@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { DoctorProfile, ClinicSettings, EmailConfig, AppState } from '../../types';
 import { useToast } from '../common/Toast';
-import { exportDataBackup } from '../../services/storage';
+import { exportDataBackup, updateUserPassword, validateCredentials } from '../../services/storage';
 
 interface SettingsViewProps {
   doctor: DoctorProfile;
@@ -154,6 +154,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Change Password
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentPassword.trim()) {
+      showToast('Please enter your current password', 'error');
+      return;
+    }
+    const currentUsername = fullState.currentUser?.username || 'admin';
+    const isCurrentValid = validateCredentials(currentUsername, currentPassword);
+    if (!isCurrentValid) {
+      showToast('Current password is incorrect.', 'error');
+      return;
+    }
     if (!newPassword.trim()) {
       showToast('Please enter a new password', 'error');
       return;
@@ -162,10 +172,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       showToast('New password and confirm password do not match', 'error');
       return;
     }
-    showToast('Password changed successfully! Keep it safe.', 'success');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    const success = updateUserPassword(currentUsername, newPassword);
+    if (success) {
+      showToast('Password changed successfully! Keep it safe.', 'success');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      showToast('Failed to update password.', 'error');
+    }
   };
 
   // Generate Backup

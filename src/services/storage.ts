@@ -12,21 +12,61 @@ import {
 import { 
   initialDoctor, 
   initialClinic, 
-  initialEmailConfig, 
-  initialPatients, 
-  initialAppointments, 
-  initialDailyNotes 
+  initialEmailConfig 
 } from './mockData';
 
-const STORAGE_KEY = 'medihive_app_state_v1';
+const STORAGE_KEY = 'medihive_app_state_v2';
 const AUTH_KEY = 'medihive_auth_user';
+const ACCOUNTS_KEY = 'medihive_accounts_v1';
 
-const defaultUser: UserAccount = {
+// One-time cleanup for old cached session if migrating from v1
+if (typeof window !== 'undefined' && localStorage.getItem('medihive_app_state_v1')) {
+  localStorage.removeItem('medihive_app_state_v1');
+  localStorage.removeItem(AUTH_KEY);
+}
+
+export const defaultAdminUser: UserAccount = {
   id: 'usr-1',
   username: 'admin',
-  name: 'Dr. Shweta N. Sawant',
+  name: 'Doctor / Admin',
   role: 'doctor',
-  passwordHash: 'admin123', // In a real app this is salted & hashed
+  passwordHash: 'admin123',
+};
+
+export const getStoredAccounts = (): UserAccount[] => {
+  try {
+    const raw = localStorage.getItem(ACCOUNTS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading accounts', e);
+  }
+  return [defaultAdminUser];
+};
+
+export const validateCredentials = (username: string, password: string): UserAccount | null => {
+  const accounts = getStoredAccounts();
+  const trimmedUser = username.trim().toLowerCase();
+  const found = accounts.find(
+    (acc) => acc.username.toLowerCase() === trimmedUser && acc.passwordHash === password.trim()
+  );
+  return found || null;
+};
+
+export const updateUserPassword = (username: string, newPassword: string): boolean => {
+  try {
+    const accounts = getStoredAccounts();
+    const updated = accounts.map((acc) => {
+      if (acc.username.toLowerCase() === username.trim().toLowerCase()) {
+        return { ...acc, passwordHash: newPassword.trim() };
+      }
+      return acc;
+    });
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updated));
+    return true;
+  } catch (e) {
+    console.error('Error updating password', e);
+    return false;
+  }
 };
 
 export const getStoredAuthUser = (): UserAccount | null => {
@@ -36,8 +76,7 @@ export const getStoredAuthUser = (): UserAccount | null => {
   } catch (e) {
     console.error('Error loading auth user', e);
   }
-  // Default logged in user if not explicitly logged out
-  return defaultUser;
+  return null;
 };
 
 export const setStoredAuthUser = (user: UserAccount | null) => {
@@ -58,9 +97,9 @@ export const loadAppState = (): AppState => {
         doctor: parsed.doctor || initialDoctor,
         clinic: parsed.clinic || initialClinic,
         emailConfig: parsed.emailConfig || initialEmailConfig,
-        patients: parsed.patients || initialPatients,
-        appointments: parsed.appointments || initialAppointments,
-        dailyNotes: parsed.dailyNotes || initialDailyNotes,
+        patients: parsed.patients || [],
+        appointments: parsed.appointments || [],
+        dailyNotes: parsed.dailyNotes || {},
       };
     }
   } catch (err) {
@@ -68,13 +107,13 @@ export const loadAppState = (): AppState => {
   }
 
   const freshState: AppState = {
-    currentUser: defaultUser,
+    currentUser: getStoredAuthUser(),
     doctor: initialDoctor,
     clinic: initialClinic,
     emailConfig: initialEmailConfig,
-    patients: initialPatients,
-    appointments: initialAppointments,
-    dailyNotes: initialDailyNotes,
+    patients: [],
+    appointments: [],
+    dailyNotes: {},
   };
   saveAppState(freshState);
   return freshState;

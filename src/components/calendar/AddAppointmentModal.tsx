@@ -102,7 +102,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
               required
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
-              placeholder="e.g. Rajas"
+              placeholder="Enter patient name"
               className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
             />
           </div>
@@ -113,7 +113,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
               type="tel"
               value={patientMobile}
               onChange={(e) => setPatientMobile(e.target.value)}
-              placeholder="e.g. 9632541785"
+              placeholder="Enter mobile number"
               className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
             />
           </div>
@@ -158,7 +158,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
                 type="text"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g. Fever checkup"
+                placeholder="Reason for visit / consultation notes"
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               />
             </div>

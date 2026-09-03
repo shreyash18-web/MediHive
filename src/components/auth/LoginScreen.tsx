@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MediHiveLogo } from '../common/MediHiveLogo';
 import { UserAccount } from '../../types';
 import { useToast } from '../common/Toast';
+import { validateCredentials } from '../../services/storage';
 import { KeyRound, User, Lock, HelpCircle, ArrowRight } from 'lucide-react';
 
 interface LoginScreenProps {
@@ -9,33 +10,31 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      showToast('Please enter both username and password.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     setTimeout(() => {
-      // Demo validation
-      if (username.trim() && password.trim()) {
-        const user: UserAccount = {
-          id: 'usr-1',
-          username: username.trim(),
-          name: 'Dr. Shweta N. Sawant',
-          role: 'doctor',
-          passwordHash: password,
-        };
+      const validatedUser = validateCredentials(username, password);
+      if (validatedUser) {
         showToast('Logged in successfully! Welcome to MediHive.', 'success');
-        onLogin(user);
+        onLogin(validatedUser);
       } else {
-        showToast('Please enter both username and password.', 'error');
+        showToast('Invalid username or password. Please try again.', 'error');
       }
       setLoading(false);
-    }, 400);
+    }, 300);
   };
 
   return (
@@ -144,11 +143,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       </div>
 
       {/* Feature Guide Info Banner */}
-      <div className="w-full max-w-4xl mt-6 bg-emerald-50/90 border border-emerald-200/90 rounded-xl p-4 flex items-start gap-3 text-sm text-emerald-900 shadow-sm">
-        <span className="text-lg shrink-0">💡</span>
+      <div className="w-full max-w-4xl mt-6 bg-slate-50 border border-slate-200/90 rounded-xl p-4 flex items-start gap-3 text-sm text-slate-600 shadow-xs">
+        <span className="text-base shrink-0">🔒</span>
         <p className="leading-relaxed">
-          <strong className="font-semibold">Team Security:</strong> Each team member has their own login. This keeps your clinic data safe and ensures that changes can be tracked correctly.
-          <span className="block text-xs text-emerald-700/80 mt-1">Default credentials: Username: <code>admin</code> | Password: <code>admin123</code></span>
+          <strong className="font-semibold text-slate-700">Practice Security:</strong> Please authenticate to access your patient directory, prescriptions, and clinic ledger. Initial master credentials: <code>admin</code> / <code>admin123</code> (can be customized under Settings).
         </p>
       </div>
 

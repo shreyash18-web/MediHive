@@ -16,7 +16,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { Patient, OPDRecord } from '../../types';
-import { format, isSameDay, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isAfter, isBefore } from 'date-fns';
+import { format, isSameDay, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isAfter, isBefore, addDays, addMonths, subMonths } from 'date-fns';
 
 interface DashboardProps {
   patients: Patient[];
@@ -125,16 +125,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
     );
   }, [patients, searchQuery]);
 
-  // Date strip helper (Page 3 top-right mini calendar strip)
-  const weekDays = [
-    { num: 1, label: 'Mon', date: '2026-06-01' },
-    { num: 2, label: 'Tue', date: '2026-06-02' },
-    { num: 3, label: 'Wed', date: '2026-06-03' },
-    { num: 4, label: 'Thu', date: '2026-06-04' },
-    { num: 5, label: 'Fri', date: '2026-06-05' },
-    { num: 6, label: 'Sat', date: '2026-06-06' },
-    { num: 7, label: 'Sun', date: '2026-06-07' },
-  ];
+  // Date strip helper (dynamic current week)
+  const weekDays = useMemo(() => {
+    const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(start, i);
+      return {
+        num: d.getDate(),
+        label: format(d, 'EEE'),
+        date: format(d, 'yyyy-MM-dd'),
+        fullDate: d,
+      };
+    });
+  }, [selectedDate]);
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 page-fade-in">
@@ -164,39 +167,55 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span>+ Add Patient</span>
           </button>
 
-          {/* Mini Calendar strip matching Page 3 screenshot */}
+          {/* Mini Calendar strip matching current date */}
           <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1 text-xs">
-            <button className="p-1 text-slate-400 hover:text-slate-600 rounded">
+            <button
+              onClick={() => setSelectedDate(subMonths(selectedDate, 1))}
+              className="p-1 text-slate-400 hover:text-slate-600 rounded"
+              title="Previous Month"
+            >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
             <span className="font-semibold text-slate-700 px-1">
               {format(selectedDate, 'MMMM yyyy')}
             </span>
-            <button className="p-1 text-slate-400 hover:text-slate-600 rounded">
+            <button
+              onClick={() => setSelectedDate(addMonths(selectedDate, 1))}
+              className="p-1 text-slate-400 hover:text-slate-600 rounded"
+              title="Next Month"
+            >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
             <div className="flex items-center gap-1 ml-1 pl-1 border-l border-slate-200">
-              {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                <button
-                  key={d}
-                  onClick={() => onNavigateToCalendar()}
-                  className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] transition ${
-                    d === 2
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : d === 4
-                      ? 'bg-amber-100 text-amber-800 font-bold'
-                      : 'text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
+              {weekDays.map((d) => {
+                const isSelected = isSameDay(d.fullDate, selectedDate);
+                const isToday = isSameDay(d.fullDate, new Date());
+                return (
+                  <button
+                    key={d.date}
+                    onClick={() => {
+                      setSelectedDate(d.fullDate);
+                      onNavigateToCalendar(d.date);
+                    }}
+                    title={`${d.label} ${d.date}`}
+                    className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] transition ${
+                      isSelected
+                        ? 'bg-[#1e536e] text-white shadow-xs'
+                        : isToday
+                        ? 'bg-emerald-100 text-emerald-800 font-extrabold'
+                        : 'text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {d.num}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards Grid matching Page 3 */}
+      {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Overdue followups */}
         <div 
@@ -210,7 +229,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Overdue</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
-                {overdueFollowUps.length || 3}
+                {overdueFollowUps.length}
               </h3>
             </div>
           </div>
@@ -229,7 +248,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today's OPD</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
-                {todaysOpdRecords.length > 0 ? todaysOpdRecords.length : 1}
+                {todaysOpdRecords.length}
               </h3>
             </div>
           </div>
@@ -257,7 +276,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </select>
                 </div>
                 <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
-                  ₹{revenueStats[revenuePeriod] > 0 ? revenueStats[revenuePeriod] : 299}
+                  ₹{revenueStats[revenuePeriod].toLocaleString('en-IN')}
                 </h3>
               </div>
             </div>
@@ -276,7 +295,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Follow-ups Due</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
-                {followUpsDue.length > 0 ? followUpsDue.length : 2}
+                {followUpsDue.length}
               </h3>
             </div>
           </div>

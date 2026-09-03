@@ -50,8 +50,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onDeleteAppointment,
   onBack,
 }) => {
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2026, 5, 1)); // Default June 2026 matching screenshots
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date(2026, 5, 3));
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [noteText, setNoteText] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
   const { showToast } = useToast();

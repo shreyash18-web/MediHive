@@ -69,20 +69,10 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   // Medicines List
-  const [medicines, setMedicines] = useState<PrescribedMedicine[]>([
-    {
-      id: 'med-init-1',
-      name: 'Maharasnadi yog',
-      dosage: '2 tabs',
-      frequency: 'Twice daily',
-      timing: 'After Food',
-      duration: '7 Days',
-      instructions: 'With warm water',
-    },
-  ]);
+  const [medicines, setMedicines] = useState<PrescribedMedicine[]>([]);
 
   // Notes & Follow up
-  const [panchakarmaNotes, setPanchakarmaNotes] = useState('therapy');
+  const [panchakarmaNotes, setPanchakarmaNotes] = useState('');
   const [clinicalNotes, setClinicalNotes] = useState('');
   const [dietaryAdvice, setDietaryAdvice] = useState('');
   const [nextVisitDate, setNextVisitDate] = useState(
@@ -90,11 +80,11 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
   );
 
   // Billing Fields
-  const [consultationFee, setConsultationFee] = useState<number>(100);
-  const [medicineFee, setMedicineFee] = useState<number>(100);
-  const [panchakarmaFee, setPanchakarmaFee] = useState<number>(100);
+  const [consultationFee, setConsultationFee] = useState<number>(0);
+  const [medicineFee, setMedicineFee] = useState<number>(0);
+  const [panchakarmaFee, setPanchakarmaFee] = useState<number>(0);
   const [discountType, setDiscountType] = useState<DiscountType>('amount');
-  const [discountValue, setDiscountValue] = useState<number>(10);
+  const [discountValue, setDiscountValue] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
 
   // Load existing patient if selected
@@ -325,7 +315,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                   setShowPatientDropdown(true);
                 }}
                 onFocus={() => setShowPatientDropdown(true)}
-                placeholder="Type patient name or ID (e.g., P0003, Rajas)"
+                placeholder="Type patient name or ID..."
                 className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               />
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -398,7 +388,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Rajas"
+                placeholder="Enter patient full name"
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               />
             </div>
@@ -421,7 +411,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 max="125"
                 value={age}
                 onChange={(e) => setAge(e.target.value ? parseInt(e.target.value) : '')}
-                placeholder="e.g. 20"
+                placeholder="Age in years"
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               />
             </div>
@@ -448,7 +438,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 required
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                placeholder="e.g. 9632541785"
+                placeholder="10-digit mobile number"
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               />
             </div>
@@ -459,7 +449,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. Sawantwadi"
+                placeholder="Patient residential address / locality"
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               />
             </div>
