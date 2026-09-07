@@ -77,13 +77,13 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
       case 'Completed':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-            ? Completed
+            Completed
           </span>
         );
       case 'Cancelled':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
-            ? Cancelled
+            Cancelled
           </span>
         );
       default:
@@ -92,7 +92,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 page-fade-in">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-6 page-fade-in">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -105,7 +105,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
         {onRefresh && (
           <button
             onClick={onRefresh}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs transition"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs transition w-full sm:w-auto"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Sync Live Queue</span>
@@ -139,7 +139,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
                     {currentPatientWithDoctor.patientName}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {currentPatientWithDoctor.patientGender} • {currentPatientWithDoctor.patientAge} yrs • Mobile: {currentPatientWithDoctor.patientMobile}
+                    {currentPatientWithDoctor.patientGender}  {currentPatientWithDoctor.patientAge} yrs  Mobile: {currentPatientWithDoctor.patientMobile}
                   </p>
                 </div>
               </div>
@@ -148,7 +148,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
                 <strong className="text-emerald-950">Complaint:</strong> {currentPatientWithDoctor.complaint}
                 {currentPatientWithDoctor.vitals?.temperature && (
                   <span className="ml-3 text-slate-500">
-                    Temp: <strong>{currentPatientWithDoctor.vitals.temperature}°F</strong>
+                    Temp: <strong>{currentPatientWithDoctor.vitals.temperature}F</strong>
                   </span>
                 )}
                 {currentPatientWithDoctor.vitals?.bloodPressure && (
@@ -188,7 +188,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
                     {nextPatientInLine.patientName}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {nextPatientInLine.patientGender} • {nextPatientInLine.patientAge} yrs • Mobile: {nextPatientInLine.patientMobile}
+                    {nextPatientInLine.patientGender}  {nextPatientInLine.patientAge} yrs  Mobile: {nextPatientInLine.patientMobile}
                   </p>
                 </div>
               </div>
@@ -197,7 +197,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
                 <strong className="text-amber-950">Complaint:</strong> {nextPatientInLine.complaint}
                 {nextPatientInLine.vitals?.temperature && (
                   <span className="ml-3 text-slate-500">
-                    Temp: <strong>{nextPatientInLine.vitals.temperature}°F</strong>
+                    Temp: <strong>{nextPatientInLine.vitals.temperature}F</strong>
                   </span>
                 )}
               </div>
@@ -222,7 +222,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 rounded-xl text-xs font-semibold">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-200/60 rounded-xl text-xs font-semibold overflow-x-auto touch-scroll max-w-full">
             <button
               onClick={() => setFilter('active')}
               className={`px-3 py-1 rounded-lg transition ${
@@ -250,8 +250,8 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto touch-scroll">
+          <table className="w-full text-left text-sm min-w-[650px]">
             <thead className="bg-[#1e536e] text-white text-xs uppercase font-semibold">
               <tr>
                 <th className="px-5 py-3">Queue No</th>
@@ -289,7 +289,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
                     <td className="px-5 py-3.5">
                       <div className="font-bold text-slate-900 capitalize text-sm">{item.patientName}</div>
                       <div className="text-[11px] text-slate-500">
-                        {item.patientGender} • {item.patientAge} yrs • <span className="font-mono">{item.patientMobile}</span>
+                        {item.patientGender}  {item.patientAge} yrs  <span className="font-mono">{item.patientMobile}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 font-mono text-slate-600 text-[11px]">
@@ -298,7 +298,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
                     <td className="px-5 py-3.5 max-w-xs">
                       <p className="font-semibold text-slate-800 line-clamp-1">{item.complaint}</p>
                       <div className="flex flex-wrap gap-2 text-[10px] text-slate-500 mt-1">
-                        {item.vitals?.temperature && <span>Temp: {item.vitals.temperature}°F</span>}
+                        {item.vitals?.temperature && <span>Temp: {item.vitals.temperature}F</span>}
                         {item.vitals?.bloodPressure && <span>BP: {item.vitals.bloodPressure}</span>}
                         {item.vitals?.weight && <span>Wt: {item.vitals.weight}kg</span>}
                         {item.vitals?.spO2 && <span>SpO2: {item.vitals.spO2}%</span>}
@@ -318,7 +318,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
                           Cancel
                         </button>
                       ) : (
-                        <span className="text-slate-400 text-[11px]">—</span>
+                        <span className="text-slate-400 text-[11px]"></span>
                       )}
                     </td>
                   </tr>

@@ -7,7 +7,8 @@ import {
   Settings, 
   HelpCircle, 
   LogOut,
-  ListOrdered
+  ListOrdered,
+  X
 } from 'lucide-react';
 import { MediHiveLogo } from '../common/MediHiveLogo';
 
@@ -26,6 +27,8 @@ interface SidebarProps {
   onLogout: () => void;
   pendingFollowUpsCount?: number;
   activeQueueCount?: number;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -34,6 +37,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   pendingFollowUpsCount = 0,
   activeQueueCount = 0,
+  isOpen = false,
+  onClose,
 }) => {
   const navItems = [
     { id: 'dashboard' as NavigationTab, label: 'Dashboard', icon: LayoutDashboard },
@@ -55,29 +60,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 bg-[#194358] text-slate-100 flex flex-col justify-between h-screen shrink-0 border-r border-[#153a4c] select-none no-print transition-all">
-      {/* Brand Header */}
-      <div>
-        <div className="p-5 border-b border-[#245770]">
-          <MediHiveLogo size="md" textColor="text-white" />
-          <p className="text-[11px] text-sky-200/70 mt-1 pl-10 font-medium">Clinic Management System</p>
-        </div>
+    <>
+      {/* Mobile Drawer Backdrop Overlay */}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs lg:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
 
-        {/* Main Navigation */}
-        <nav className="p-3 space-y-1.5 mt-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onSelectTab(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all group ${
-                  isActive
-                    ? 'bg-[#2b7194] text-white shadow-inner font-semibold'
-                    : 'text-sky-100/80 hover:bg-[#20516b] hover:text-white'
-                }`}
-              >
+      {/* Main Sidebar (Fixed drawer on mobile/tablet, static on desktop) */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#194358] text-slate-100 flex flex-col justify-between h-[100dvh] shrink-0 border-r border-[#153a4c] select-none no-print transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+          isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        }`}
+      >
+        {/* Brand Header */}
+        <div>
+          <div className="p-4 sm:p-5 border-b border-[#245770] flex items-center justify-between">
+            <div>
+              <MediHiveLogo size="md" textColor="text-white" />
+              <p className="text-[11px] text-sky-200/70 mt-1 pl-10 font-medium">Clinic Management System</p>
+            </div>
+            {/* Close Button on Mobile Drawer */}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-sky-200 hover:text-white hover:bg-white/10 lg:hidden transition"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Main Navigation */}
+          <nav className="p-3 space-y-1.5 mt-2 overflow-y-auto">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onSelectTab(item.id);
+                    onClose?.();
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all group ${
+                    isActive
+                      ? 'bg-[#2b7194] text-white shadow-inner font-semibold'
+                      : 'text-sky-100/80 hover:bg-[#20516b] hover:text-white'
+                  }`}
+                >
                 <div className="flex items-center gap-3">
                   <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-sky-300' : 'text-sky-200/70 group-hover:text-white'}`} />
                   <span>{item.label}</span>
@@ -96,7 +129,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Bottom Area: Help & Logout */}
       <div className="p-3 border-t border-[#245770] space-y-1">
         <button
-          onClick={() => onSelectTab('help')}
+          onClick={() => {
+            onSelectTab('help');
+            onClose?.();
+          }}
           className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
             currentTab === 'help'
               ? 'bg-[#2b7194] text-white font-semibold'
@@ -116,6 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
     </aside>
+    </>
   );
 };
 

@@ -133,8 +133,8 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
 
       {/* Main Patients Table matching Page 7 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200/90 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto touch-scroll">
+          <table className="w-full text-left text-sm min-w-[700px]">
             <thead className="bg-[#1e536e] text-white text-xs uppercase font-semibold">
               <tr>
                 <th className="px-5 py-3.5">Patient ID</th>

@@ -26,10 +26,10 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   const patientVisits = (visits || []).filter((v) => v.patientId === patient.id);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[96dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-[#1e536e] to-[#256382] text-white flex items-center justify-between shrink-0">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-[#1e536e] to-[#256382] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/10 rounded-lg">
               <User className="w-5 h-5 text-sky-200" />
@@ -42,7 +42,7 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-sky-100/80">
-                {patient.gender} • {patient.age} yrs • Mobile: {patient.mobile}
+                {patient.gender}  {patient.age} yrs  Mobile: {patient.mobile}
               </p>
             </div>
           </div>
@@ -55,7 +55,7 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
         </div>
 
         {/* Patient Key Medical Profile Chips */}
-        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="px-4 sm:px-6 py-2.5 sm:py-3 bg-slate-50 border-b border-slate-200 text-xs flex flex-wrap items-center justify-between gap-2 shrink-0">
           <div className="flex flex-wrap items-center gap-3">
             {patient.bloodGroup && (
               <span className="px-2 py-1 bg-rose-50 text-rose-700 font-semibold rounded border border-rose-200">
@@ -84,7 +84,7 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
         </div>
 
         {/* Scrollable History Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto touch-scroll p-3 sm:p-6 space-y-4 sm:space-y-6">
           {records.length === 0 && patientVisits.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <FileText className="w-12 h-12 mx-auto text-slate-300 mb-2" />
@@ -146,9 +146,9 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                           <div key={mi} className="p-2 flex items-center justify-between gap-2">
                             <div>
                               <span className="font-bold text-slate-800">{m.name}</span>
-                              <span className="text-slate-500 ml-2">({m.dosage} • {m.frequency})</span>
+                              <span className="text-slate-500 ml-2">({m.dosage}  {m.frequency})</span>
                             </div>
-                            <span className="text-slate-500 text-[11px]">{m.timing} • {m.duration}</span>
+                            <span className="text-slate-500 text-[11px]">{m.timing}  {m.duration}</span>
                           </div>
                         ))}
                       </div>
@@ -169,11 +169,11 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+        <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 rounded-lg transition"
+            className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 rounded-lg transition w-full sm:w-auto text-center"
           >
             Close
           </button>
@@ -184,7 +184,7 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 onClose();
                 onStartNewVisit(patient);
               }}
-              className="px-4 py-2 text-xs font-bold bg-[#2ba4c7] hover:bg-[#228da8] text-white rounded-lg transition shadow-sm"
+              className="px-4 py-2 text-xs font-bold bg-[#2ba4c7] hover:bg-[#228da8] text-white rounded-lg transition shadow-sm w-full sm:w-auto text-center"
             >
               Start New Visit for {patient.fullName}
             </button>

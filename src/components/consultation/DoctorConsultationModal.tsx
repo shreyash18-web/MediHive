@@ -179,38 +179,39 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-5">
+      <div className="bg-white w-full max-w-5xl rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[96dvh] sm:max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-[#194358] text-white px-6 py-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-300 flex items-center justify-center border border-sky-400/30">
+        <div className="bg-[#194358] text-white px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 overflow-hidden">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-500/20 text-sky-300 flex items-center justify-center border border-sky-400/30 shrink-0">
               <Stethoscope className="w-5 h-5" />
             </div>
-            <div>
+            <div className="overflow-hidden">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded-full bg-emerald-400 text-slate-900 text-xs font-bold font-mono">
                   {queueItem.queueNumber}
                 </span>
-                <h2 className="text-lg font-bold text-white">Active Patient Consultation</h2>
+                <h2 className="text-sm sm:text-lg font-bold text-white truncate">Active Consultation</h2>
               </div>
-              <p className="text-xs text-sky-200/90">
-                Patient: <span className="font-semibold text-white">{patient.fullName}</span> ({patient.age}y, {patient.gender}) • ID: {patient.id} • Tel: {patient.mobile}
+              <p className="text-[11px] sm:text-xs text-sky-200/90 truncate">
+                <span className="font-semibold text-white">{patient.fullName}</span> ({patient.age}y, {patient.gender}) • ID: {patient.id}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => onViewHistory(patient)}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition flex items-center gap-1.5 border border-white/15"
+              className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] sm:text-xs font-medium transition flex items-center gap-1 border border-white/15"
             >
               <History className="w-3.5 h-3.5" />
-              <span>Past History ({patient.records ? patient.records.length : 0})</span>
+              <span className="hidden xs:inline">Past History</span> ({patient.records ? patient.records.length : 0})
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-sky-200 hover:text-white hover:bg-white/10 transition"
+              className="p-1.5 rounded-lg text-sky-200 hover:text-white hover:bg-white/10 transition"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
@@ -218,7 +219,7 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
         </div>
 
         {/* Body Container */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 touch-scroll">
           {/* Triage Info Banner from Receptionist */}
           <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-4">
             <div className="flex items-center justify-between pb-2 mb-3 border-b border-sky-200/60">
@@ -487,40 +488,42 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
         </div>
 
         {/* Footer Actions */}
-        <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div className="bg-slate-50 border-t border-slate-200 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handlePreview}
-              className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl shadow-2xs transition flex items-center gap-1.5"
+              className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5"
             >
               <Printer className="w-4 h-4 text-slate-500" />
               <span>Preview Prescription</span>
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl transition"
-            >
-              Cancel
-            </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl transition text-center"
+              >
+                Cancel
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleComplete(false)}
-              className="px-4 py-2 text-xs font-semibold text-[#194358] bg-sky-100 hover:bg-sky-200 rounded-xl transition flex items-center gap-1.5"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Complete Consultation</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleComplete(false)}
+                className="flex-1 sm:flex-none px-3.5 py-2 text-xs font-semibold text-[#194358] bg-sky-100 hover:bg-sky-200 rounded-xl transition flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Save Complete</span>
+              </button>
+            </div>
 
             <button
               type="button"
               onClick={() => handleComplete(true)}
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition flex items-center gap-2"
+              className="w-full sm:w-auto px-5 py-2.5 sm:py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition flex items-center justify-center gap-2"
             >
               <span>Complete & Call Next Patient</span>
               <ArrowRight className="w-4 h-4" />

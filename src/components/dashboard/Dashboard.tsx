@@ -174,9 +174,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [todaysQueue]);
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 page-fade-in">
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6 page-fade-in">
       {/* Top Bar: Search + Add Patient Button + Mini Calendar strip */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
         {/* Search Bar */}
         <div className="relative flex-1 max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -192,17 +192,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Action button & Mini Calendar */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <button
             onClick={onAddPatient}
-            className="bg-[#2da478] hover:bg-[#258d67] text-white font-medium text-sm px-4 py-2 rounded-lg shadow-sm flex items-center gap-2 transition"
+            className="w-full sm:w-auto bg-[#2da478] hover:bg-[#258d67] text-white font-medium text-sm px-4 py-2 rounded-lg shadow-sm flex items-center justify-center gap-2 transition"
           >
             <UserPlus className="w-4 h-4" />
             <span>+ Add Patient</span>
           </button>
 
           {/* Mini Calendar strip matching current date */}
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1 text-xs">
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1 text-xs overflow-x-auto touch-scroll max-w-full">
             <button
               onClick={() => setSelectedDate(subMonths(selectedDate, 1))}
               className="p-1 text-slate-400 hover:text-slate-600 rounded"
@@ -546,8 +546,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto touch-scroll">
+          <table className="w-full text-left text-sm min-w-[650px]">
             <thead className="bg-[#1e536e] text-white text-xs uppercase font-semibold">
               <tr>
                 <th className="px-5 py-3">Patient ID</th>

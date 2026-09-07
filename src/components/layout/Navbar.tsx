@@ -1,7 +1,7 @@
 import React from 'react';
 import { DoctorProfile, ClinicSettings } from '../../types';
 import { MediHiveLogo } from '../common/MediHiveLogo';
-import { User, Bell, Calendar as CalendarIcon } from 'lucide-react';
+import { User, Bell, Calendar as CalendarIcon, Menu } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface NavbarProps {
@@ -10,6 +10,7 @@ interface NavbarProps {
   activeFollowUpsCount?: number;
   onNavigateToCalendar?: () => void;
   onOpenFollowUps?: () => void;
+  onToggleSidebar?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -18,20 +19,30 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeFollowUpsCount = 0,
   onNavigateToCalendar,
   onOpenFollowUps,
+  onToggleSidebar,
 }) => {
   const currentDateFormatted = format(new Date(), 'dd MMMM yyyy');
 
   return (
-    <header className="bg-gradient-to-r from-[#1e536e] via-[#236484] to-[#1e536e] text-white px-4 sm:px-6 py-2.5 shadow-md flex items-center justify-between z-30 no-print">
-      {/* Left side: Brand or Greeting */}
-      <div className="flex items-center gap-4">
-        <div className="hidden md:flex items-center">
+    <header className="bg-gradient-to-r from-[#1e536e] via-[#236484] to-[#1e536e] text-white px-3 sm:px-6 py-2.5 shadow-md flex items-center justify-between z-30 no-print">
+      {/* Left side: Mobile Menu Toggle + Brand or Greeting */}
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* Hamburger button on mobile & tablet */}
+        <button
+          onClick={onToggleSidebar}
+          className="p-1.5 -ml-1 text-white hover:bg-white/15 rounded-lg lg:hidden transition flex items-center justify-center cursor-pointer"
+          aria-label="Toggle navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-2.5">
           <MediHiveLogo size="sm" textColor="text-white" />
-        </div>
-        <div className="border-l border-white/20 pl-4 py-0.5 hidden sm:block">
-          <span className="text-sm font-semibold tracking-wide text-sky-100">
-            Welcome <span className="text-white font-bold">{doctor.name}</span>
-          </span>
+          <div className="border-l border-white/20 pl-3 py-0.5 hidden sm:block">
+            <span className="text-xs sm:text-sm font-semibold tracking-wide text-sky-100">
+              Welcome <span className="text-white font-bold">{doctor.name}</span>
+            </span>
+          </div>
         </div>
       </div>
 

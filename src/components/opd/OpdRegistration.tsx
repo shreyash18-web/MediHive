@@ -850,11 +850,11 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => handleSubmit(false)}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold transition"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold transition text-center"
               >
                 Save Record Only
               </button>
@@ -862,7 +862,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
               <button
                 type="button"
                 onClick={() => handleSubmit(true)}
-                className="flex-1 sm:flex-none bg-[#2da478] hover:bg-[#258d67] text-white font-bold text-sm px-6 py-2.5 rounded-lg shadow-md hover:shadow transition flex items-center justify-center gap-2"
+                className="w-full sm:w-auto bg-[#2da478] hover:bg-[#258d67] text-white font-bold text-sm px-6 py-2.5 rounded-lg shadow-md hover:shadow transition flex items-center justify-center gap-2"
               >
                 <Check className="w-4 h-4" />
                 <span>Save & Generate Prescription</span>

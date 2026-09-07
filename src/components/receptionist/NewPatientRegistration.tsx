@@ -89,9 +89,9 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 page-fade-in">
+    <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-6 page-fade-in">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -116,7 +116,7 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
       <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200/90 divide-y divide-slate-100 overflow-hidden">
         
         {/* Section 1: Demographics */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <h2 className="text-sm font-bold text-[#1e536e] uppercase tracking-wide flex items-center gap-2">
               <User className="w-4 h-4 text-sky-600" />
@@ -224,7 +224,7 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
         </div>
 
         {/* Section 2: Medical Background & Emergency Contact */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <div className="border-b border-slate-100 pb-2">
             <h2 className="text-sm font-bold text-[#1e536e] uppercase tracking-wide flex items-center gap-2">
               <HeartPulse className="w-4 h-4 text-rose-600" />
@@ -271,18 +271,18 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
         </div>
 
         {/* Action Footer */}
-        <div className="p-6 bg-slate-50/70 flex items-center justify-between">
+        <div className="p-4 sm:p-6 bg-slate-50/70 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <button
             type="button"
             onClick={onBack}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition"
+            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition text-center"
           >
             Cancel
           </button>
 
           <button
             type="submit"
-            className="bg-[#2ba4c7] hover:bg-[#228da8] text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2"
+            className="w-full sm:w-auto justify-center bg-[#2ba4c7] hover:bg-[#228da8] text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2"
           >
             <UserPlus className="w-4 h-4" />
             <span>Register & Start Visit</span>

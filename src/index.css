@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    height: 100%;
+    min-height: 100dvh;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     background-color: #f4f7f9;
     color: #1e293b;
@@ -27,6 +34,25 @@
     background-color: #14b8a6;
     color: #ffffff;
   }
+}
+
+/* Safe area padding utilities for notched iPhones */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Smooth momentum touch scrolling for iOS */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom subtle scrollbar */

@@ -123,7 +123,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 page-fade-in no-print">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -140,7 +140,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-[#2da478] hover:bg-[#258d67] text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-lg shadow-sm flex items-center gap-2 transition"
+          className="bg-[#2da478] hover:bg-[#258d67] text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-lg shadow-sm flex items-center justify-center gap-2 transition w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           <span>+ Book Appointment</span>
@@ -151,7 +151,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Calendar Month Grid (7 cols) */}
-        <div className="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200/90 p-5 space-y-4">
+        <div className="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200/90 p-3 sm:p-5 space-y-4">
           {/* Month Navigator */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-base font-bold text-[#1e536e] flex items-center gap-2">
@@ -196,7 +196,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </div>
 
           {/* Day Cells Grid */}
-          <div className="grid grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-1.5">
             {calendarDays.map((day) => {
               const dayStr = format(day, 'yyyy-MM-dd');
               const isSelected = isSameDay(day, selectedDate);
@@ -211,7 +211,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 <button
                   key={day.toISOString()}
                   onClick={() => setSelectedDate(day)}
-                  className={`min-h-[58px] p-1.5 rounded-xl text-left flex flex-col justify-between transition-all relative border ${
+                  className={`min-h-[46px] sm:min-h-[58px] p-1 sm:p-1.5 rounded-lg sm:rounded-xl text-left flex flex-col justify-between transition-all relative border ${
                     isSelected
                       ? 'bg-[#1e536e] text-white border-[#1e536e] shadow-md'
                       : isCurrentMonthDay

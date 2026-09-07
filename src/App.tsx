@@ -42,6 +42,7 @@ const MainAppContent: React.FC = () => {
     record: OPDRecord;
   } | null>(null);
   const [activeConsultationQueueItem, setActiveConsultationQueueItem] = useState<QueueItem | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const { showToast } = useToast();
 
@@ -240,27 +241,31 @@ const MainAppContent: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-[#f4f7f9] overflow-hidden">
-      {/* Left Sidebar */}
+    <div className="flex h-[100dvh] min-h-[100dvh] bg-[#f4f7f9] overflow-hidden">
+      {/* Left Sidebar (Desktop fixed + Mobile/Tablet slide-in drawer) */}
       <Sidebar
         currentTab={currentTab}
         onSelectTab={(tab) => {
           setPreselectedOpdPatientId(undefined);
           setCurrentTab(tab);
+          setMobileSidebarOpen(false);
         }}
         onLogout={handleLogout}
         pendingFollowUpsCount={todaysFollowUps.length}
         activeQueueCount={activeWaitingQueueCount}
+        isOpen={mobileSidebarOpen}
+        onClose={() => setMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-[100dvh] min-h-0 overflow-hidden">
         {/* Top Navbar */}
         <Navbar
           doctor={appState.doctor}
           clinic={appState.clinic}
           activeFollowUpsCount={todaysFollowUps.length}
           onNavigateToCalendar={() => setCurrentTab('calendar')}
+          onToggleSidebar={() => setMobileSidebarOpen((prev) => !prev)}
         />
 
         {/* Scrollable View Container */}

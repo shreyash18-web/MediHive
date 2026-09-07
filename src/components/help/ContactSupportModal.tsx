@@ -27,9 +27,9 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 no-print">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 no-print">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full max-h-[96dvh] flex flex-col overflow-hidden">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-[#1e536e]" />
             <h3 className="font-bold text-slate-800 text-base">Contact MediHive Support</h3>
@@ -51,7 +51,7 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto touch-scroll">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Topic</label>
               <select

@@ -32,7 +32,7 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
   }, [patients, query]);
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 page-fade-in">
+    <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-6 page-fade-in">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -42,7 +42,7 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
 
         <button
           onClick={onNavigateToNewPatient}
-          className="bg-[#2ba4c7] hover:bg-[#228da8] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center gap-2 transition"
+          className="w-full sm:w-auto bg-[#2ba4c7] hover:bg-[#228da8] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm flex items-center justify-center gap-2 transition"
         >
           <UserPlus className="w-4 h-4" />
           <span>+ Register New Patient</span>
@@ -119,7 +119,7 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">
-                          {patient.gender} Х {patient.age} yrs Х Mobile: <strong className="font-mono text-slate-700">{patient.mobile}</strong>
+                          {patient.gender}  {patient.age} yrs  Mobile: <strong className="font-mono text-slate-700">{patient.mobile}</strong>
                         </p>
                       </div>
                     </div>
@@ -152,7 +152,7 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
                     )}
                     {patient.allergies && (
                       <div className="text-[11px] text-amber-700 font-medium">
-                        ?? Allergy: {patient.allergies}
+                        тЪая╕П Allergy: {patient.allergies}
                       </div>
                     )}
                   </div>
@@ -194,8 +194,8 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto touch-scroll">
+            <table className="w-full text-left text-sm min-w-[650px]">
               <thead className="bg-[#1e536e] text-white text-xs uppercase font-semibold">
                 <tr>
                   <th className="px-5 py-3">Patient ID</th>
@@ -220,7 +220,7 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
                       <td className="px-5 py-3.5 font-bold text-slate-900 font-mono">{p.id}</td>
                       <td className="px-5 py-3.5 font-semibold text-slate-900 capitalize">{p.fullName}</td>
                       <td className="px-4 py-3.5 text-slate-600">
-                        {p.age} yrs Х {p.gender}
+                        {p.age} yrs  {p.gender}
                       </td>
                       <td className="px-5 py-3.5 font-mono text-slate-600">{p.mobile}</td>
                       <td className="px-4 py-3.5 font-bold text-slate-800">

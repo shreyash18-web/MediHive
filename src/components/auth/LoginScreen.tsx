@@ -63,7 +63,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
+    <div className="min-h-[100dvh] bg-slate-100 flex flex-col justify-center items-center p-3 sm:p-6 lg:p-8">
       {/* Top micro brand indicator */}
       <div className="w-full max-w-4xl flex items-center justify-between mb-4 px-2">
         <span className="text-xs font-semibold text-slate-500 tracking-wide uppercase">
@@ -75,7 +75,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       {/* Main Login Card with Split Style matching Page 2 */}
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200/80 flex flex-col md:flex-row min-h-[500px]">
         {/* Left Dark Teal Panel */}
-        <div className="w-full md:w-5/12 bg-gradient-to-br from-[#1e536e] via-[#1a475e] to-[#123141] text-white p-8 sm:p-12 flex flex-col justify-between relative overflow-hidden">
+        <div className="w-full md:w-5/12 bg-gradient-to-br from-[#1e536e] via-[#1a475e] to-[#123141] text-white p-6 sm:p-8 md:p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden">
           {/* Subtle background glow / honeycomb pattern */}
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]"></div>
           
@@ -114,7 +114,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         </div>
 
         {/* Right Form Panel */}
-        <div className="w-full md:w-7/12 p-8 sm:p-12 flex flex-col justify-center bg-white">
+        <div className="w-full md:w-7/12 p-6 sm:p-8 md:p-8 lg:p-12 flex flex-col justify-center bg-white">
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center p-2 mb-1">
               <MediHiveLogo size="md" textColor="text-[#1e536e]" />

@@ -12,7 +12,9 @@ import {
   Activity,
   HeartPulse,
   Building2,
-  Phone
+  Phone,
+  Menu,
+  X
 } from 'lucide-react';
 import { MediHiveLogo } from '../common/MediHiveLogo';
 import { 
@@ -51,6 +53,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   const [currentTab, setCurrentTab] = useState<ReceptionistTab>('dashboard');
   const [activeVisitPatient, setActiveVisitPatient] = useState<Patient | null>(null);
   const [initialSearchQuery, setInitialSearchQuery] = useState<string>('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { showToast } = useToast();
 
@@ -115,22 +118,45 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   ];
 
   return (
-    <div className="flex h-screen bg-[#f4f7f9] overflow-hidden">
-      {/* Left Sidebar */}
-      <aside className="w-64 bg-[#143242] text-slate-100 flex flex-col justify-between h-screen shrink-0 border-r border-[#0f2835] select-none no-print">
+    <div className="flex h-[100dvh] min-h-[100dvh] bg-[#f4f7f9] overflow-hidden">
+      {/* Mobile Drawer Backdrop Overlay */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs lg:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Left Sidebar (Drawer on mobile/tablet, static on desktop) */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#143242] text-slate-100 flex flex-col justify-between h-[100dvh] shrink-0 border-r border-[#0f2835] select-none no-print transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+          mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        }`}
+      >
         <div>
           {/* Brand Header */}
-          <div className="p-5 border-b border-[#1f455a]">
-            <MediHiveLogo size="md" textColor="text-white" />
-            <div className="flex items-center gap-2 mt-2 pl-10">
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-teal-400/20 text-teal-300 border border-teal-400/30">
-                Reception Portal
-              </span>
+          <div className="p-4 sm:p-5 border-b border-[#1f455a] flex items-center justify-between">
+            <div>
+              <MediHiveLogo size="md" textColor="text-white" />
+              <div className="flex items-center gap-2 mt-2 pl-10">
+                <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-teal-400/20 text-teal-300 border border-teal-400/30">
+                  Reception Portal
+                </span>
+              </div>
             </div>
+            {/* Close Button on Mobile */}
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-1.5 rounded-lg text-teal-200 hover:text-white hover:bg-white/10 lg:hidden transition"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Navigation */}
-          <nav className="p-3 space-y-1.5 mt-2">
+          <nav className="p-3 space-y-1.5 mt-2 overflow-y-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id && !activeVisitPatient;
@@ -140,6 +166,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
                   onClick={() => {
                     setActiveVisitPatient(null);
                     setCurrentTab(item.id);
+                    setMobileMenuOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all group ${
                     isActive
@@ -189,35 +216,45 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-[100dvh] min-h-0 overflow-hidden">
         {/* Top Navbar */}
-        <header className="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shrink-0 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100">
-              <Building2 className="w-5 h-5" />
+        <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between shrink-0 shadow-xs">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Hamburger Button on Mobile */}
+            <button
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              className="p-1.5 -ml-1 text-slate-700 hover:bg-slate-100 rounded-lg lg:hidden transition flex items-center justify-center cursor-pointer"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100 shrink-0">
+              <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 leading-tight">
+            <div className="overflow-hidden">
+              <h2 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-none">
                 {appState.clinic?.name || 'MediHive Health Center'}
               </h2>
-              <p className="text-xs text-slate-500">
-                Front Desk / Patient Triage System
+              <p className="text-[10px] sm:text-xs text-slate-500 truncate">
+                Front Desk / Patient Triage
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Live Queue Status Pill */}
             <button
               onClick={() => {
                 setActiveVisitPatient(null);
                 setCurrentTab('queue');
+                setMobileMenuOpen(false);
               }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition cursor-pointer shrink-0"
               title="Click to view live queue"
             >
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-              <span>{activeWaitingCount} Patients in Line</span>
+              <span>{activeWaitingCount} <span className="hidden xs:inline">in Line</span></span>
             </button>
 
             {/* Current Time Display */}

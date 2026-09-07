@@ -82,31 +82,32 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full flex flex-col max-h-[92vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full flex flex-col max-h-[96dvh] sm:max-h-[92vh] overflow-hidden">
         
         {/* Modal Top Bar */}
-        <div className="px-6 py-3.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between no-print">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#1e536e]" />
-            <h3 className="font-bold text-slate-800 text-sm sm:text-base">
+        <div className="px-3 sm:px-6 py-2.5 sm:py-3.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between no-print">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-[#1e536e] shrink-0" />
+            <h3 className="font-bold text-slate-800 text-xs sm:text-base truncate">
               Prescription Preview — {patient.fullName} ({patient.id})
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition shrink-0"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Printable Prescription Document Area (Exact reproduction of Page 6) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100/50 flex justify-center">
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-2 sm:p-8 bg-slate-100/50 flex justify-center touch-scroll">
           <div
             ref={prescriptionRef}
             id="printable-prescription"
-            className="bg-white rounded-xl shadow-md border border-slate-200/90 w-full max-w-[720px] p-6 sm:p-10 text-slate-800 space-y-5 print:shadow-none print:border-none print:p-0"
+            className="bg-white rounded-xl shadow-md border border-slate-200/90 w-full max-w-[720px] min-w-[300px] p-4 sm:p-10 text-slate-800 space-y-4 sm:space-y-5 print:shadow-none print:border-none print:p-0"
           >
             {/* Header: Clinic Emblem + Clinic Details + Doctor Info */}
             <div className="border-b-2 border-[#1e536e] pb-4 flex flex-col sm:flex-row items-center justify-between gap-4">

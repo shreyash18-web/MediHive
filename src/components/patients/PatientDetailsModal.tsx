@@ -35,26 +35,26 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
   if (!isOpen || !patient) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 no-print">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6 no-print">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full flex flex-col max-h-[96dvh] sm:max-h-[90vh] overflow-hidden">
         
         {/* Modal Header matching Page 8 */}
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 capitalize">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+          <div className="overflow-hidden">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 capitalize truncate">
               {patient.fullName}
             </h2>
-            <p className="text-xs text-slate-500 font-mono">
+            <p className="text-[11px] sm:text-xs text-slate-500 font-mono truncate">
               {patient.id} • {patient.mobile} • {patient.gender}, {patient.age} yrs
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => {
                 onClose();
                 onAddNewOpd(patient.id);
               }}
-              className="text-xs bg-[#2da478] hover:bg-[#258d67] text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition"
+              className="text-xs bg-[#2da478] hover:bg-[#258d67] text-white font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New Visit</span>
@@ -62,6 +62,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
             <button
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
@@ -69,7 +70,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
         </div>
 
         {/* Visit History List matching Page 8 Cards */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-100/40">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4 bg-slate-100/40 touch-scroll">
           {patient.records.length === 0 ? (
             <div className="p-8 text-center bg-white rounded-xl border border-slate-200 text-slate-400 text-sm">
               No OPD consultation records found for this patient.

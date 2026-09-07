@@ -119,7 +119,7 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center shrink-0">
             <Users className="w-6 h-6" />
@@ -311,7 +311,7 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
           <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden bg-white shadow-sm">
             {filteredPatients.length > 0 ? (
               filteredPatients.map((p) => (
-                <div key={p.id} className="p-3.5 hover:bg-slate-50 transition flex items-center justify-between gap-3">
+                <div key={p.id} className="p-3.5 hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm text-slate-900">{p.fullName}</span>

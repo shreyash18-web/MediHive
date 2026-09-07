@@ -67,9 +67,9 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 no-print">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden">
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 no-print">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full max-h-[96dvh] flex flex-col overflow-hidden">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-base font-bold text-slate-800">Edit Patient Details</h2>
             <p className="text-xs text-slate-500 font-mono">ID: {patient.id}</p>
@@ -82,7 +82,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto touch-scroll">
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Full Name *</label>
             <input
@@ -153,17 +153,17 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
             />
           </div>
 
-          <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
+          <div className="pt-4 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition text-center"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-lg bg-[#2da478] hover:bg-[#258d67] text-white font-bold flex items-center gap-1.5 shadow-sm transition"
+              className="w-full sm:w-auto justify-center px-5 py-2 rounded-lg bg-[#2da478] hover:bg-[#258d67] text-white font-bold flex items-center gap-1.5 shadow-sm transition"
             >
               <Check className="w-4 h-4" />
               <span>Save Changes</span>
