@@ -9,37 +9,103 @@ export interface PrescribedMedicine {
   name: string;
   dosage: string; // e.g., '1 tab', '2 tsp', '10 ml'
   frequency: string; // e.g., '1-0-1', 'Once daily', 'Twice daily after food', 'Morning & Night'
-  timing: string; // 'Before Food' | 'After Food' | 'Empty Stomach' | 'With Warm Water'
+  timing?: string; // 'Before Food' | 'After Food' | 'Empty Stomach' | 'With Warm Water'
   duration: string; // e.g., '5 Days', '15 Days', '1 Month'
+  instruction?: string;
   instructions?: string;
 }
+
+export type PrescriptionItem = PrescribedMedicine;
 
 export interface OPDRecord {
   id: string;
   patientId: string;
   visitDate: string; // YYYY-MM-DD
-  opdType: OpdType;
-  chargeType: ChargeType;
+  opdType?: OpdType;
+  chargeType?: ChargeType;
   diagnosis: string;
   symptoms: string[];
+  complaint?: string;
+  vitals?: PatientVitals;
   uploadedImages?: string[]; // base64 or object URLs for skin treatment / clinical photos
-  medicines: PrescribedMedicine[];
+  medicines?: PrescribedMedicine[];
+  prescriptions?: PrescribedMedicine[];
   panchakarmaNotes?: string;
   clinicalNotes?: string;
   dietaryAdvice?: string;
   nextVisitDate?: string; // YYYY-MM-DD
+  tests?: string;
   
   // Billing details
-  consultationFee: number;
-  medicineFee: number;
-  panchakarmaFee: number;
-  discountType: DiscountType;
-  discountValue: number;
+  consultationFee?: number;
+  medicineFee?: number;
+  panchakarmaFee?: number;
+  discountType?: DiscountType;
+  discountValue?: number;
   totalFee: number;
-  paymentMode: PaymentMode;
-  paymentStatus: 'Paid' | 'Pending';
+  paymentMode?: PaymentMode;
+  paymentStatus?: 'Paid' | 'Pending';
   
   createdAt: string;
+}
+
+export interface PatientVitals {
+  temperature?: string; // in °F, e.g. '98.6'
+  bloodPressure?: string; // in mmHg, e.g. '120/80'
+  weight?: string; // in kg, e.g. '68'
+  spO2?: string; // in %, e.g. '98'
+  pulse?: string; // in bpm, e.g. '74'
+  respiratoryRate?: string;
+  otherVitals?: string;
+  // Aliases for convenience
+  temp?: string;
+  bp?: string;
+  spo2?: string;
+}
+
+export type QueueStatus = 'Waiting' | 'Next' | 'With Doctor' | 'Completed' | 'Cancelled';
+
+export interface PatientVisit {
+  id: string; // e.g., 'VIS-2026-001'
+  patientId: string;
+  patientName: string;
+  patientAge: number;
+  patientGender: Gender;
+  patientMobile: string;
+  visitDate: string; // YYYY-MM-DD
+  visitTime: string; // HH:mm
+  complaint: string;
+  symptoms: string[];
+  symptomDuration?: string;
+  vitals: PatientVitals;
+  receptionistId?: string;
+  receptionistName?: string;
+  queueId?: string;
+  queueNumber?: string;
+  status: QueueStatus;
+  createdAt: string;
+}
+
+export interface QueueItem {
+  id: string; // e.g., 'Q-001-ID'
+  queueNumber: string; // e.g., 'Q-001'
+  sequenceNumber: number; // 1, 2, 3...
+  visitId: string;
+  patientId: string;
+  patientName: string;
+  patientAge: number;
+  patientGender: Gender;
+  patientMobile: string;
+  complaint: string;
+  symptoms: string[];
+  symptomDuration?: string;
+  vitals: PatientVitals;
+  arrivalTime: string; // HH:mm or ISO
+  visitDate: string; // YYYY-MM-DD
+  status: QueueStatus;
+  doctorId?: string;
+  calledAt?: string;
+  completedAt?: string;
 }
 
 export interface Patient {
@@ -51,11 +117,15 @@ export interface Patient {
   mobile: string;
   address?: string;
   bloodGroup?: string;
+  emergencyContact?: string;
+  allergies?: string;
+  medicalHistory?: string;
   registrationDate: string; // YYYY-MM-DD
   lastVisitDate: string; // YYYY-MM-DD
   totalVisits: number;
   records: OPDRecord[];
   notes?: string;
+  createdAt?: string;
 }
 
 export interface Appointment {
@@ -85,6 +155,7 @@ export interface DoctorProfile {
   email: string;
   contact: string;
   photoUrl?: string;
+  consultationFee?: number;
 }
 
 export interface ClinicSettings {
@@ -121,6 +192,8 @@ export interface AppState {
   clinic: ClinicSettings;
   emailConfig: EmailConfig;
   patients: Patient[];
+  visits: PatientVisit[];
+  queue: QueueItem[];
   appointments: Appointment[];
   dailyNotes: Record<string, string>; // YYYY-MM-DD -> note
 }

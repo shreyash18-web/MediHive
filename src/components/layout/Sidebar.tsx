@@ -6,12 +6,14 @@ import {
   Calendar, 
   Settings, 
   HelpCircle, 
-  LogOut 
+  LogOut,
+  ListOrdered
 } from 'lucide-react';
 import { MediHiveLogo } from '../common/MediHiveLogo';
 
 export type NavigationTab = 
   | 'dashboard'
+  | 'queue'
   | 'opd'
   | 'patients'
   | 'calendar'
@@ -23,6 +25,7 @@ interface SidebarProps {
   onSelectTab: (tab: NavigationTab) => void;
   onLogout: () => void;
   pendingFollowUpsCount?: number;
+  activeQueueCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -30,9 +33,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   onLogout,
   pendingFollowUpsCount = 0,
+  activeQueueCount = 0,
 }) => {
   const navItems = [
     { id: 'dashboard' as NavigationTab, label: 'Dashboard', icon: LayoutDashboard },
+    { 
+      id: 'queue' as NavigationTab, 
+      label: 'Live Queue', 
+      icon: ListOrdered,
+      badge: activeQueueCount > 0 ? activeQueueCount : undefined
+    },
     { id: 'opd' as NavigationTab, label: 'OPD', icon: Stethoscope },
     { id: 'patients' as NavigationTab, label: 'Patient Management', icon: Users },
     { 

@@ -4,8 +4,13 @@ import {
   loadAppState, 
   saveAppState, 
   setStoredAuthUser, 
-  getStoredAuthUser 
+  getStoredAuthUser,
+  subscribeQueueEvents,
+  callPatientIntoCabin,
+  completeConsultationAndAdvanceQueue,
+  cancelPatientQueueItem
 } from './services/storage';
+import { QueueItem } from './types';
 import { ToastProvider, useToast } from './components/common/Toast';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, NavigationTab } from './components/layout/Sidebar';
@@ -19,6 +24,9 @@ import { EditPatientModal } from './components/patients/EditPatientModal';
 import { CalendarView } from './components/calendar/CalendarView';
 import { SettingsView } from './components/settings/SettingsView';
 import { HelpCenter } from './components/help/HelpCenter';
+import { ReceptionistLayout } from './components/receptionist/ReceptionistLayout';
+import { ReceptionistQueueView } from './components/receptionist/ReceptionistQueueView';
+import { DoctorConsultationModal } from './components/consultation/DoctorConsultationModal';
 import { format } from 'date-fns';
 
 const MainAppContent: React.FC = () => {
@@ -33,6 +41,7 @@ const MainAppContent: React.FC = () => {
     patient: Patient;
     record: OPDRecord;
   } | null>(null);
+  const [activeConsultationQueueItem, setActiveConsultationQueueItem] = useState<QueueItem | null>(null);
 
   const { showToast } = useToast();
 
@@ -40,6 +49,37 @@ const MainAppContent: React.FC = () => {
   useEffect(() => {
     saveAppState(appState);
   }, [appState]);
+
+  // Real-time synchronization across browser tabs
+  useEffect(() => {
+    const unsubscribe = subscribeQueueEvents(() => {
+      setAppState(loadAppState());
+    });
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'medihive_clinic_state_v1' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setAppState((prev) => ({
+            ...prev,
+            patients: parsed.patients || [],
+            visits: parsed.visits || [],
+            queue: parsed.queue || [],
+            appointments: parsed.appointments || [],
+            dailyNotes: parsed.dailyNotes || {},
+          }));
+        } catch (err) {
+          console.error('Storage cross-tab sync error:', err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   // Check follow-ups due today on load
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -54,6 +94,13 @@ const MainAppContent: React.FC = () => {
     });
     return list;
   }, [appState.patients, todayStr]);
+
+  // Waiting queue count for today
+  const activeWaitingQueueCount = useMemo(() => {
+    return (appState.queue || []).filter(
+      (q) => q.visitDate === todayStr && (q.status === 'Waiting' || q.status === 'Next')
+    ).length;
+  }, [appState.queue, todayStr]);
 
   // Handle Login / Logout
   const handleLogin = (user: UserAccount) => {
@@ -143,9 +190,53 @@ const MainAppContent: React.FC = () => {
     saveAppState(restoredState);
   };
 
+  // Queue actions for doctor
+  const handleDoctorCallPatient = (queueId?: string) => {
+    const { updatedState, activePatient } = callPatientIntoCabin(appState, queueId);
+    setAppState(updatedState);
+    if (activePatient) {
+      showToast(`Calling ${activePatient.patientName} (${activePatient.queueNumber}) into Cabin`, 'info');
+    }
+  };
+
+  const handleCompleteConsultation = (opdRecord: OPDRecord, autoCallNext: boolean) => {
+    if (!activeConsultationQueueItem) return;
+    const { updatedState, nextPatient } = completeConsultationAndAdvanceQueue(
+      appState,
+      activeConsultationQueueItem.id,
+      opdRecord
+    );
+
+    if (autoCallNext && nextPatient) {
+      const advanced = callPatientIntoCabin(updatedState, nextPatient.id);
+      setAppState(advanced.updatedState);
+      setActiveConsultationQueueItem(advanced.activePatient);
+    } else {
+      setAppState(updatedState);
+      setActiveConsultationQueueItem(null);
+    }
+  };
+
+  const handleCancelQueueItem = (queueId: string) => {
+    const updated = cancelPatientQueueItem(appState, queueId);
+    setAppState(updated);
+    showToast('Queue ticket cancelled', 'info');
+  };
+
   // If user is not logged in, show Login Screen
   if (!appState.currentUser) {
     return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  // If user is receptionist, show dedicated Receptionist Portal
+  if (appState.currentUser.role === 'receptionist') {
+    return (
+      <ReceptionistLayout
+        appState={appState}
+        onUpdateAppState={setAppState}
+        onLogout={handleLogout}
+      />
+    );
   }
 
   return (
@@ -159,6 +250,7 @@ const MainAppContent: React.FC = () => {
         }}
         onLogout={handleLogout}
         pendingFollowUpsCount={todaysFollowUps.length}
+        activeQueueCount={activeWaitingQueueCount}
       />
 
       {/* Main Content Area */}
@@ -176,6 +268,7 @@ const MainAppContent: React.FC = () => {
           {currentTab === 'dashboard' && (
             <Dashboard
               patients={appState.patients}
+              queue={appState.queue}
               onAddPatient={() => {
                 setPreselectedOpdPatientId(undefined);
                 setCurrentTab('opd');
@@ -188,7 +281,25 @@ const MainAppContent: React.FC = () => {
               }}
               onNavigateToCalendar={() => setCurrentTab('calendar')}
               onNavigateToPatients={() => setCurrentTab('patients')}
+              onCallPatientIntoCabin={handleDoctorCallPatient}
+              onOpenConsultation={(item) => setActiveConsultationQueueItem(item)}
+              onNavigateToQueue={() => setCurrentTab('queue')}
             />
+          )}
+
+          {currentTab === 'queue' && (
+            <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 page-fade-in">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">Doctor's Live Clinic Queue</h1>
+                  <p className="text-xs text-slate-500">Live FIFO patient sequence and cabin admission</p>
+                </div>
+              </div>
+              <ReceptionistQueueView
+                queue={appState.queue}
+                onCancelQueueItem={handleCancelQueueItem}
+              />
+            </div>
           )}
 
           {currentTab === 'opd' && (
@@ -298,6 +409,37 @@ const MainAppContent: React.FC = () => {
           onConfirmSave={() => {
             setPrescriptionData(null);
             showToast('Prescription confirmed and archived!', 'success');
+          }}
+        />
+      )}
+
+      {/* MODAL: Doctor Active Consultation Modal */}
+      {activeConsultationQueueItem && (
+        <DoctorConsultationModal
+          isOpen={Boolean(activeConsultationQueueItem)}
+          onClose={() => setActiveConsultationQueueItem(null)}
+          queueItem={activeConsultationQueueItem}
+          patient={
+            appState.patients.find((p) => p.id === activeConsultationQueueItem.patientId) || {
+              id: activeConsultationQueueItem.patientId,
+              fullName: activeConsultationQueueItem.patientName,
+              age: activeConsultationQueueItem.patientAge,
+              gender: activeConsultationQueueItem.patientGender,
+              mobile: activeConsultationQueueItem.patientMobile,
+              registrationDate: todayStr,
+              lastVisitDate: todayStr,
+              records: [],
+              totalVisits: 0,
+              createdAt: '',
+            }
+          }
+          doctor={appState.doctor}
+          clinic={appState.clinic}
+          existingPatients={appState.patients}
+          onCompleteConsultation={handleCompleteConsultation}
+          onViewHistory={(patient) => setViewingPatient(patient)}
+          onPreviewPrescription={(patient, record) => {
+            setPrescriptionData({ patient, record });
           }}
         />
       )}

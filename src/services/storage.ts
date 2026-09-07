@@ -7,7 +7,11 @@ import {
   ClinicSettings, 
   EmailConfig, 
   Appointment, 
-  UserAccount 
+  UserAccount,
+  PatientVisit,
+  PatientVitals,
+  QueueItem,
+  QueueStatus
 } from '../types';
 import { 
   initialDoctor, 
@@ -17,37 +21,60 @@ import {
 
 const STORAGE_KEY = 'medihive_app_state_v2';
 const AUTH_KEY = 'medihive_auth_user';
-const ACCOUNTS_KEY = 'medihive_accounts_v1';
+const ACCOUNTS_KEY = 'medihive_accounts_v2';
+const QUEUE_CHANNEL_NAME = 'medihive_queue_sync_channel';
 
-// One-time cleanup for old cached session if migrating from v1
-if (typeof window !== 'undefined' && localStorage.getItem('medihive_app_state_v1')) {
-  localStorage.removeItem('medihive_app_state_v1');
-  localStorage.removeItem(AUTH_KEY);
-}
-
-export const defaultAdminUser: UserAccount = {
-  id: 'usr-1',
-  username: 'admin',
-  name: 'Doctor / Admin',
-  role: 'doctor',
-  passwordHash: 'admin123',
-};
+// Default multi-role accounts
+export const defaultAccounts: UserAccount[] = [
+  {
+    id: 'usr-doc',
+    username: 'doctor',
+    name: 'Dr. Shweta N. Sawant',
+    role: 'doctor',
+    passwordHash: 'doctor123',
+  },
+  {
+    id: 'usr-admin',
+    username: 'admin',
+    name: 'Dr. Shweta (Admin)',
+    role: 'doctor',
+    passwordHash: 'admin123',
+  },
+  {
+    id: 'usr-rec',
+    username: 'receptionist',
+    name: 'Clinic Reception',
+    role: 'receptionist',
+    passwordHash: 'reception123',
+  },
+  {
+    id: 'usr-rec2',
+    username: 'reception',
+    name: 'Reception Desk',
+    role: 'receptionist',
+    passwordHash: 'reception123',
+  },
+];
 
 export const getStoredAccounts = (): UserAccount[] => {
   try {
     const raw = localStorage.getItem(ACCOUNTS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
   } catch (e) {
     console.error('Error loading accounts', e);
   }
-  return [defaultAdminUser];
+  return defaultAccounts;
 };
 
 export const validateCredentials = (username: string, password: string): UserAccount | null => {
   const accounts = getStoredAccounts();
   const trimmedUser = username.trim().toLowerCase();
+  const trimmedPass = password.trim();
   const found = accounts.find(
-    (acc) => acc.username.toLowerCase() === trimmedUser && acc.passwordHash === password.trim()
+    (acc) => acc.username.toLowerCase() === trimmedUser && acc.passwordHash === trimmedPass
   );
   return found || null;
 };
@@ -87,6 +114,79 @@ export const setStoredAuthUser = (user: UserAccount | null) => {
   }
 };
 
+// Real-time synchronization via BroadcastChannel & Storage events
+export const broadcastQueueEvent = (event: { type: string; payload?: any }) => {
+  try {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const channel = new BroadcastChannel(QUEUE_CHANNEL_NAME);
+      channel.postMessage({ ...event, timestamp: Date.now() });
+      channel.close();
+    }
+  } catch (err) {
+    console.warn('BroadcastChannel error:', err);
+  }
+};
+
+export const subscribeQueueEvents = (callback: (event: any) => void): (() => void) => {
+  if (typeof window === 'undefined') return () => {};
+
+  let channel: BroadcastChannel | null = null;
+  const storageHandler = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY) {
+      callback({ type: 'STORAGE_SYNC' });
+    }
+  };
+
+  try {
+    if ('BroadcastChannel' in window) {
+      channel = new BroadcastChannel(QUEUE_CHANNEL_NAME);
+      channel.onmessage = (msg) => {
+        callback(msg.data);
+      };
+    }
+  } catch (err) {
+    console.warn('BroadcastChannel init error:', err);
+  }
+
+  window.addEventListener('storage', storageHandler);
+
+  return () => {
+    if (channel) channel.close();
+    window.removeEventListener('storage', storageHandler);
+  };
+};
+
+// Generate next Visit ID (e.g. VIS-2026-001)
+export const generateNextVisitId = (visits: PatientVisit[]): string => {
+  const currentYear = new Date().getFullYear();
+  let maxNum = 0;
+  (visits || []).forEach(v => {
+    const match = v.id.match(/VIS-\d+-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) maxNum = num;
+    }
+  });
+  const nextNum = maxNum + 1;
+  return `VIS-${currentYear}-${nextNum.toString().padStart(3, '0')}`;
+};
+
+// Generate next Queue Number (e.g. Q-001)
+export const generateNextQueueNumber = (queue: QueueItem[]): string => {
+  const today = new Date().toISOString().slice(0, 10);
+  const todaysItems = (queue || []).filter(q => q.visitDate === today);
+  let maxNum = 0;
+  todaysItems.forEach(item => {
+    const match = item.queueNumber.match(/Q-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) maxNum = num;
+    }
+  });
+  const nextNum = maxNum + 1;
+  return `Q-${nextNum.toString().padStart(3, '0')}`;
+};
+
 export const loadAppState = (): AppState => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -98,6 +198,8 @@ export const loadAppState = (): AppState => {
         clinic: parsed.clinic || initialClinic,
         emailConfig: parsed.emailConfig || initialEmailConfig,
         patients: parsed.patients || [],
+        visits: parsed.visits || [],
+        queue: parsed.queue || [],
         appointments: parsed.appointments || [],
         dailyNotes: parsed.dailyNotes || {},
       };
@@ -112,6 +214,8 @@ export const loadAppState = (): AppState => {
     clinic: initialClinic,
     emailConfig: initialEmailConfig,
     patients: [],
+    visits: [],
+    queue: [],
     appointments: [],
     dailyNotes: {},
   };
@@ -157,6 +261,242 @@ export const generateNextOpdId = (patients: Patient[]): string => {
   });
   const nextNum = maxNum + 1;
   return `OPD-${currentYear}-${nextNum.toString().padStart(3, '0')}`;
+};
+
+// Add new visit and create queue item in FIFO queue
+export const createVisitAndAddToQueue = (
+  appState: AppState,
+  patient: Patient,
+  visitInput: {
+    complaint: string;
+    symptoms: string[];
+    symptomDuration?: string;
+    vitals: PatientVitals;
+    receptionistId?: string;
+    receptionistName?: string;
+  }
+): { updatedState: AppState; newQueueItem: QueueItem; newVisit: PatientVisit } => {
+  const visitId = generateNextVisitId(appState.visits);
+  const queueNumber = generateNextQueueNumber(appState.queue);
+  const today = new Date().toISOString().slice(0, 10);
+  const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  const queueId = `Q-${Date.now()}`;
+
+  // Check if any patient is currently "With Doctor" or "Next"
+  const hasActivePatient = (appState.queue || []).some(q => q.status === 'With Doctor' && q.visitDate === today);
+  const hasNextPatient = (appState.queue || []).some(q => q.status === 'Next' && q.visitDate === today);
+  
+  // Strict FIFO: if no patient is currently with doctor and none is next, mark as Next, else Waiting
+  const initialStatus: QueueStatus = (!hasActivePatient && !hasNextPatient) ? 'Next' : 'Waiting';
+
+  const newVisit: PatientVisit = {
+    id: visitId,
+    patientId: patient.id,
+    patientName: patient.fullName,
+    patientAge: patient.age,
+    patientGender: patient.gender,
+    patientMobile: patient.mobile,
+    visitDate: today,
+    visitTime: timeNow,
+    complaint: visitInput.complaint,
+    symptoms: visitInput.symptoms,
+    symptomDuration: visitInput.symptomDuration,
+    vitals: visitInput.vitals,
+    receptionistId: visitInput.receptionistId,
+    receptionistName: visitInput.receptionistName,
+    queueId: queueId,
+    queueNumber: queueNumber,
+    status: initialStatus,
+    createdAt: new Date().toISOString(),
+  };
+
+  const newQueueItem: QueueItem = {
+    id: queueId,
+    queueNumber: queueNumber,
+    sequenceNumber: Date.now(),
+    visitId: visitId,
+    patientId: patient.id,
+    patientName: patient.fullName,
+    patientAge: patient.age,
+    patientGender: patient.gender,
+    patientMobile: patient.mobile,
+    complaint: visitInput.complaint,
+    symptoms: visitInput.symptoms,
+    symptomDuration: visitInput.symptomDuration,
+    vitals: visitInput.vitals,
+    arrivalTime: timeNow,
+    visitDate: today,
+    status: initialStatus,
+  };
+
+  const updatedState: AppState = {
+    ...appState,
+    visits: [newVisit, ...(appState.visits || [])],
+    queue: [...(appState.queue || []), newQueueItem],
+  };
+
+  saveAppState(updatedState);
+  broadcastQueueEvent({ type: 'QUEUE_UPDATED', payload: { newQueueItem } });
+
+  return { updatedState, newQueueItem, newVisit };
+};
+
+// Doctor calls patient into cabin
+export const callPatientIntoCabin = (
+  appState: AppState,
+  queueId?: string
+): { updatedState: AppState; activePatient: QueueItem | null } => {
+  const today = new Date().toISOString().slice(0, 10);
+  const queue = [...(appState.queue || [])];
+
+  // Target item to call: either specified queueId, or the first 'Next', or the first 'Waiting'
+  let targetIndex = -1;
+  if (queueId) {
+    targetIndex = queue.findIndex(q => q.id === queueId);
+  } else {
+    targetIndex = queue.findIndex(q => q.status === 'Next' && q.visitDate === today);
+    if (targetIndex === -1) {
+      targetIndex = queue.findIndex(q => q.status === 'Waiting' && q.visitDate === today);
+    }
+  }
+
+  if (targetIndex === -1) {
+    return { updatedState: appState, activePatient: null };
+  }
+
+  const nowIso = new Date().toISOString();
+  const updatedItem: QueueItem = {
+    ...queue[targetIndex],
+    status: 'With Doctor',
+    calledAt: nowIso,
+  };
+  queue[targetIndex] = updatedItem;
+
+  // Make sure the next waiting patient in line is marked 'Next'
+  let foundNext = false;
+  for (let i = 0; i < queue.length; i++) {
+    if (i !== targetIndex && queue[i].visitDate === today && queue[i].status === 'Waiting') {
+      if (!foundNext) {
+        queue[i] = { ...queue[i], status: 'Next' };
+        foundNext = true;
+      }
+    }
+  }
+
+  // Update corresponding visit status
+  const updatedVisits = (appState.visits || []).map(v => 
+    v.queueId === updatedItem.id ? { ...v, status: 'With Doctor' as QueueStatus } : v
+  );
+
+  const updatedState: AppState = {
+    ...appState,
+    queue,
+    visits: updatedVisits,
+  };
+
+  saveAppState(updatedState);
+  broadcastQueueEvent({ type: 'PATIENT_CALLED', payload: { activePatient: updatedItem } });
+
+  return { updatedState, activePatient: updatedItem };
+};
+
+// Doctor completes consultation and automatically calls next FIFO patient
+export const completeConsultationAndAdvanceQueue = (
+  appState: AppState,
+  queueId: string,
+  opdRecord: OPDRecord
+): { updatedState: AppState; nextPatient: QueueItem | null } => {
+  const today = new Date().toISOString().slice(0, 10);
+  const queue = [...(appState.queue || [])];
+  const qIdx = queue.findIndex(q => q.id === queueId);
+
+  if (qIdx !== -1) {
+    queue[qIdx] = {
+      ...queue[qIdx],
+      status: 'Completed',
+      completedAt: new Date().toISOString(),
+    };
+  }
+
+  // Save the OPD record to the patient's record history
+  const updatedPatients = (appState.patients || []).map(p => {
+    if (p.id === opdRecord.patientId) {
+      const records = [opdRecord, ...(p.records || [])];
+      return {
+        ...p,
+        totalVisits: (p.totalVisits || 0) + 1,
+        lastVisitDate: opdRecord.visitDate || today,
+        records,
+      };
+    }
+    return p;
+  });
+
+  // Update visit record
+  const updatedVisits = (appState.visits || []).map(v => 
+    v.queueId === queueId ? { ...v, status: 'Completed' as QueueStatus } : v
+  );
+
+  // Automatically find the next FIFO patient
+  let nextPatientIdx = queue.findIndex(q => q.visitDate === today && q.status === 'Next');
+  if (nextPatientIdx === -1) {
+    nextPatientIdx = queue.findIndex(q => q.visitDate === today && q.status === 'Waiting');
+  }
+
+  let nextPatient: QueueItem | null = null;
+  if (nextPatientIdx !== -1) {
+    nextPatient = {
+      ...queue[nextPatientIdx],
+      status: 'Next',
+    };
+    queue[nextPatientIdx] = nextPatient;
+  }
+
+  const updatedState: AppState = {
+    ...appState,
+    patients: updatedPatients,
+    visits: updatedVisits,
+    queue,
+  };
+
+  saveAppState(updatedState);
+  broadcastQueueEvent({ type: 'CONSULTATION_COMPLETED', payload: { completedQueueId: queueId, nextPatient } });
+
+  return { updatedState, nextPatient };
+};
+
+// Cancel a queue item (patient leaves before consultation)
+export const cancelPatientQueueItem = (
+  appState: AppState,
+  queueId: string
+): AppState => {
+  const today = new Date().toISOString().slice(0, 10);
+  const queue = (appState.queue || []).map(q => 
+    q.id === queueId ? { ...q, status: 'Cancelled' as QueueStatus } : q
+  );
+
+  // Ensure next waiting patient becomes 'Next' if cancelled one was 'Next'
+  let hasNext = queue.some(q => q.status === 'Next' && q.visitDate === today);
+  if (!hasNext) {
+    const firstWaitingIdx = queue.findIndex(q => q.status === 'Waiting' && q.visitDate === today);
+    if (firstWaitingIdx !== -1) {
+      queue[firstWaitingIdx] = { ...queue[firstWaitingIdx], status: 'Next' };
+    }
+  }
+
+  const updatedVisits = (appState.visits || []).map(v => 
+    v.queueId === queueId ? { ...v, status: 'Cancelled' as QueueStatus } : v
+  );
+
+  const updatedState: AppState = {
+    ...appState,
+    queue,
+    visits: updatedVisits,
+  };
+
+  saveAppState(updatedState);
+  broadcastQueueEvent({ type: 'QUEUE_UPDATED' });
+  return updatedState;
 };
 
 // Helper: Export Backup as Excel or JSON

@@ -13,29 +13,42 @@ import {
   Calendar as CalendarIcon,
   CheckCircle2,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Stethoscope,
+  ArrowRight,
+  Activity,
+  UserCheck,
+  Phone
 } from 'lucide-react';
-import { Patient, OPDRecord } from '../../types';
+import { Patient, OPDRecord, QueueItem } from '../../types';
 import { format, isSameDay, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isAfter, isBefore, addDays, addMonths, subMonths } from 'date-fns';
 
 interface DashboardProps {
   patients: Patient[];
+  queue?: QueueItem[];
   onAddPatient: () => void;
   onViewPatient: (patient: Patient) => void;
   onEditPatient: (patient: Patient) => void;
   onNavigateToOpd: (patientId?: string) => void;
   onNavigateToCalendar: (date?: string) => void;
   onNavigateToPatients: () => void;
+  onCallPatientIntoCabin?: (queueId?: string) => void;
+  onOpenConsultation?: (queueItem: QueueItem) => void;
+  onNavigateToQueue?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   patients,
+  queue = [],
   onAddPatient,
   onViewPatient,
   onEditPatient,
   onNavigateToOpd,
   onNavigateToCalendar,
   onNavigateToPatients,
+  onCallPatientIntoCabin,
+  onOpenConsultation,
+  onNavigateToQueue,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [revenuePeriod, setRevenuePeriod] = useState<'today' | 'weekly' | 'monthly' | 'yearly'>('today');
@@ -139,6 +152,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
     });
   }, [selectedDate]);
 
+  // Queue computations for today
+  const todaysQueue = useMemo(() => {
+    return (queue || []).filter((q) => q.visitDate === todayStr);
+  }, [queue, todayStr]);
+
+  const currentWithDoctor = useMemo(() => {
+    return todaysQueue.find((q) => q.status === 'With Doctor');
+  }, [todaysQueue]);
+
+  const nextInLine = useMemo(() => {
+    return todaysQueue
+      .filter((q) => q.status === 'Next' || q.status === 'Waiting')
+      .sort((a, b) => a.sequenceNumber - b.sequenceNumber)[0];
+  }, [todaysQueue]);
+
+  const waitingQueueList = useMemo(() => {
+    return todaysQueue
+      .filter((q) => q.status === 'Next' || q.status === 'Waiting')
+      .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+  }, [todaysQueue]);
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 page-fade-in">
       {/* Top Bar: Search + Add Patient Button + Mini Calendar strip */}
@@ -212,6 +246,200 @@ export const Dashboard: React.FC<DashboardProps> = ({
               })}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Live Clinic Queue & Cabin Status Widget */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-[#194358] to-[#255f7c] text-white px-5 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h2 className="text-sm font-bold tracking-wide uppercase">Live Consultation Cabin</h2>
+            <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-white/15 text-sky-100 border border-white/20">
+              FIFO Real-Time Queue
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-sky-200 font-medium">
+              Waiting: <strong className="text-white">{waitingQueueList.length}</strong>
+            </span>
+            {onNavigateToQueue && (
+              <button
+                onClick={onNavigateToQueue}
+                className="text-xs font-semibold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-lg border border-white/20 transition flex items-center gap-1"
+              >
+                <span>Full Queue</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="p-5">
+          {currentWithDoctor ? (
+            /* Patient is currently in cabin */
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4 sm:p-5">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center font-black text-lg shadow-sm shrink-0">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-100">Token</span>
+                  <span>{currentWithDoctor.queueNumber}</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white tracking-wide uppercase">
+                      Now in Cabin
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">{currentWithDoctor.patientName}</h3>
+                    <span className="text-xs text-slate-500 font-medium">
+                      ({currentWithDoctor.patientAge}y, {currentWithDoctor.patientGender}) • ID: {currentWithDoctor.patientId}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs text-slate-600 pt-0.5">
+                    <span className="flex items-center gap-1 text-slate-500">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      {currentWithDoctor.patientMobile}
+                    </span>
+                    <span>•</span>
+                    <span>
+                      Complaint: <strong className="text-slate-800">{currentWithDoctor.complaint || 'Checkup'}</strong>
+                    </span>
+                    {currentWithDoctor.symptoms && currentWithDoctor.symptoms.length > 0 && (
+                      <span className="hidden sm:inline-flex items-center gap-1">
+                        ({currentWithDoctor.symptoms.slice(0, 3).join(', ')})
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Vitals summary preview */}
+                  {currentWithDoctor.vitals && (
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600 pt-1.5">
+                      <span className="bg-white px-2 py-0.5 rounded border border-emerald-200">
+                        BP: <strong className="text-slate-800">{currentWithDoctor.vitals.bp || '—'}</strong>
+                      </span>
+                      <span className="bg-white px-2 py-0.5 rounded border border-emerald-200">
+                        Temp: <strong className="text-slate-800">{currentWithDoctor.vitals.temp ? `${currentWithDoctor.vitals.temp}°F` : '—'}</strong>
+                      </span>
+                      <span className="bg-white px-2 py-0.5 rounded border border-emerald-200">
+                        Pulse: <strong className="text-slate-800">{currentWithDoctor.vitals.pulse ? `${currentWithDoctor.vitals.pulse} bpm` : '—'}</strong>
+                      </span>
+                      <span className="bg-white px-2 py-0.5 rounded border border-emerald-200">
+                        SpO2: <strong className="text-slate-800">{currentWithDoctor.vitals.spo2 ? `${currentWithDoctor.vitals.spo2}%` : '—'}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+                <button
+                  onClick={() => onOpenConsultation && onOpenConsultation(currentWithDoctor)}
+                  className="w-full md:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
+                >
+                  <Stethoscope className="w-4 h-4" />
+                  <span>Open Consultation</span>
+                </button>
+              </div>
+            </div>
+          ) : nextInLine ? (
+            /* Cabin is available and patients are waiting in queue */
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 bg-sky-50/60 border border-sky-200/80 rounded-xl p-4 sm:p-5">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex flex-col items-center justify-center font-black text-lg shadow-sm shrink-0">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-amber-100">Next</span>
+                  <span>{nextInLine.queueNumber}</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white tracking-wide uppercase">
+                      Ready to Call
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">{nextInLine.patientName}</h3>
+                    <span className="text-xs text-slate-500 font-medium">
+                      ({nextInLine.patientAge}y, {nextInLine.patientGender}) • ID: {nextInLine.patientId}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600">
+                    Complaint: <strong className="text-slate-800">{nextInLine.complaint || 'Checkup'}</strong>
+                    {nextInLine.symptoms && nextInLine.symptoms.length > 0 && ` (${nextInLine.symptoms.join(', ')})`}
+                    {nextInLine.symptomDuration && ` • Duration: ${nextInLine.symptomDuration}`}
+                  </p>
+
+                  {nextInLine.vitals && (
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600 pt-1">
+                      <span className="bg-white px-2 py-0.5 rounded border border-sky-200">
+                        BP: <strong className="text-slate-800">{nextInLine.vitals.bp || '—'}</strong>
+                      </span>
+                      <span className="bg-white px-2 py-0.5 rounded border border-sky-200">
+                        Temp: <strong className="text-slate-800">{nextInLine.vitals.temp ? `${nextInLine.vitals.temp}°F` : '—'}</strong>
+                      </span>
+                      <span className="bg-white px-2 py-0.5 rounded border border-sky-200">
+                        SpO2: <strong className="text-slate-800">{nextInLine.vitals.spo2 ? `${nextInLine.vitals.spo2}%` : '—'}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+                <button
+                  onClick={() => onCallPatientIntoCabin && onCallPatientIntoCabin(nextInLine.id)}
+                  className="w-full md:w-auto px-5 py-2.5 bg-[#194358] hover:bg-[#205570] text-white text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
+                >
+                  <UserCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Call Patient into Cabin</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Queue is empty */
+            <div className="py-6 text-center text-slate-500 bg-slate-50 rounded-xl border border-slate-100">
+              <Clock className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-700">Cabin is open and queue is empty</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Patients registered by the receptionist will immediately appear here in FIFO order.
+              </p>
+            </div>
+          )}
+
+          {/* Mini Waiting Pipeline if multiple patients are in queue */}
+          {waitingQueueList.length > 1 && (
+            <div className="mt-4 pt-3.5 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                  Upcoming in Line ({waitingQueueList.length} total)
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                {waitingQueueList.slice(0, 3).map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <span className="w-7 h-7 rounded-lg bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold text-slate-800 truncate">{item.patientName}</p>
+                        <p className="text-[11px] text-slate-500 truncate">{item.queueNumber} • {item.complaint || 'Checkup'}</p>
+                      </div>
+                    </div>
+                    {item.status !== 'With Doctor' && (
+                      <button
+                        onClick={() => onCallPatientIntoCabin && onCallPatientIntoCabin(item.id)}
+                        className="px-2 py-1 bg-white hover:bg-slate-200 text-[11px] font-semibold text-sky-800 rounded border border-slate-300 shrink-0 transition"
+                      >
+                        Call
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
