@@ -21,6 +21,7 @@ interface PatientManagementProps {
   onViewPatient: (patient: Patient) => void;
   onEditPatient: (patient: Patient) => void;
   onPrintLatestPrescription: (patient: Patient, record: OPDRecord) => void;
+  onDeletePatient?: (patientId: string) => void;
   onBack: () => void;
 }
 
@@ -30,10 +31,12 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
   onViewPatient,
   onEditPatient,
   onPrintLatestPrescription,
+  onDeletePatient,
   onBack,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState<'All' | 'Male' | 'Female' | 'Other'>('All');
+  const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
   const { showToast } = useToast();
 
   const filteredPatients = useMemo(() => {
@@ -216,6 +219,17 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
                         >
                           <Printer className="w-4 h-4" />
                         </button>
+
+                        {/* Trash Icon - Delete Patient */}
+                        {onDeletePatient && (
+                          <button
+                            onClick={() => setPatientToDelete(patient)}
+                            title="Delete Patient Record"
+                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -225,6 +239,65 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Delete Patient Confirmation Modal */}
+      {patientToDelete && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-rose-100 text-rose-600 rounded-xl">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Delete Patient Record</h3>
+                <p className="text-xs text-slate-500">Permanent data removal</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-1.5 text-xs text-slate-700">
+              <p>
+                <strong className="text-slate-900">Patient:</strong> {patientToDelete.fullName}
+              </p>
+              <p>
+                <strong className="text-slate-900">Patient ID:</strong> <span className="font-mono">{patientToDelete.id}</span>
+              </p>
+              <p>
+                <strong className="text-slate-900">Mobile:</strong> {patientToDelete.mobile}
+              </p>
+              <p>
+                <strong className="text-slate-900">Total Visits:</strong> {patientToDelete.records ? patientToDelete.records.length : 0}
+              </p>
+            </div>
+
+            <p className="text-xs text-rose-600 leading-relaxed bg-rose-50 p-3 rounded-lg border border-rose-200">
+              Warning: Deleting this patient will permanently remove their records, OPD visits, prescriptions, and queue entries from both Supabase and local storage. This action cannot be undone.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPatientToDelete(null)}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeletePatient && patientToDelete) {
+                    onDeletePatient(patientToDelete.id);
+                    setPatientToDelete(null);
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Yes, Delete Patient</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

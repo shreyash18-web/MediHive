@@ -21,7 +21,13 @@ import {
   updateDoctorProfileInSupabase,
   updateClinicSettingsInSupabase,
   updateEmailConfigInSupabase,
-  subscribeToClinicRealtime
+  subscribeToClinicRealtime,
+  deletePatientInSupabase,
+  deleteOpdRecordInSupabase,
+  deleteDailyNoteInSupabase,
+  deleteQueueItemInSupabase,
+  clearCompletedQueueInSupabase,
+  clearAllClinicDataFromSupabase
 } from './services/supabaseService';
 import { isSupabaseConfigured } from './lib/supabase';
 import { QueueItem } from './types';
@@ -255,6 +261,121 @@ const MainAppContent: React.FC = () => {
     });
   };
 
+  const handleDeletePatient = (patientId: string) => {
+    setAppState((prev) => ({
+      ...prev,
+      patients: prev.patients.filter((p) => p.id !== patientId),
+      visits: prev.visits.filter((v) => v.patientId !== patientId),
+      queue: prev.queue.filter((q) => q.patientId !== patientId),
+      appointments: prev.appointments.filter((a) => a.patientId !== patientId),
+    }));
+    if (viewingPatient?.id === patientId) {
+      setViewingPatient(null);
+    }
+    if (editingPatient?.id === patientId) {
+      setEditingPatient(null);
+    }
+    showToast('Patient and associated records deleted.', 'info');
+    deletePatientInSupabase(patientId).catch((err) => {
+      console.warn('Supabase deletePatient error:', err);
+    });
+  };
+
+  const handleDeleteOpdRecord = (patientId: string, recordId: string) => {
+    setAppState((prev) => {
+      const updatedPatients = prev.patients.map((p) => {
+        if (p.id === patientId) {
+          const updatedRecords = p.records.filter((r) => r.id !== recordId);
+          return {
+            ...p,
+            records: updatedRecords,
+            totalVisits: updatedRecords.length,
+            lastVisitDate: updatedRecords[0]?.visitDate || p.registrationDate,
+          };
+        }
+        return p;
+      });
+
+      return {
+        ...prev,
+        patients: updatedPatients,
+      };
+    });
+
+    if (viewingPatient && viewingPatient.id === patientId) {
+      setViewingPatient((prev) => {
+        if (!prev) return null;
+        const updatedRecords = prev.records.filter((r) => r.id !== recordId);
+        return {
+          ...prev,
+          records: updatedRecords,
+          totalVisits: updatedRecords.length,
+          lastVisitDate: updatedRecords[0]?.visitDate || prev.registrationDate,
+        };
+      });
+    }
+
+    showToast('Consultation record deleted.', 'info');
+    deleteOpdRecordInSupabase(recordId, patientId).catch((err) => {
+      console.warn('Supabase deleteOpdRecord error:', err);
+    });
+  };
+
+  const handleDeleteDailyNote = (date: string) => {
+    setAppState((prev) => {
+      const nextNotes = { ...prev.dailyNotes };
+      delete nextNotes[date];
+      return {
+        ...prev,
+        dailyNotes: nextNotes,
+      };
+    });
+    deleteDailyNoteInSupabase(date).catch((err) => {
+      console.warn('Supabase deleteDailyNote error:', err);
+    });
+  };
+
+  const handleDeleteQueueItem = (queueId: string) => {
+    setAppState((prev) => ({
+      ...prev,
+      queue: prev.queue.filter((q) => q.id !== queueId),
+    }));
+    deleteQueueItemInSupabase(queueId).catch((err) => {
+      console.warn('Supabase deleteQueueItem error:', err);
+    });
+  };
+
+  const handleClearCompletedQueue = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    setAppState((prev) => ({
+      ...prev,
+      queue: prev.queue.filter(
+        (q) => !(q.visitDate === today && (q.status === 'Completed' || q.status === 'Cancelled'))
+      ),
+    }));
+    clearCompletedQueueInSupabase().catch((err) => {
+      console.warn('Supabase clearCompletedQueue error:', err);
+    });
+  };
+
+  const handleClearAllClinicData = () => {
+    setAppState((prev) => ({
+      ...prev,
+      patients: [],
+      visits: [],
+      queue: [],
+      appointments: [],
+      dailyNotes: {},
+    }));
+    setViewingPatient(null);
+    setEditingPatient(null);
+    setPrescriptionData(null);
+    setActiveConsultationQueueItem(null);
+    clearAllClinicDataFromSupabase().catch((err) => {
+      console.warn('Supabase clearAllClinicData error:', err);
+    });
+  };
+
   const handleUpdateDoctor = (doctor: DoctorProfile) => {
     setAppState((prev) => ({ ...prev, doctor }));
     updateDoctorProfileInSupabase(doctor).catch((err) => {
@@ -393,6 +514,8 @@ const MainAppContent: React.FC = () => {
               <ReceptionistQueueView
                 queue={appState.queue}
                 onCancelQueueItem={handleCancelQueueItem}
+                onDeleteQueueItem={handleDeleteQueueItem}
+                onClearCompletedQueue={handleClearCompletedQueue}
               />
             </div>
           )}
@@ -418,6 +541,7 @@ const MainAppContent: React.FC = () => {
               }}
               onViewPatient={(patient) => setViewingPatient(patient)}
               onEditPatient={(patient) => setEditingPatient(patient)}
+              onDeletePatient={handleDeletePatient}
               onPrintLatestPrescription={(patient, record) => {
                 setPrescriptionData({ patient, record });
               }}
@@ -431,6 +555,7 @@ const MainAppContent: React.FC = () => {
               appointments={appState.appointments}
               dailyNotes={appState.dailyNotes}
               onSaveDailyNote={handleSaveDailyNote}
+              onDeleteDailyNote={handleDeleteDailyNote}
               onSaveAppointment={handleSaveAppointment}
               onDeleteAppointment={handleDeleteAppointment}
               onBack={() => setCurrentTab('dashboard')}
@@ -447,6 +572,7 @@ const MainAppContent: React.FC = () => {
               onUpdateClinic={handleUpdateClinic}
               onUpdateEmailConfig={handleUpdateEmailConfig}
               onRestoreBackup={handleRestoreBackup}
+              onClearAllClinicData={handleClearAllClinicData}
               onBack={() => setCurrentTab('dashboard')}
             />
           )}
@@ -462,6 +588,7 @@ const MainAppContent: React.FC = () => {
         patient={viewingPatient}
         isOpen={Boolean(viewingPatient)}
         onClose={() => setViewingPatient(null)}
+        onDeleteOpdRecord={handleDeleteOpdRecord}
         onPreviewPrescription={(record) => {
           if (viewingPatient) {
             setPrescriptionData({ patient: viewingPatient, record });

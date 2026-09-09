@@ -36,6 +36,7 @@ interface CalendarViewProps {
   appointments: Appointment[];
   dailyNotes: Record<string, string>;
   onSaveDailyNote: (date: string, note: string) => void;
+  onDeleteDailyNote?: (date: string) => void;
   onSaveAppointment: (appointment: Appointment) => void;
   onDeleteAppointment: (id: string) => void;
   onBack: () => void;
@@ -46,6 +47,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   appointments,
   dailyNotes,
   onSaveDailyNote,
+  onDeleteDailyNote,
   onSaveAppointment,
   onDeleteAppointment,
   onBack,
@@ -118,6 +120,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const handleSaveNote = () => {
     onSaveDailyNote(selectedDateStr, noteText);
     showToast(`Note saved for ${selectedDateStr}`, 'success');
+  };
+
+  const handleDeleteNote = () => {
+    if (!dailyNotes[selectedDateStr] && !noteText) return;
+    if (window.confirm(`Delete daily note for ${selectedDateStr}?`)) {
+      setNoteText('');
+      if (onDeleteDailyNote) {
+        onDeleteDailyNote(selectedDateStr);
+      }
+      showToast(`Note deleted for ${selectedDateStr}`, 'info');
+    }
   };
 
   return (
@@ -279,7 +292,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition leading-relaxed"
             />
 
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              {(dailyNotes[selectedDateStr] || noteText) ? (
+                <button
+                  type="button"
+                  onClick={handleDeleteNote}
+                  className="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear Note</span>
+                </button>
+              ) : <span />}
+
               <button
                 type="button"
                 onClick={handleSaveNote}

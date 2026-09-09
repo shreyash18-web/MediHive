@@ -10,7 +10,8 @@ import {
   Eye, 
   IndianRupee, 
   Sparkles,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { Patient, OPDRecord } from '../../types';
 import { format } from 'date-fns';
@@ -22,6 +23,7 @@ interface PatientDetailsModalProps {
   onPreviewPrescription: (record: OPDRecord) => void;
   onPrintPrescription: (record: OPDRecord) => void;
   onAddNewOpd: (patientId: string) => void;
+  onDeleteOpdRecord?: (patientId: string, recordId: string) => void;
 }
 
 export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
@@ -31,6 +33,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
   onPreviewPrescription,
   onPrintPrescription,
   onAddNewOpd,
+  onDeleteOpdRecord,
 }) => {
   if (!isOpen || !patient) return null;
 
@@ -166,6 +169,20 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                       <Printer className="w-3.5 h-3.5" />
                       <span>Print</span>
                     </button>
+
+                    {onDeleteOpdRecord && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete consultation record from ${record.visitDate}? This will remove it from database history.`)) {
+                            onDeleteOpdRecord(patient.id, record.id);
+                          }
+                        }}
+                        title="Delete Consultation Record"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

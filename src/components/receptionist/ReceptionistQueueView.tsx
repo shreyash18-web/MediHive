@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, User, Activity, CheckCircle2, AlertCircle, Ban, ArrowRight, RefreshCw, Sparkles, Stethoscope } from 'lucide-react';
+import { Clock, User, Activity, CheckCircle2, AlertCircle, Ban, ArrowRight, RefreshCw, Sparkles, Stethoscope, Trash2 } from 'lucide-react';
 import { QueueItem, QueueStatus } from '../../types';
 import { useToast } from '../common/Toast';
 
@@ -7,12 +7,16 @@ interface ReceptionistQueueViewProps {
   queue: QueueItem[];
   onCancelQueueItem: (queueId: string) => void;
   onRefresh?: () => void;
+  onDeleteQueueItem?: (queueId: string) => void;
+  onClearCompletedQueue?: () => void;
 }
 
 export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
   queue,
   onCancelQueueItem,
   onRefresh,
+  onDeleteQueueItem,
+  onClearCompletedQueue,
 }) => {
   const { showToast } = useToast();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active');
@@ -49,6 +53,31 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
     if (confirmed) {
       onCancelQueueItem(item.id);
       showToast(`${item.patientName} (${item.queueNumber}) marked as Cancelled.`, 'info');
+    }
+  };
+
+  const handleDeleteItem = (item: QueueItem) => {
+    const confirmed = window.confirm(
+      `Delete queue token ${item.queueNumber} for ${item.patientName}? This will permanently remove this record from the queue.`
+    );
+    if (confirmed && onDeleteQueueItem) {
+      onDeleteQueueItem(item.id);
+      showToast(`Queue token ${item.queueNumber} deleted.`, 'info');
+    }
+  };
+
+  const handleClearCompleted = () => {
+    const inactiveCount = todaysQueue.filter(q => q.status === 'Completed' || q.status === 'Cancelled').length;
+    if (inactiveCount === 0) {
+      showToast('No completed or cancelled tokens to clear today.', 'info');
+      return;
+    }
+    const confirmed = window.confirm(
+      `Clear all completed and cancelled queue tokens (${inactiveCount} records) for today? Patients currently waiting or with the doctor will not be touched.`
+    );
+    if (confirmed && onClearCompletedQueue) {
+      onClearCompletedQueue();
+      showToast(`Cleared ${inactiveCount} completed/cancelled tokens.`, 'success');
     }
   };
 
@@ -102,15 +131,28 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
           </p>
         </div>
 
-        {onRefresh && (
-          <button
-            onClick={onRefresh}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs transition w-full sm:w-auto"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Sync Live Queue</span>
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {onClearCompletedQueue && (
+            <button
+              onClick={handleClearCompleted}
+              title="Clear all completed and cancelled tokens"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-rose-200 hover:bg-rose-50 text-rose-700 rounded-lg text-xs font-semibold shadow-xs transition"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span>Clear Completed / Inactive</span>
+            </button>
+          )}
+
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Sync Live Queue</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Live Stage Highlights (Now Serving & Next) */}
@@ -317,8 +359,17 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
                         >
                           Cancel
                         </button>
+                      ) : (item.status === 'Completed' || item.status === 'Cancelled') && onDeleteQueueItem ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteItem(item)}
+                          title="Permanently remove this queue record"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center justify-center"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       ) : (
-                        <span className="text-slate-400 text-[11px]"></span>
+                        <span className="text-slate-400 text-[11px]">-</span>
                       )}
                     </td>
                   </tr>

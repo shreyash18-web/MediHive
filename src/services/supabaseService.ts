@@ -534,6 +534,48 @@ export const deleteAppointmentInSupabase = async (id: string): Promise<boolean> 
 // CALENDAR DAILY NOTES CRUD
 // ==============================================================================
 
+export const deleteOpdRecordInSupabase = async (
+  recordId: string,
+  patientId: string
+): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('opd_records').delete().eq('id', recordId);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Supabase deleteOpdRecord error:', err);
+    return false;
+  }
+};
+
+export const deleteQueueItemInSupabase = async (queueId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('queue_items').delete().eq('id', queueId);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Supabase deleteQueueItem error:', err);
+    return false;
+  }
+};
+
+export const clearCompletedQueueInSupabase = async (): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('queue_items')
+      .delete()
+      .in('status', ['Completed', 'Cancelled']);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Supabase clearCompletedQueue error:', err);
+    return false;
+  }
+};
+
 export const saveDailyNoteInSupabase = async (date: string, note: string): Promise<boolean> => {
   if (!isSupabaseConfigured) return false;
   try {
@@ -546,6 +588,36 @@ export const saveDailyNoteInSupabase = async (date: string, note: string): Promi
     return true;
   } catch (err) {
     console.error('Supabase saveDailyNote error:', err);
+    return false;
+  }
+};
+
+export const deleteDailyNoteInSupabase = async (date: string): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('daily_notes').delete().eq('date', date);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Supabase deleteDailyNote error:', err);
+    return false;
+  }
+};
+
+export const clearAllClinicDataFromSupabase = async (): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    // Delete transactional items in order
+    await supabase.from('queue_items').delete().neq('id', '');
+    await supabase.from('patient_visits').delete().neq('id', '');
+    await supabase.from('opd_records').delete().neq('id', '');
+    await supabase.from('appointments').delete().neq('id', '');
+    await supabase.from('daily_notes').delete().neq('date', '1970-01-01');
+    const { error } = await supabase.from('patients').delete().neq('id', '');
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Supabase clearAllClinicData error:', err);
     return false;
   }
 };

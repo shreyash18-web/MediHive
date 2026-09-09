@@ -16,7 +16,9 @@ import {
   FileCode,
   ShieldCheck,
   Eye,
-  KeyRound
+  KeyRound,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { DoctorProfile, ClinicSettings, EmailConfig, AppState } from '../../types';
 import { useToast } from '../common/Toast';
@@ -31,6 +33,7 @@ interface SettingsViewProps {
   onUpdateClinic: (cli: ClinicSettings) => void;
   onUpdateEmailConfig: (cfg: EmailConfig) => void;
   onRestoreBackup: (restoredState: AppState) => void;
+  onClearAllClinicData?: () => void;
   onBack: () => void;
 }
 
@@ -45,10 +48,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateClinic,
   onUpdateEmailConfig,
   onRestoreBackup,
+  onClearAllClinicData,
   onBack,
 }) => {
   const { showToast } = useToast();
   const [currentSubView, setCurrentSubView] = useState<SettingsSubView>('main');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+
+  const totalOpdRecords = (fullState.patients || []).reduce((acc, p) => acc + (p.records?.length || 0), 0);
+  const totalNotes = Object.keys(fullState.dailyNotes || {}).length;
 
   // Doctor Info state
   const [docName, setDocName] = useState(doctor.name);
@@ -669,6 +678,72 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               Backups will be downloaded as Excel/JSON files containing patient records, visit history, prescriptions, and billing info.
             </p>
           </div>
+
+          {/* Danger Zone: Data Management & Reset */}
+          <div className="bg-white rounded-xl shadow-sm border border-rose-200 p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4 border-b border-rose-100 pb-3">
+              <div>
+                <h2 className="text-base font-bold text-rose-800 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-rose-600" />
+                  <span>Danger Zone — Reset Clinic Records</span>
+                </h2>
+                <p className="text-xs text-rose-600/90 mt-0.5">
+                  Permanently clear all existing patient demographics, visit histories, consultations, live queues, and calendar notes.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
+                <span className="block text-2xl font-black text-rose-900 font-mono">
+                  {fullState.patients.length}
+                </span>
+                <span className="text-[11px] font-semibold text-rose-700">Patients</span>
+              </div>
+              <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
+                <span className="block text-2xl font-black text-rose-900 font-mono">
+                  {totalOpdRecords}
+                </span>
+                <span className="text-[11px] font-semibold text-rose-700">OPD Records</span>
+              </div>
+              <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
+                <span className="block text-2xl font-black text-rose-900 font-mono">
+                  {fullState.queue.length}
+                </span>
+                <span className="text-[11px] font-semibold text-rose-700">Queue Items</span>
+              </div>
+              <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
+                <span className="block text-2xl font-black text-rose-900 font-mono">
+                  {totalNotes}
+                </span>
+                <span className="text-[11px] font-semibold text-rose-700">Calendar Notes</span>
+              </div>
+            </div>
+
+            <div className="bg-rose-50/70 rounded-lg p-3.5 border border-rose-200/80 text-xs text-rose-900 space-y-1">
+              <p className="font-semibold flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                This will delete test/demo data from both Supabase Cloud Database and browser local storage.
+              </p>
+              <p className="text-rose-700 text-[11px] pl-5">
+                Your clinic information, doctor profile, and login credentials will remain intact. Before resetting, ensure you have exported a backup if needed.
+              </p>
+            </div>
+
+            <div className="pt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setResetConfirmText('');
+                  setShowResetModal(true);
+                }}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-lg shadow-sm flex items-center gap-2 transition"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Reset & Clear All Clinic Records...</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -730,7 +805,74 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </form>
       )}
 
-      
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Permanently Clear All Clinic Data?</h3>
+                <p className="text-xs text-slate-500">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-600 space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <p className="font-medium text-slate-800">The following records will be permanently erased:</p>
+              <ul className="list-disc list-inside text-[11px] text-slate-600 space-y-1 pl-1 font-mono">
+                <li>{fullState.patients.length} Patient files & visit logs</li>
+                <li>{totalOpdRecords} OPD consultations & prescriptions</li>
+                <li>{fullState.queue.length} Queue tokens & history</li>
+                <li>{totalNotes} Calendar daily notes</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                To confirm, type <span className="font-mono font-black text-rose-600 select-all">RESET</span> below:
+              </label>
+              <input
+                type="text"
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder="Type RESET"
+                className="w-full px-3 py-2 text-sm font-mono uppercase bg-white border border-rose-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 text-rose-900 font-bold tracking-wider"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResetConfirmText('');
+                }}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={resetConfirmText.trim().toUpperCase() !== 'RESET'}
+                onClick={() => {
+                  if (onClearAllClinicData) {
+                    onClearAllClinicData();
+                  }
+                  setShowResetModal(false);
+                  setResetConfirmText('');
+                  showToast('All clinic patient and consultation records have been cleared.', 'info');
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition shadow-sm flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Confirm & Erase All Records</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

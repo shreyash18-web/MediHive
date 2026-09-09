@@ -30,7 +30,11 @@ import {
   createVisitAndAddToQueue, 
   cancelPatientQueueItem 
 } from '../../services/storage';
-import { createPatientInSupabase } from '../../services/supabaseService';
+import { 
+  createPatientInSupabase, 
+  deleteQueueItemInSupabase, 
+  clearCompletedQueueInSupabase 
+} from '../../services/supabaseService';
 import { ReceptionistDashboard } from './ReceptionistDashboard';
 import { PatientSearchAndVisit } from './PatientSearchAndVisit';
 import { NewPatientRegistration } from './NewPatientRegistration';
@@ -110,6 +114,31 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     const updated = cancelPatientQueueItem(appState, queueId);
     onUpdateAppState(() => updated);
     showToast('Queue ticket cancelled', 'info');
+  };
+
+  // Handle deleting individual queue ticket
+  const handleDeleteQueueItem = (queueId: string) => {
+    onUpdateAppState((prev) => ({
+      ...prev,
+      queue: prev.queue.filter((q) => q.id !== queueId),
+    }));
+    deleteQueueItemInSupabase(queueId).catch((err) => {
+      console.warn('Supabase deleteQueueItem error:', err);
+    });
+  };
+
+  // Handle clearing completed and cancelled tokens
+  const handleClearCompletedQueue = () => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    onUpdateAppState((prev) => ({
+      ...prev,
+      queue: prev.queue.filter(
+        (q) => !(q.visitDate === todayStr && (q.status === 'Completed' || q.status === 'Cancelled'))
+      ),
+    }));
+    clearCompletedQueueInSupabase().catch((err) => {
+      console.warn('Supabase clearCompletedQueue error:', err);
+    });
   };
 
   const navItems = [
@@ -324,6 +353,8 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
                 <ReceptionistQueueView
                   queue={appState.queue}
                   onCancelQueueItem={handleCancelQueueItem}
+                  onDeleteQueueItem={handleDeleteQueueItem}
+                  onClearCompletedQueue={handleClearCompletedQueue}
                 />
               )}
             </>
