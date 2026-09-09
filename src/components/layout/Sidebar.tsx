@@ -81,7 +81,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-4 sm:p-5 border-b border-[#245770] flex items-center justify-between">
             <div>
               <MediHiveLogo size="md" textColor="text-white" />
-              <p className="text-[11px] text-sky-200/70 mt-1 pl-10 font-medium">Clinic Management System</p>
             </div>
             {/* Close Button on Mobile Drawer */}
             <button

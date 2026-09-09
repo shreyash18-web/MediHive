@@ -4,55 +4,82 @@ interface LogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
+  showSubtitle?: boolean;
   textColor?: string;
+  variant?: 'badge' | 'image-only';
 }
 
 export const MediHiveLogo: React.FC<LogoProps> = ({
   className = '',
   size = 'md',
   showText = true,
+  showSubtitle = true,
   textColor = 'text-white',
+  variant = 'badge',
 }) => {
   const sizeMap = {
-    sm: { icon: 'w-6 h-6', text: 'text-lg' },
-    md: { icon: 'w-8 h-8', text: 'text-xl' },
-    lg: { icon: 'w-10 h-10', text: 'text-2xl' },
-    xl: { icon: 'w-14 h-14', text: 'text-3xl' },
+    sm: { 
+      badge: 'w-8 h-8 p-0.5', 
+      text: 'text-base font-extrabold', 
+      sub: 'text-[8px]' 
+    },
+    md: { 
+      badge: 'w-10 h-10 p-1', 
+      text: 'text-lg font-extrabold', 
+      sub: 'text-[9px]' 
+    },
+    lg: { 
+      badge: 'w-12 h-12 p-1', 
+      text: 'text-2xl font-extrabold', 
+      sub: 'text-[11px]' 
+    },
+    xl: { 
+      badge: 'w-16 h-16 p-1.5', 
+      text: 'text-3xl font-extrabold', 
+      sub: 'text-xs' 
+    },
   };
 
+  const currentSize = sizeMap[size];
+
+  if (variant === 'image-only') {
+    return (
+      <img
+        src="/medihive-logo.png"
+        alt="MediHive Logo"
+        className={`object-contain select-none ${currentSize.badge} ${className}`}
+      />
+    );
+  }
+
+  const isDarkText = textColor.includes('slate-') || textColor.includes('text-[#') || textColor.includes('black');
+
   return (
-    <div className={`flex items-center gap-2.5 font-bold select-none ${className}`}>
-      <div className={`relative flex items-center justify-center shrink-0 ${sizeMap[size].icon}`}>
-        {/* Hexagonal Hive + Medical Cross / Stethoscope emblem */}
-        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <polygon
-            points="50,4 92,27 92,73 50,96 8,73 8,27"
-            className="fill-medihive-500/20 stroke-medihive-400"
-            strokeWidth="5"
-            strokeLinejoin="round"
-          />
-          <polygon
-            points="50,15 82,33 82,67 50,85 18,67 18,33"
-            className="fill-medihive-600"
-            strokeLinejoin="round"
-          />
-          {/* Medical Cross / Plus */}
-          <path
-            d="M44 32 H56 V44 H68 V56 H56 V68 H44 V56 H32 V44 H44 Z"
-            fill="#ffffff"
-            className="drop-shadow"
-          />
-          {/* Small leaf/hive accent */}
-          <circle cx="50" cy="50" r="4" fill="#38bdf8" />
-        </svg>
+    <div className={`flex items-center gap-2.5 select-none ${className}`}>
+      {/* Brand Icon Badge with High Contrast White Backing */}
+      <div className={`relative flex items-center justify-center shrink-0 bg-white rounded-xl shadow-xs border border-white/30 overflow-hidden ${currentSize.badge}`}>
+        <img
+          src="/medihive-logo.png"
+          alt="MediHive Logo"
+          className="w-full h-full object-contain"
+        />
       </div>
 
+      {/* Brand Typography */}
       {showText && (
-        <span className={`tracking-tight font-extrabold ${sizeMap[size].text} ${textColor}`}>
-          Medi<span className="text-sky-400">Hive</span>
-        </span>
+        <div className="flex flex-col leading-tight">
+          <span className={`tracking-tight ${currentSize.text} ${textColor}`}>
+            Medi<span className="text-sky-400">Hive</span>
+          </span>
+          {showSubtitle && (
+            <span className={`uppercase tracking-wider font-semibold ${currentSize.sub} ${
+              isDarkText ? 'text-slate-500' : 'text-sky-200/80'
+            }`}>
+              Clinic's Digital Ecosystem
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
 };
-

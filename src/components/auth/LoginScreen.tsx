@@ -116,8 +116,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         {/* Right Form Panel */}
         <div className="w-full md:w-7/12 p-6 sm:p-8 md:p-8 lg:p-12 flex flex-col justify-center bg-white">
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center p-2 mb-1">
-              <MediHiveLogo size="md" textColor="text-[#1e536e]" />
+            <div className="inline-flex items-center justify-center mb-1">
+              <img
+                src="/medihive-logo.png"
+                alt="MediHive Logo"
+                className="w-24 h-24 object-contain drop-shadow-sm hover:scale-105 transition-transform"
+              />
             </div>
             <p className="text-xs text-slate-500 font-medium">Select your clinic role to begin</p>
           </div>
