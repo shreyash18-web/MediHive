@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS patients (
     mobile TEXT NOT NULL,
     address TEXT,
     blood_group TEXT,
+    weight TEXT, -- e.g. '68' kg
+    height TEXT, -- e.g. '172 cm' or '5ft 8in'
     emergency_contact TEXT,
     allergies TEXT,
     medical_history TEXT,
@@ -281,11 +283,11 @@ INSERT INTO doctor_profile (id, name, qualifications, specialisation, medical_li
 VALUES (
     1,
     'Dr. Shweta N. Sawant',
-    'B.A.M.S., M.D. (Ayurveda)',
-    'Ayurvedic Medicine & Panchakarma Specialist',
-    'MH-AYU-84920',
-    'dr.shweta@medihive.com',
-    '+91 98765 43210',
+    'B.A.M.S | Ayurveda & Panchakarma Consultant',
+    'Ayurveda & Panchakarma Specialist',
+    'I-107200-A',
+    'vaidyashwetaayurveda@gmail.com',
+    '9067251670',
     500
 )
 ON CONFLICT (id) DO NOTHING;
@@ -294,12 +296,12 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO clinic_settings (id, name, address, phone, email, website, operating_hours, currency)
 VALUES (
     1,
-    'MediHive Ayurvedic Clinic & Panchakarma Center',
-    'Plot 42, Shiv Samarth Complex, MG Road, Pune, Maharashtra 411001',
-    '+91 20 2567 8900',
-    'contact@medihive.com',
-    'https://medihive.vercel.app',
-    'Mon-Sat: 10:00 AM - 1:00 PM & 5:00 PM - 8:30 PM (Sun Closed)',
+    'Dr. Shweta''s Ayurveda Clinic',
+    'Nemani bhavan, near Milagris school, office no 4, Salaiwada, Sawantwadi',
+    '9067251670',
+    'vaidyashwetaayurveda@gmail.com',
+    'www.shwetaayurveda.com',
+    'Morning 10 am to 1 pm & Evening 5 pm to 8 pm',
     '₹'
 )
 ON CONFLICT (id) DO NOTHING;
@@ -308,8 +310,8 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO email_config (id, smtp_email, smtp_app_password, smtp_server, smtp_port, enable_notifications)
 VALUES (
     1,
-    'noreply@medihive.com',
-    'app_password_placeholder',
+    'vaidyashwetaayurveda@gmail.com',
+    '••••••••••••••••',
     'smtp.gmail.com',
     587,
     true

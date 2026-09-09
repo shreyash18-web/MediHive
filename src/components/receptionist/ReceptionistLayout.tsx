@@ -30,6 +30,7 @@ import {
   createVisitAndAddToQueue, 
   cancelPatientQueueItem 
 } from '../../services/storage';
+import { createPatientInSupabase } from '../../services/supabaseService';
 import { ReceptionistDashboard } from './ReceptionistDashboard';
 import { PatientSearchAndVisit } from './PatientSearchAndVisit';
 import { NewPatientRegistration } from './NewPatientRegistration';
@@ -69,6 +70,12 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
       patients: [newPatient, ...prev.patients],
     }));
     showToast(`Patient ${newPatient.fullName} registered successfully!`, 'success');
+
+    // Persist new patient to Supabase
+    createPatientInSupabase(newPatient).catch((err) => {
+      console.warn('Supabase createPatient notice:', err);
+    });
+
     // Offer to immediately start visit for this patient
     setActiveVisitPatient(newPatient);
   };

@@ -8,8 +8,22 @@ import {
   subscribeQueueEvents,
   callPatientIntoCabin,
   completeConsultationAndAdvanceQueue,
-  cancelPatientQueueItem
+  cancelPatientQueueItem,
+  syncAccountsFromSupabase
 } from './services/storage';
+import {
+  fetchFullAppStateFromSupabase,
+  updatePatientInSupabase,
+  saveOpdRecordInSupabase,
+  saveAppointmentInSupabase,
+  deleteAppointmentInSupabase,
+  saveDailyNoteInSupabase,
+  updateDoctorProfileInSupabase,
+  updateClinicSettingsInSupabase,
+  updateEmailConfigInSupabase,
+  subscribeToClinicRealtime
+} from './services/supabaseService';
+import { isSupabaseConfigured } from './lib/supabase';
 import { QueueItem } from './types';
 import { ToastProvider, useToast } from './components/common/Toast';
 import { Navbar } from './components/layout/Navbar';
@@ -46,19 +60,61 @@ const MainAppContent: React.FC = () => {
 
   const { showToast } = useToast();
 
-  // Keep state synced in localStorage
+  // Keep state synced in localStorage as fallback/cache
   useEffect(() => {
     saveAppState(appState);
   }, [appState]);
 
-  // Real-time synchronization across browser tabs
+  // Initial load from Supabase & Real-time multi-device sync
+  useEffect(() => {
+    let isMounted = true;
+
+    // 1. Initial hydration from Supabase if configured
+    if (isSupabaseConfigured) {
+      fetchFullAppStateFromSupabase()
+        .then((dbState) => {
+          if (dbState && isMounted) {
+            setAppState((prev) => ({
+              ...prev,
+              ...dbState,
+              currentUser: prev.currentUser || getStoredAuthUser(),
+            }));
+          }
+        })
+        .catch((err) => {
+          console.warn('Initial Supabase hydration notice:', err);
+        });
+
+      // Sync user accounts from Supabase into accounts cache
+      syncAccountsFromSupabase().catch(() => {});
+
+      // 2. Real-time PostgreSQL subscription across all clinic screens
+      const unsubscribeRealtime = subscribeToClinicRealtime(async () => {
+        const refreshed = await fetchFullAppStateFromSupabase();
+        if (refreshed && isMounted) {
+          setAppState((prev) => ({
+            ...prev,
+            ...refreshed,
+            currentUser: prev.currentUser,
+          }));
+        }
+      });
+
+      return () => {
+        isMounted = false;
+        unsubscribeRealtime();
+      };
+    }
+  }, []);
+
+  // Real-time synchronization across browser tabs (via BroadcastChannel & Storage events)
   useEffect(() => {
     const unsubscribe = subscribeQueueEvents(() => {
       setAppState(loadAppState());
     });
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'medihive_clinic_state_v1' && e.newValue) {
+      if (e.key === 'medihive_app_state_v2' && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
           setAppState((prev) => ({
@@ -115,7 +171,7 @@ const MainAppContent: React.FC = () => {
     showToast('Logged out successfully', 'info');
   };
 
-  // State update actions
+  // State update actions (Optimistic UI + Supabase Persistence)
   const handleSaveOpdRecord = (patient: Patient, opdRecord: OPDRecord) => {
     setAppState((prev) => {
       const existingIdx = prev.patients.findIndex((p) => p.id === patient.id);
@@ -132,6 +188,11 @@ const MainAppContent: React.FC = () => {
         patients: updatedPatients,
       };
     });
+
+    // Write to Supabase
+    saveOpdRecordInSupabase(patient, opdRecord).catch((err) => {
+      console.warn('Supabase saveOpdRecord error:', err);
+    });
   };
 
   const handleSavePatient = (updatedPatient: Patient) => {
@@ -147,6 +208,11 @@ const MainAppContent: React.FC = () => {
     if (viewingPatient && viewingPatient.id === updatedPatient.id) {
       setViewingPatient(updatedPatient);
     }
+
+    // Write to Supabase
+    updatePatientInSupabase(updatedPatient).catch((err) => {
+      console.warn('Supabase updatePatient error:', err);
+    });
   };
 
   const handleSaveDailyNote = (date: string, note: string) => {
@@ -157,6 +223,11 @@ const MainAppContent: React.FC = () => {
         [date]: note,
       },
     }));
+
+    // Write to Supabase
+    saveDailyNoteInSupabase(date, note).catch((err) => {
+      console.warn('Supabase saveDailyNote error:', err);
+    });
   };
 
   const handleSaveAppointment = (appointment: Appointment) => {
@@ -164,6 +235,11 @@ const MainAppContent: React.FC = () => {
       ...prev,
       appointments: [appointment, ...prev.appointments],
     }));
+
+    // Write to Supabase
+    saveAppointmentInSupabase(appointment).catch((err) => {
+      console.warn('Supabase saveAppointment error:', err);
+    });
   };
 
   const handleDeleteAppointment = (id: string) => {
@@ -172,18 +248,32 @@ const MainAppContent: React.FC = () => {
       appointments: prev.appointments.filter((a) => a.id !== id),
     }));
     showToast('Appointment removed', 'info');
+
+    // Delete from Supabase
+    deleteAppointmentInSupabase(id).catch((err) => {
+      console.warn('Supabase deleteAppointment error:', err);
+    });
   };
 
   const handleUpdateDoctor = (doctor: DoctorProfile) => {
     setAppState((prev) => ({ ...prev, doctor }));
+    updateDoctorProfileInSupabase(doctor).catch((err) => {
+      console.warn('Supabase updateDoctorProfile error:', err);
+    });
   };
 
   const handleUpdateClinic = (clinic: ClinicSettings) => {
     setAppState((prev) => ({ ...prev, clinic }));
+    updateClinicSettingsInSupabase(clinic).catch((err) => {
+      console.warn('Supabase updateClinicSettings error:', err);
+    });
   };
 
   const handleUpdateEmailConfig = (emailConfig: EmailConfig) => {
     setAppState((prev) => ({ ...prev, emailConfig }));
+    updateEmailConfigInSupabase(emailConfig).catch((err) => {
+      console.warn('Supabase updateEmailConfig error:', err);
+    });
   };
 
   const handleRestoreBackup = (restoredState: AppState) => {

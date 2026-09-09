@@ -18,6 +18,14 @@ import {
   initialClinic, 
   initialEmailConfig 
 } from './mockData';
+import {
+  insertVisitAndQueueInSupabase,
+  updateQueueItemStatusInSupabase,
+  cancelQueueTicketInSupabase,
+  updateUserPasswordInSupabase,
+  saveOpdRecordInSupabase,
+  fetchUserAccountsFromSupabase
+} from './supabaseService';
 
 const STORAGE_KEY = 'medihive_app_state_v2';
 const AUTH_KEY = 'medihive_auth_user';
@@ -69,6 +77,17 @@ export const getStoredAccounts = (): UserAccount[] => {
   return defaultAccounts;
 };
 
+export const syncAccountsFromSupabase = async (): Promise<void> => {
+  try {
+    const accounts = await fetchUserAccountsFromSupabase();
+    if (accounts && accounts.length > 0) {
+      localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    }
+  } catch (e) {
+    console.warn('Sync accounts from Supabase notice:', e);
+  }
+};
+
 export const validateCredentials = (username: string, password: string): UserAccount | null => {
   const accounts = getStoredAccounts();
   const trimmedUser = username.trim().toLowerCase();
@@ -89,6 +108,10 @@ export const updateUserPassword = (username: string, newPassword: string): boole
       return acc;
     });
     localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updated));
+    // Persist to Supabase
+    updateUserPasswordInSupabase(username, newPassword).catch((err) => {
+      console.warn('Supabase updateUserPassword sync:', err);
+    });
     return true;
   } catch (e) {
     console.error('Error updating password', e);
@@ -338,6 +361,11 @@ export const createVisitAndAddToQueue = (
   saveAppState(updatedState);
   broadcastQueueEvent({ type: 'QUEUE_UPDATED', payload: { newQueueItem } });
 
+  // Persist to Supabase in background
+  insertVisitAndQueueInSupabase(newVisit, newQueueItem).catch((err) => {
+    console.warn('Supabase insertVisitAndQueue sync notice:', err);
+  });
+
   return { updatedState, newQueueItem, newVisit };
 };
 
@@ -379,6 +407,8 @@ export const callPatientIntoCabin = (
       if (!foundNext) {
         queue[i] = { ...queue[i], status: 'Next' };
         foundNext = true;
+        // Sync next status to Supabase
+        updateQueueItemStatusInSupabase(queue[i].id, 'Next').catch(() => {});
       }
     }
   }
@@ -397,6 +427,13 @@ export const callPatientIntoCabin = (
   saveAppState(updatedState);
   broadcastQueueEvent({ type: 'PATIENT_CALLED', payload: { activePatient: updatedItem } });
 
+  // Persist to Supabase in background
+  updateQueueItemStatusInSupabase(updatedItem.id, 'With Doctor', {
+    calledAt: nowIso,
+  }).catch((err) => {
+    console.warn('Supabase callPatientIntoCabin sync notice:', err);
+  });
+
   return { updatedState, activePatient: updatedItem };
 };
 
@@ -410,24 +447,27 @@ export const completeConsultationAndAdvanceQueue = (
   const queue = [...(appState.queue || [])];
   const qIdx = queue.findIndex(q => q.id === queueId);
 
+  const completedTime = new Date().toISOString();
   if (qIdx !== -1) {
     queue[qIdx] = {
       ...queue[qIdx],
       status: 'Completed',
-      completedAt: new Date().toISOString(),
+      completedAt: completedTime,
     };
   }
 
   // Save the OPD record to the patient's record history
+  let savedPatientRecord: Patient | null = null;
   const updatedPatients = (appState.patients || []).map(p => {
     if (p.id === opdRecord.patientId) {
       const records = [opdRecord, ...(p.records || [])];
-      return {
+      savedPatientRecord = {
         ...p,
         totalVisits: (p.totalVisits || 0) + 1,
         lastVisitDate: opdRecord.visitDate || today,
         records,
       };
+      return savedPatientRecord;
     }
     return p;
   });
@@ -462,6 +502,21 @@ export const completeConsultationAndAdvanceQueue = (
   saveAppState(updatedState);
   broadcastQueueEvent({ type: 'CONSULTATION_COMPLETED', payload: { completedQueueId: queueId, nextPatient } });
 
+  // Persist completed consultation & OPD record to Supabase
+  if (savedPatientRecord) {
+    saveOpdRecordInSupabase(savedPatientRecord, opdRecord).catch((err) => {
+      console.warn('Supabase saveOpdRecord sync notice:', err);
+    });
+  }
+  updateQueueItemStatusInSupabase(queueId, 'Completed', {
+    completedAt: completedTime,
+  }).catch((err) => {
+    console.warn('Supabase completeConsultation sync notice:', err);
+  });
+  if (nextPatient) {
+    updateQueueItemStatusInSupabase(nextPatient.id, 'Next').catch(() => {});
+  }
+
   return { updatedState, nextPatient };
 };
 
@@ -481,6 +536,7 @@ export const cancelPatientQueueItem = (
     const firstWaitingIdx = queue.findIndex(q => q.status === 'Waiting' && q.visitDate === today);
     if (firstWaitingIdx !== -1) {
       queue[firstWaitingIdx] = { ...queue[firstWaitingIdx], status: 'Next' };
+      updateQueueItemStatusInSupabase(queue[firstWaitingIdx].id, 'Next').catch(() => {});
     }
   }
 
@@ -496,6 +552,12 @@ export const cancelPatientQueueItem = (
 
   saveAppState(updatedState);
   broadcastQueueEvent({ type: 'QUEUE_UPDATED' });
+
+  // Persist cancellation to Supabase
+  cancelQueueTicketInSupabase(queueId).catch((err) => {
+    console.warn('Supabase cancelQueueTicket sync notice:', err);
+  });
+
   return updatedState;
 };
 
