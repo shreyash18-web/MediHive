@@ -14,7 +14,8 @@ import {
   Building2,
   Phone,
   Menu,
-  X
+  X,
+  Database
 } from 'lucide-react';
 import { MediHiveLogo } from '../common/MediHiveLogo';
 import { 
@@ -38,6 +39,8 @@ import {
   clearCompletedQueueInSupabase,
   deleteVisitInSupabase 
 } from '../../services/supabaseService';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { SupabaseConnectionModal } from '../common/SupabaseConnectionModal';
 import { ReceptionistDashboard } from './ReceptionistDashboard';
 import { PatientSearchAndVisit } from './PatientSearchAndVisit';
 import { NewPatientRegistration } from './NewPatientRegistration';
@@ -64,6 +67,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [initialSearchQuery, setInitialSearchQuery] = useState<string>('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
 
   const { showToast } = useToast();
 
@@ -358,6 +362,31 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
               <span>{activeWaitingCount} <span className="hidden xs:inline">in Line</span></span>
             </button>
 
+            {/* Cloud DB Status Pill */}
+            <button
+              onClick={() => setShowSupabaseModal(true)}
+              type="button"
+              title={
+                isSupabaseConfigured
+                  ? "Cloud Database (Supabase) is connected. Click to test or manage connection."
+                  : "Cloud Database not connected (Running in local offline mode). Click to setup Supabase."
+              }
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition cursor-pointer shrink-0 ${
+                isSupabaseConfigured
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                  : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${
+                  isSupabaseConfigured ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                }`}
+              />
+              <Database className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Cloud DB:</span>
+              <span>{isSupabaseConfigured ? 'Live' : 'Setup'}</span>
+            </button>
+
             {/* Current Time Display */}
             <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -442,6 +471,12 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
           onSavePatient={handleSavePatient}
         />
       )}
+
+      {/* MODAL: Supabase Connection & Diagnostics Modal */}
+      <SupabaseConnectionModal
+        isOpen={showSupabaseModal}
+        onClose={() => setShowSupabaseModal(false)}
+      />
     </div>
   );
 };

@@ -47,6 +47,7 @@ import { HelpCenter } from './components/help/HelpCenter';
 import { ReceptionistLayout } from './components/receptionist/ReceptionistLayout';
 import { ReceptionistQueueView } from './components/receptionist/ReceptionistQueueView';
 import { DoctorConsultationModal } from './components/consultation/DoctorConsultationModal';
+import { SupabaseConnectionModal } from './components/common/SupabaseConnectionModal';
 import { format } from 'date-fns';
 
 const MainAppContent: React.FC = () => {
@@ -63,6 +64,7 @@ const MainAppContent: React.FC = () => {
   } | null>(null);
   const [activeConsultationQueueItem, setActiveConsultationQueueItem] = useState<QueueItem | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
 
   const { showToast } = useToast();
 
@@ -477,6 +479,7 @@ const MainAppContent: React.FC = () => {
           activeFollowUpsCount={todaysFollowUps.length}
           onNavigateToCalendar={() => setCurrentTab('calendar')}
           onToggleSidebar={() => setMobileSidebarOpen((prev) => !prev)}
+          onOpenSupabaseModal={() => setShowSupabaseModal(true)}
         />
 
         {/* Scrollable View Container */}
@@ -573,6 +576,7 @@ const MainAppContent: React.FC = () => {
               onUpdateEmailConfig={handleUpdateEmailConfig}
               onRestoreBackup={handleRestoreBackup}
               onClearAllClinicData={handleClearAllClinicData}
+              onOpenSupabaseModal={() => setShowSupabaseModal(true)}
               onBack={() => setCurrentTab('dashboard')}
             />
           )}
@@ -665,6 +669,12 @@ const MainAppContent: React.FC = () => {
           }}
         />
       )}
+
+      {/* MODAL: Supabase Connection & Diagnostics Modal */}
+      <SupabaseConnectionModal
+        isOpen={showSupabaseModal}
+        onClose={() => setShowSupabaseModal(false)}
+      />
     </div>
   );
 };

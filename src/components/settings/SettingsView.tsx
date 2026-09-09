@@ -23,6 +23,7 @@ import {
 import { DoctorProfile, ClinicSettings, EmailConfig, AppState } from '../../types';
 import { useToast } from '../common/Toast';
 import { exportDataBackup, updateUserPassword, validateCredentials } from '../../services/storage';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 interface SettingsViewProps {
   doctor: DoctorProfile;
@@ -34,6 +35,7 @@ interface SettingsViewProps {
   onUpdateEmailConfig: (cfg: EmailConfig) => void;
   onRestoreBackup: (restoredState: AppState) => void;
   onClearAllClinicData?: () => void;
+  onOpenSupabaseModal?: () => void;
   onBack: () => void;
 }
 
@@ -49,6 +51,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateEmailConfig,
   onRestoreBackup,
   onClearAllClinicData,
+  onOpenSupabaseModal,
   onBack,
 }) => {
   const { showToast } = useToast();
@@ -444,8 +447,45 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </form>
 
-          {/* Sub-Cards matching Page 11: Email Configuration, Backup Data, Authentication */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Sub-Cards matching Page 11: Email Configuration, Backup Data, Authentication + Supabase Cloud DB */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Cloud Database (Supabase) Card */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                    <Database className="w-4 h-4 text-[#1e536e]" />
+                    <span>Cloud Database</span>
+                  </h3>
+                  <span
+                    className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                      isSupabaseConfigured
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
+                  >
+                    {isSupabaseConfigured ? '🟢 Live' : '🟠 Offline'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                  {isSupabaseConfigured
+                    ? 'Connected to Supabase. Clinic records synchronize in real-time.'
+                    : 'Running in local mode. Connect Supabase to sync across devices.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenSupabaseModal}
+                className={`w-full py-2 text-white text-xs font-semibold rounded-lg transition text-center shadow-xs cursor-pointer ${
+                  isSupabaseConfigured
+                    ? 'bg-[#1e536e] hover:bg-[#163f54]'
+                    : 'bg-amber-600 hover:bg-amber-700'
+                }`}
+              >
+                {isSupabaseConfigured ? 'Manage Connection' : 'Connect Supabase'}
+              </button>
+            </div>
+
             {/* Email Config Card */}
             <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
               <div>
@@ -460,7 +500,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setCurrentSubView('email')}
-                className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs"
+                className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs cursor-pointer"
               >
                 Configure Email
               </button>
@@ -470,7 +510,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
               <div>
                 <h3 className="font-bold text-slate-800 text-sm mb-1 flex items-center gap-2">
-                  <Database className="w-4 h-4 text-[#1e536e]" />
+                  <Download className="w-4 h-4 text-[#1e536e]" />
                   <span>Backup Data</span>
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
@@ -480,7 +520,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setCurrentSubView('backup')}
-                className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs"
+                className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs cursor-pointer"
               >
                 Generate Backup
               </button>
@@ -500,7 +540,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setCurrentSubView('auth')}
-                className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs"
+                className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs cursor-pointer"
               >
                 Authentication
               </button>
