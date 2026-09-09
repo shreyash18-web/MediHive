@@ -24,6 +24,8 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
   const [mobile, setMobile] = useState('');
   const [address, setAddress] = useState('');
   const [bloodGroup, setBloodGroup] = useState('A+');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
 
   useEffect(() => {
     if (patient) {
@@ -34,6 +36,8 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
       setMobile(patient.mobile);
       setAddress(patient.address || '');
       setBloodGroup(patient.bloodGroup || 'A+');
+      setWeight(patient.weight || '');
+      setHeight(patient.height || '');
     }
   }, [patient]);
 
@@ -59,6 +63,8 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
       mobile: mobile.trim(),
       address: address.trim() || undefined,
       bloodGroup,
+      weight: weight.trim() || undefined,
+      height: height.trim() || undefined,
     };
 
     onSavePatient(updated);
@@ -140,6 +146,29 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
                   <option key={bg} value={bg}>{bg}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Weight (kg)</label>
+              <input
+                type="text"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="e.g. 68"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Height (cm / ft)</label>
+              <input
+                type="text"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="e.g. 172 cm or 5'8 in"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
+              />
             </div>
           </div>
 

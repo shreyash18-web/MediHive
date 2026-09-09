@@ -117,6 +117,8 @@ export interface Patient {
   mobile: string;
   address?: string;
   bloodGroup?: string;
+  weight?: string; // in kg, e.g. '68'
+  height?: string; // in cm or ft/in, e.g. '172 cm' or '5ft 8in'
   emergencyContact?: string;
   allergies?: string;
   medicalHistory?: string;

@@ -26,6 +26,8 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
   const [mobile, setMobile] = useState('');
   const [address, setAddress] = useState('');
   const [bloodGroup, setBloodGroup] = useState('A+');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
   const [allergies, setAllergies] = useState('');
   const [medicalHistory, setMedicalHistory] = useState('');
@@ -75,6 +77,8 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
       mobile: mobile.trim(),
       address: address.trim() || undefined,
       bloodGroup: bloodGroup || undefined,
+      weight: weight.trim() || undefined,
+      height: height.trim() || undefined,
       emergencyContact: emergencyContact.trim() || undefined,
       allergies: allergies.trim() || undefined,
       medicalHistory: medicalHistory.trim() || undefined,
@@ -219,6 +223,30 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
                   <option key={bg} value={bg}>{bg}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Weight (kg)</label>
+              <input
+                type="text"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="e.g. 68"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Height (cm / ft)</label>
+              <input
+                type="text"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="e.g. 172 cm or 5'8&quot;"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
+              />
             </div>
           </div>
         </div>

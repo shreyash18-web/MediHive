@@ -62,6 +62,16 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 Blood: {patient.bloodGroup}
               </span>
             )}
+            {patient.weight && (
+              <span className="px-2 py-1 bg-blue-50 text-blue-700 font-medium rounded border border-blue-200">
+                Weight: {patient.weight} kg
+              </span>
+            )}
+            {patient.height && (
+              <span className="px-2 py-1 bg-teal-50 text-teal-700 font-medium rounded border border-teal-200">
+                Height: {patient.height}
+              </span>
+            )}
             {patient.allergies && (
               <span className="px-2 py-1 bg-amber-50 text-amber-800 font-medium rounded border border-amber-200">
                 Allergies: {patient.allergies}

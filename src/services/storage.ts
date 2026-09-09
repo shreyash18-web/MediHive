@@ -552,6 +552,8 @@ export const exportDataBackup = (
     'Gender': p.gender,
     'Mobile': p.mobile,
     'Blood Group': p.bloodGroup || 'N/A',
+    'Weight (kg)': p.weight || 'N/A',
+    'Height': p.height || 'N/A',
     'Registration Date': p.registrationDate,
     'Last Visit Date': p.lastVisitDate,
     'Total Visits': p.totalVisits,

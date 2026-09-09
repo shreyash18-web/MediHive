@@ -46,6 +46,9 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
             </h2>
             <p className="text-[11px] sm:text-xs text-slate-500 font-mono truncate">
               {patient.id} • {patient.mobile} • {patient.gender}, {patient.age} yrs
+              {patient.bloodGroup && ` • ${patient.bloodGroup}`}
+              {patient.weight && ` • Wt: ${patient.weight}kg`}
+              {patient.height && ` • Ht: ${patient.height}`}
             </p>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
