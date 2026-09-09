@@ -85,7 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_visits_date ON patient_visits(visit_date);
 CREATE TABLE IF NOT EXISTS queue_items (
     id TEXT PRIMARY KEY, -- e.g. 'Q-001-ID' or UUID
     queue_number TEXT NOT NULL, -- e.g. 'Q-001'
-    sequence_number INTEGER NOT NULL, -- 1, 2, 3 for strict FIFO
+    sequence_number BIGINT NOT NULL, -- 1, 2, 3 for strict FIFO
     visit_id TEXT REFERENCES patient_visits(id) ON DELETE CASCADE,
     patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
     patient_name TEXT NOT NULL,

@@ -13,6 +13,7 @@ import {
 } from './services/storage';
 import {
   fetchFullAppStateFromSupabase,
+  createPatientInSupabase,
   updatePatientInSupabase,
   saveOpdRecordInSupabase,
   saveAppointmentInSupabase,
@@ -27,7 +28,10 @@ import {
   deleteDailyNoteInSupabase,
   deleteQueueItemInSupabase,
   clearCompletedQueueInSupabase,
-  clearAllClinicDataFromSupabase
+  clearAllClinicDataFromSupabase,
+  insertVisitAndQueueInSupabase,
+  updateQueueItemStatusInSupabase,
+  cancelQueueTicketInSupabase
 } from './services/supabaseService';
 import { isSupabaseConfigured } from './lib/supabase';
 import { QueueItem } from './types';
@@ -82,11 +86,52 @@ const MainAppContent: React.FC = () => {
       fetchFullAppStateFromSupabase()
         .then((dbState) => {
           if (dbState && isMounted) {
-            setAppState((prev) => ({
-              ...prev,
-              ...dbState,
-              currentUser: prev.currentUser || getStoredAuthUser(),
-            }));
+            setAppState((prev) => {
+              // 1. Identify any local patients created that are not yet in Supabase
+              const supabasePatientIds = new Set((dbState.patients || []).map((p) => p.id));
+              const localUnsyncedPatients = (prev.patients || []).filter((p) => !supabasePatientIds.has(p.id));
+
+              // Upload unsynced local patients to Supabase in background
+              if (localUnsyncedPatients.length > 0) {
+                localUnsyncedPatients.forEach((patient) => {
+                  createPatientInSupabase(patient).catch((err) => {
+                    console.warn('Initial sync of local patient to Supabase:', err);
+                  });
+                  (patient.records || []).forEach((r) => {
+                    saveOpdRecordInSupabase(patient, r).catch(() => {});
+                  });
+                });
+              }
+
+              // 2. Identify any local queue items created that are not yet in Supabase
+              const supabaseQueueIds = new Set((dbState.queue || []).map((q) => q.id));
+              const localUnsyncedQueue = (prev.queue || []).filter((q) => !supabaseQueueIds.has(q.id));
+              if (localUnsyncedQueue.length > 0) {
+                localUnsyncedQueue.forEach((q) => {
+                  const matchingVisit = (prev.visits || []).find((v) => v.id === q.visitId || v.queueId === q.id);
+                  if (matchingVisit) {
+                    insertVisitAndQueueInSupabase(matchingVisit, q).catch(() => {});
+                  }
+                });
+              }
+
+              // Merge Supabase data with any local unsynced patients/queue
+              const mergedPatients = [...(dbState.patients || []), ...localUnsyncedPatients];
+              const mergedQueue = [...(dbState.queue || []), ...localUnsyncedQueue];
+              const mergedVisits = [
+                ...(dbState.visits || []),
+                ...(prev.visits || []).filter((v) => !(dbState.visits || []).some((sv) => sv.id === v.id)),
+              ];
+
+              return {
+                ...prev,
+                ...dbState,
+                patients: mergedPatients,
+                queue: mergedQueue,
+                visits: mergedVisits,
+                currentUser: prev.currentUser || getStoredAuthUser(),
+              };
+            });
           }
         })
         .catch((err) => {
@@ -410,6 +455,11 @@ const MainAppContent: React.FC = () => {
     setAppState(updatedState);
     if (activePatient) {
       showToast(`Calling ${activePatient.patientName} (${activePatient.queueNumber}) into Cabin`, 'info');
+      updateQueueItemStatusInSupabase(activePatient.id, 'With Doctor', {
+        calledAt: new Date().toISOString(),
+      }).catch((err) => {
+        console.warn('Supabase updateQueueItemStatus error:', err);
+      });
     }
   };
 
@@ -421,10 +471,28 @@ const MainAppContent: React.FC = () => {
       opdRecord
     );
 
+    // Explicitly persist completed consultation & OPD record to Supabase
+    const patient = appState.patients.find((p) => p.id === opdRecord.patientId);
+    if (patient) {
+      saveOpdRecordInSupabase(patient, opdRecord).catch((err) => {
+        console.warn('Supabase saveOpdRecord error:', err);
+      });
+    }
+    updateQueueItemStatusInSupabase(activeConsultationQueueItem.id, 'Completed', {
+      completedAt: new Date().toISOString(),
+    }).catch((err) => {
+      console.warn('Supabase updateQueueItemStatus error:', err);
+    });
+
     if (autoCallNext && nextPatient) {
       const advanced = callPatientIntoCabin(updatedState, nextPatient.id);
       setAppState(advanced.updatedState);
       setActiveConsultationQueueItem(advanced.activePatient);
+      if (advanced.activePatient) {
+        updateQueueItemStatusInSupabase(advanced.activePatient.id, 'With Doctor', {
+          calledAt: new Date().toISOString(),
+        }).catch(() => {});
+      }
     } else {
       setAppState(updatedState);
       setActiveConsultationQueueItem(null);
@@ -435,6 +503,9 @@ const MainAppContent: React.FC = () => {
     const updated = cancelPatientQueueItem(appState, queueId);
     setAppState(updated);
     showToast('Queue ticket cancelled', 'info');
+    cancelQueueTicketInSupabase(queueId).catch((err) => {
+      console.warn('Supabase cancelQueueTicket error:', err);
+    });
   };
 
   // If user is not logged in, show Login Screen

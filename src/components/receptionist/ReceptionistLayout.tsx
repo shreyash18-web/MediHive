@@ -37,7 +37,9 @@ import {
   updatePatientInSupabase,
   deleteQueueItemInSupabase, 
   clearCompletedQueueInSupabase,
-  deleteVisitInSupabase 
+  deleteVisitInSupabase,
+  insertVisitAndQueueInSupabase,
+  cancelQueueTicketInSupabase
 } from '../../services/supabaseService';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { SupabaseConnectionModal } from '../common/SupabaseConnectionModal';
@@ -115,6 +117,12 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     );
 
     onUpdateAppState(() => updatedState);
+
+    // Persist visit and live queue item to Supabase for instant multi-screen sync with Doctor
+    insertVisitAndQueueInSupabase(newVisit, newQueueItem).catch((err) => {
+      console.warn('Supabase insertVisitAndQueue error:', err);
+    });
+
     return { newQueueItem, newVisit };
   };
 
@@ -123,6 +131,11 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     const updated = cancelPatientQueueItem(appState, queueId);
     onUpdateAppState(() => updated);
     showToast('Queue ticket cancelled', 'info');
+
+    // Persist cancellation to Supabase
+    cancelQueueTicketInSupabase(queueId).catch((err) => {
+      console.warn('Supabase cancelQueueTicket error:', err);
+    });
   };
 
   // Handle deleting individual queue ticket

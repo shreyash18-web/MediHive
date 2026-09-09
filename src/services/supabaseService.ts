@@ -186,28 +186,35 @@ export const mapQueueItemFromDb = (row: any): QueueItem => ({
   completedAt: row.completed_at || undefined,
 });
 
-export const mapQueueItemToDb = (q: QueueItem) => ({
-  id: q.id,
-  queue_number: q.queueNumber,
-  sequence_number: q.sequenceNumber,
-  visit_id: q.visitId || null,
-  patient_id: q.patientId,
-  patient_name: q.patientName,
-  patient_age: q.patientAge,
-  patient_gender: q.patientGender,
-  patient_mobile: q.patientMobile,
-  complaint: q.complaint,
-  symptoms: q.symptoms || [],
-  symptom_duration: q.symptomDuration || null,
-  vitals: q.vitals || {},
-  arrival_time: q.arrivalTime,
-  visit_date: q.visitDate,
-  status: q.status,
-  doctor_id: q.doctorId || null,
-  called_at: q.calledAt || null,
-  completed_at: q.completedAt || null,
-  created_at: new Date().toISOString(),
-});
+export const mapQueueItemToDb = (q: QueueItem) => {
+  const parsedQueueNum = parseInt((q.queueNumber || '').replace(/\D/g, ''), 10) || 1;
+  const safeSeq = (typeof q.sequenceNumber === 'number' && q.sequenceNumber > 0 && q.sequenceNumber < 2147483647)
+    ? q.sequenceNumber
+    : parsedQueueNum;
+
+  return {
+    id: q.id,
+    queue_number: q.queueNumber,
+    sequence_number: safeSeq,
+    visit_id: q.visitId || null,
+    patient_id: q.patientId,
+    patient_name: q.patientName,
+    patient_age: q.patientAge,
+    patient_gender: q.patientGender,
+    patient_mobile: q.patientMobile,
+    complaint: q.complaint,
+    symptoms: q.symptoms || [],
+    symptom_duration: q.symptomDuration || null,
+    vitals: q.vitals || {},
+    arrival_time: q.arrivalTime,
+    visit_date: q.visitDate,
+    status: q.status,
+    doctor_id: q.doctorId || null,
+    called_at: q.calledAt || null,
+    completed_at: q.completedAt || null,
+    created_at: new Date().toISOString(),
+  };
+};
 
 export const mapAppointmentFromDb = (row: any): Appointment => ({
   id: row.id,
@@ -777,6 +784,16 @@ export const subscribeToClinicRealtime = (onSync: () => void): (() => void) => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'appointments' },
+        () => onSync()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'opd_records' },
+        () => onSync()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'daily_notes' },
         () => onSync()
       )
       .subscribe();

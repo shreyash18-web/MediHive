@@ -1,6 +1,24 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-medihive-50: #f0f7fa;
+  --color-medihive-100: #d9ecf3;
+  --color-medihive-200: #b7dce9;
+  --color-medihive-300: #86c3db;
+  --color-medihive-400: #4fa3c7;
+  --color-medihive-500: #2d84ab;
+  --color-medihive-600: #236b8e;
+  --color-medihive-700: #1e536e;
+  --color-medihive-800: #1a475e;
+  --color-medihive-900: #153a4c;
+  --color-medihive-950: #0c2330;
+
+  --color-navy-800: #1b3245;
+  --color-navy-900: #122332;
+
+  --shadow-soft: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
 
 @layer base {
   html, body {

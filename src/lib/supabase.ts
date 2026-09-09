@@ -3,6 +3,17 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const ENV_URL = (import.meta.env.VITE_SUPABASE_URL || '').trim();
 const ENV_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
+/**
+ * Sanitizes and normalizes Supabase Project URL by stripping /rest/v1 or trailing slashes.
+ */
+export const normalizeSupabaseUrl = (rawUrl: string): string => {
+  let cleaned = (rawUrl || '').trim();
+  cleaned = cleaned.replace(/\/+$/, '');
+  cleaned = cleaned.replace(/\/rest\/v1\/?$/i, '');
+  cleaned = cleaned.replace(/\/rest\/?$/i, '');
+  return cleaned;
+};
+
 export interface SupabaseConfigInfo {
   url: string;
   key: string;
@@ -18,7 +29,8 @@ export const getSupabaseConfig = (): SupabaseConfigInfo => {
   const customUrl = (typeof window !== 'undefined' ? localStorage.getItem('medihive_supabase_url') : null)?.trim() || '';
   const customKey = (typeof window !== 'undefined' ? localStorage.getItem('medihive_supabase_anon_key') : null)?.trim() || '';
 
-  const activeUrl = customUrl || ENV_URL;
+  const rawUrl = customUrl || ENV_URL;
+  const activeUrl = normalizeSupabaseUrl(rawUrl);
   const activeKey = customKey || ENV_KEY;
 
   const isPlaceholder = Boolean(
@@ -48,7 +60,7 @@ export const getSupabaseConfig = (): SupabaseConfigInfo => {
 let currentClient: SupabaseClient | null = null;
 
 const createConfiguredClient = (url: string, key: string): SupabaseClient => {
-  const safeUrl = url || 'https://placeholder.supabase.co';
+  const safeUrl = normalizeSupabaseUrl(url) || 'https://placeholder.supabase.co';
   const safeKey = key || 'placeholder-anon-key';
 
   return createClient(safeUrl, safeKey, {
@@ -93,7 +105,7 @@ export const supabase = new Proxy({} as SupabaseClient, {
  * Saves custom credentials to localStorage and re-initializes the Supabase client.
  */
 export const saveCustomSupabaseConfig = (url: string, key: string) => {
-  const trimmedUrl = url.trim();
+  const trimmedUrl = normalizeSupabaseUrl(url.trim());
   const trimmedKey = key.trim();
 
   localStorage.setItem('medihive_supabase_url', trimmedUrl);
@@ -137,7 +149,8 @@ export const testSupabaseConnection = async (
   details?: string;
 }> => {
   const activeCfg = getSupabaseConfig();
-  const url = (testUrlCandidate !== undefined ? testUrlCandidate : activeCfg.url).trim();
+  const rawUrl = (testUrlCandidate !== undefined ? testUrlCandidate : activeCfg.url).trim();
+  const url = normalizeSupabaseUrl(rawUrl);
   const key = (testKeyCandidate !== undefined ? testKeyCandidate : activeCfg.key).trim();
 
   if (!url || !key) {
