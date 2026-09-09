@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, UserPlus, FileText, Calendar, Phone, ArrowRight, Eye, UserCheck, AlertCircle, Sparkles } from 'lucide-react';
+import { Search, UserPlus, FileText, Calendar, Phone, ArrowRight, Eye, UserCheck, AlertCircle, Sparkles, Edit2, Trash2 } from 'lucide-react';
 import { Patient, PatientVisit } from '../../types';
 import { PatientHistoryModal } from './PatientHistoryModal';
 
@@ -8,6 +8,9 @@ interface PatientSearchAndVisitProps {
   visits: PatientVisit[];
   onStartNewVisit: (patient: Patient) => void;
   onNavigateToNewPatient: () => void;
+  onEditPatient?: (patient: Patient) => void;
+  onDeletePatient?: (patientId: string) => void;
+  onDeleteVisit?: (visitId: string) => void;
 }
 
 export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
@@ -15,9 +18,13 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
   visits,
   onStartNewVisit,
   onNavigateToNewPatient,
+  onEditPatient,
+  onDeletePatient,
+  onDeleteVisit,
 }) => {
   const [query, setQuery] = useState('');
   const [selectedPatientForHistory, setSelectedPatientForHistory] = useState<Patient | null>(null);
+  const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
 
   const searchResults = useMemo(() => {
     if (!query.trim()) return [];
@@ -158,20 +165,45 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPatientForHistory(patient)}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition flex items-center gap-1.5"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Medical History</span>
-                    </button>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPatientForHistory(patient)}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition flex items-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <span>History</span>
+                      </button>
+
+                      {onEditPatient && (
+                        <button
+                          type="button"
+                          onClick={() => onEditPatient(patient)}
+                          title="Edit Patient Details"
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition flex items-center gap-1"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+
+                      {onDeletePatient && (
+                        <button
+                          type="button"
+                          onClick={() => setPatientToDelete(patient)}
+                          title="Delete Patient Record"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition flex items-center justify-center"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
 
                     <button
                       type="button"
                       onClick={() => onStartNewVisit(patient)}
-                      className="px-4 py-1.5 bg-[#2ba4c7] hover:bg-[#228da8] text-white font-bold text-xs rounded-lg transition shadow-xs flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 bg-[#2ba4c7] hover:bg-[#228da8] text-white font-bold text-xs rounded-lg transition shadow-xs flex items-center gap-1.5"
                     >
                       <span>New Visit</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -237,6 +269,26 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          {onEditPatient && (
+                            <button
+                              type="button"
+                              onClick={() => onEditPatient(p)}
+                              title="Edit Patient Details"
+                              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {onDeletePatient && (
+                            <button
+                              type="button"
+                              onClick={() => setPatientToDelete(p)}
+                              title="Delete Patient Record"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => onStartNewVisit(p)}
@@ -262,7 +314,60 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
         isOpen={Boolean(selectedPatientForHistory)}
         onClose={() => setSelectedPatientForHistory(null)}
         onStartNewVisit={onStartNewVisit}
+        onEditPatient={onEditPatient}
+        onDeletePatient={onDeletePatient}
+        onDeleteVisit={onDeleteVisit}
       />
+
+      {/* Delete Patient Confirmation Modal */}
+      {patientToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Delete Patient Record?</h3>
+                <p className="text-xs text-slate-500">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-3.5 text-xs text-rose-900 space-y-1">
+              <p className="font-semibold capitalize text-sm text-slate-900">{patientToDelete.fullName}</p>
+              <p className="text-[11px] text-slate-600">
+                ID: <span className="font-mono font-bold">{patientToDelete.id}</span> | Mobile: <span className="font-mono">{patientToDelete.mobile}</span>
+              </p>
+              <p className="text-[11px] text-rose-700 pt-1">
+                ⚠️ This will permanently delete this patient from Supabase and automatically cascade to remove all associated visits, consultations, and queue tokens.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPatientToDelete(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeletePatient) {
+                    onDeletePatient(patientToDelete.id);
+                  }
+                  setPatientToDelete(null);
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-sm flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Yes, Delete Patient</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

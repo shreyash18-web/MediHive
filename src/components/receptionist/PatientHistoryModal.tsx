@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Clock, Activity, FileText, Pill, AlertCircle, Shield, User, Phone, MapPin } from 'lucide-react';
+import { X, Calendar, Clock, Activity, FileText, Pill, AlertCircle, Shield, User, Phone, MapPin, Edit2, Trash2 } from 'lucide-react';
 import { Patient, OPDRecord, PatientVisit } from '../../types';
 
 interface PatientHistoryModalProps {
@@ -8,6 +8,9 @@ interface PatientHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStartNewVisit?: (patient: Patient) => void;
+  onEditPatient?: (patient: Patient) => void;
+  onDeletePatient?: (patientId: string) => void;
+  onDeleteVisit?: (visitId: string) => void;
 }
 
 export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
@@ -16,6 +19,9 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   isOpen,
   onClose,
   onStartNewVisit,
+  onEditPatient,
+  onDeletePatient,
+  onDeleteVisit,
 }) => {
   if (!isOpen || !patient) return null;
 
@@ -176,17 +182,103 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               ))}
             </div>
           )}
+
+          {/* Recent Reception Visits & Queue Entries */}
+          {patientVisits.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Recent Reception Visits & Queue Tokens ({patientVisits.length})
+              </h4>
+              <div className="space-y-2">
+                {patientVisits.map((v) => (
+                  <div
+                    key={v.id}
+                    className="bg-slate-50 rounded-xl border border-slate-200 p-3.5 flex items-center justify-between gap-3 text-xs hover:border-slate-300 transition"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-slate-800">{v.visitDate} {v.visitTime}</span>
+                        {v.queueNumber && (
+                          <span className="font-mono font-extrabold bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200 text-[11px]">
+                            {v.queueNumber}
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          v.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          v.status === 'Cancelled' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                          'bg-amber-50 text-amber-800 border border-amber-200'
+                        }`}>
+                          {v.status}
+                        </span>
+                      </div>
+                      <p className="text-slate-600 mt-1">
+                        <strong>Complaint:</strong> {v.complaint || 'General Checkup'}
+                      </p>
+                    </div>
+
+                    {onDeleteVisit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Delete visit record from ${v.visitDate} (${v.queueNumber || v.id})?`)) {
+                            onDeleteVisit(v.id);
+                          }
+                        }}
+                        title="Delete this visit entry"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 rounded-lg transition w-full sm:w-auto text-center"
-          >
-            Close
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 rounded-lg transition text-center"
+            >
+              Close
+            </button>
+
+            {onEditPatient && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onEditPatient(patient);
+                }}
+                className="px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                <span>Edit Details</span>
+              </button>
+            )}
+
+            {onDeletePatient && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to permanently delete patient ${patient.fullName} (${patient.id})? This will also remove all their visits and queue records.`)) {
+                    onClose();
+                    onDeletePatient(patient.id);
+                  }
+                }}
+                className="px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>Delete Patient</span>
+              </button>
+            )}
+          </div>
+
           {onStartNewVisit && (
             <button
               type="button"
@@ -194,7 +286,7 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                 onClose();
                 onStartNewVisit(patient);
               }}
-              className="px-4 py-2 text-xs font-bold bg-[#2ba4c7] hover:bg-[#228da8] text-white rounded-lg transition shadow-sm w-full sm:w-auto text-center"
+              className="px-4 py-2 text-xs font-bold bg-[#2ba4c7] hover:bg-[#228da8] text-white rounded-lg transition shadow-sm text-center"
             >
               Start New Visit for {patient.fullName}
             </button>

@@ -561,6 +561,18 @@ export const deleteQueueItemInSupabase = async (queueId: string): Promise<boolea
   }
 };
 
+export const deleteVisitInSupabase = async (visitId: string): Promise<boolean> => {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('patient_visits').delete().eq('id', visitId);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Supabase deleteVisit error:', err);
+    return false;
+  }
+};
+
 export const clearCompletedQueueInSupabase = async (): Promise<boolean> => {
   if (!isSupabaseConfigured) return false;
   try {

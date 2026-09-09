@@ -32,14 +32,18 @@ import {
 } from '../../services/storage';
 import { 
   createPatientInSupabase, 
+  deletePatientInSupabase,
+  updatePatientInSupabase,
   deleteQueueItemInSupabase, 
-  clearCompletedQueueInSupabase 
+  clearCompletedQueueInSupabase,
+  deleteVisitInSupabase 
 } from '../../services/supabaseService';
 import { ReceptionistDashboard } from './ReceptionistDashboard';
 import { PatientSearchAndVisit } from './PatientSearchAndVisit';
 import { NewPatientRegistration } from './NewPatientRegistration';
 import { ReceptionistQueueView } from './ReceptionistQueueView';
 import { PatientVisitForm } from './PatientVisitForm';
+import { EditPatientModal } from '../patients/EditPatientModal';
 import { useToast } from '../common/Toast';
 
 export type ReceptionistTab = 'dashboard' | 'search' | 'new-patient' | 'queue';
@@ -57,6 +61,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
 }) => {
   const [currentTab, setCurrentTab] = useState<ReceptionistTab>('dashboard');
   const [activeVisitPatient, setActiveVisitPatient] = useState<Patient | null>(null);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [initialSearchQuery, setInitialSearchQuery] = useState<string>('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -138,6 +143,66 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     }));
     clearCompletedQueueInSupabase().catch((err) => {
       console.warn('Supabase clearCompletedQueue error:', err);
+    });
+  };
+
+  // Handle editing patient
+  const handleEditPatient = (patient: Patient) => {
+    setEditingPatient(patient);
+  };
+
+  // Handle saving edited patient
+  const handleSavePatient = (updatedPatient: Patient) => {
+    onUpdateAppState((prev) => ({
+      ...prev,
+      patients: prev.patients.map((p) => (p.id === updatedPatient.id ? updatedPatient : p)),
+    }));
+    if (editingPatient?.id === updatedPatient.id) {
+      setEditingPatient(null);
+    }
+    if (activeVisitPatient?.id === updatedPatient.id) {
+      setActiveVisitPatient(updatedPatient);
+    }
+    showToast('Patient details updated successfully.', 'success');
+    updatePatientInSupabase(updatedPatient).catch((err) => {
+      console.warn('Supabase updatePatient error:', err);
+    });
+  };
+
+  // Handle deleting patient and cascading cleanup
+  const handleDeletePatient = (patientId: string) => {
+    onUpdateAppState((prev) => ({
+      ...prev,
+      patients: prev.patients.filter((p) => p.id !== patientId),
+      visits: prev.visits.filter((v) => v.patientId !== patientId),
+      queue: prev.queue.filter((q) => q.patientId !== patientId),
+      appointments: prev.appointments.filter((a) => a.patientId !== patientId),
+    }));
+    if (editingPatient?.id === patientId) {
+      setEditingPatient(null);
+    }
+    if (activeVisitPatient?.id === patientId) {
+      setActiveVisitPatient(null);
+    }
+    showToast('Patient and associated records deleted.', 'info');
+    deletePatientInSupabase(patientId).catch((err) => {
+      console.warn('Supabase deletePatient error:', err);
+    });
+  };
+
+  // Handle deleting an individual visit record
+  const handleDeleteVisit = (visitId: string) => {
+    onUpdateAppState((prev) => {
+      const visit = prev.visits.find((v) => v.id === visitId);
+      return {
+        ...prev,
+        visits: prev.visits.filter((v) => v.id !== visitId),
+        queue: visit?.queueId ? prev.queue.filter((q) => q.id !== visit.queueId) : prev.queue,
+      };
+    });
+    showToast('Visit record deleted.', 'info');
+    deleteVisitInSupabase(visitId).catch((err) => {
+      console.warn('Supabase deleteVisit error:', err);
     });
   };
 
@@ -329,6 +394,9 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
                   onNavigateToNewPatient={() => setCurrentTab('new-patient')}
                   onNavigateToQueue={() => setCurrentTab('queue')}
                   onStartVisit={(patient) => setActiveVisitPatient(patient)}
+                  onEditPatient={handleEditPatient}
+                  onDeletePatient={handleDeletePatient}
+                  onDeleteVisit={handleDeleteVisit}
                 />
               )}
 
@@ -338,6 +406,9 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
                   visits={appState.visits}
                   onStartNewVisit={(patient) => setActiveVisitPatient(patient)}
                   onNavigateToNewPatient={() => setCurrentTab('new-patient')}
+                  onEditPatient={handleEditPatient}
+                  onDeletePatient={handleDeletePatient}
+                  onDeleteVisit={handleDeleteVisit}
                 />
               )}
 
@@ -361,6 +432,16 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
           )}
         </main>
       </div>
+
+      {/* MODAL: Edit Patient Demographics (Receptionist) */}
+      {editingPatient && (
+        <EditPatientModal
+          patient={editingPatient}
+          isOpen={Boolean(editingPatient)}
+          onClose={() => setEditingPatient(null)}
+          onSavePatient={handleSavePatient}
+        />
+      )}
     </div>
   );
 };

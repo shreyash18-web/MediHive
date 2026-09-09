@@ -10,12 +10,14 @@ import {
   ArrowRight, 
   Activity, 
   Stethoscope, 
-  Sparkles,
-  Phone,
-  Eye,
-  Calendar,
-  AlertCircle,
-  Thermometer
+  Sparkles, 
+  Phone, 
+  Eye, 
+  Calendar, 
+  AlertCircle, 
+  Thermometer,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { Patient, PatientVisit, QueueItem } from '../../types';
 import { PatientHistoryModal } from './PatientHistoryModal';
@@ -28,6 +30,9 @@ interface ReceptionistDashboardProps {
   onNavigateToNewPatient: () => void;
   onNavigateToQueue: () => void;
   onStartVisit: (patient: Patient) => void;
+  onEditPatient?: (patient: Patient) => void;
+  onDeletePatient?: (patientId: string) => void;
+  onDeleteVisit?: (visitId: string) => void;
 }
 
 export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
@@ -38,6 +43,9 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
   onNavigateToNewPatient,
   onNavigateToQueue,
   onStartVisit,
+  onEditPatient,
+  onDeletePatient,
+  onDeleteVisit,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatientForHistory, setSelectedPatientForHistory] = useState<Patient | null>(null);
@@ -331,14 +339,40 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => setSelectedPatientForHistory(p)}
+                      title="View Medical History"
                       className="px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition flex items-center gap-1"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>History</span>
                     </button>
+
+                    {onEditPatient && (
+                      <button
+                        onClick={() => onEditPatient(p)}
+                        title="Edit Patient Details"
+                        className="p-1.5 text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {onDeletePatient && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete patient ${p.fullName} (${p.id})? This will also remove their visits and queue items.`)) {
+                            onDeletePatient(p.id);
+                          }
+                        }}
+                        title="Delete Patient Record"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
                     <button
                       onClick={() => onStartVisit(p)}
                       className="px-3 py-1.5 text-xs text-white bg-[#194358] hover:bg-[#205570] rounded-lg font-semibold shadow-sm transition flex items-center gap-1.5"
@@ -371,12 +405,16 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
       {selectedPatientForHistory && (
         <PatientHistoryModal
           patient={selectedPatientForHistory}
+          visits={visits}
           isOpen={Boolean(selectedPatientForHistory)}
           onClose={() => setSelectedPatientForHistory(null)}
           onStartNewVisit={(patient) => {
             setSelectedPatientForHistory(null);
             onStartVisit(patient);
           }}
+          onEditPatient={onEditPatient}
+          onDeletePatient={onDeletePatient}
+          onDeleteVisit={onDeleteVisit}
         />
       )}
     </div>
