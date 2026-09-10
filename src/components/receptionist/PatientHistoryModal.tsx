@@ -35,7 +35,7 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[96dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-[#1e536e] to-[#256382] text-white flex items-center justify-between shrink-0">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-linear-to-r from-[#1e536e] to-[#256382] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/10 rounded-lg">
               <User className="w-5 h-5 text-sky-200" />

@@ -1,19 +1,19 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  UserPlus, 
-  Eye, 
-  Edit3, 
-  Printer, 
-  ArrowLeft, 
-  Trash2, 
-  Calendar, 
-  Phone, 
+import React, { useState, useMemo } from "react";
+import {
+  Search,
+  UserPlus,
+  Eye,
+  Edit3,
+  Printer,
+  ArrowLeft,
+  Trash2,
+  Calendar,
+  Phone,
   Download,
-  FileSpreadsheet
-} from 'lucide-react';
-import { Patient, OPDRecord } from '../../types';
-import { useToast } from '../common/Toast';
+  FileSpreadsheet,
+} from "lucide-react";
+import { Patient, OPDRecord } from "../../types";
+import { useToast } from "../common/Toast";
 
 interface PatientManagementProps {
   patients: Patient[];
@@ -34,15 +34,17 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
   onDeletePatient,
   onBack,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [genderFilter, setGenderFilter] = useState<'All' | 'Male' | 'Female' | 'Other'>('All');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [genderFilter, setGenderFilter] = useState<
+    "All" | "Male" | "Female" | "Other"
+  >("All");
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
   const { showToast } = useToast();
 
   const filteredPatients = useMemo(() => {
     let list = patients;
 
-    if (genderFilter !== 'All') {
+    if (genderFilter !== "All") {
       list = list.filter((p) => p.gender === genderFilter);
     }
 
@@ -53,7 +55,7 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
           p.fullName.toLowerCase().includes(q) ||
           p.id.toLowerCase().includes(q) ||
           p.mobile.includes(q) ||
-          (p.address && p.address.toLowerCase().includes(q))
+          (p.address && p.address.toLowerCase().includes(q)),
       );
     }
 
@@ -62,7 +64,10 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
 
   const handlePrintClick = (patient: Patient) => {
     if (!patient.records || patient.records.length === 0) {
-      showToast(`No prescription recorded yet for ${patient.fullName}.`, 'info');
+      showToast(
+        `No prescription recorded yet for ${patient.fullName}.`,
+        "info",
+      );
       return;
     }
     const latestRecord = patient.records[0];
@@ -82,8 +87,12 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
             <span>Back</span>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-800">Patient Management</h1>
-            <p className="text-xs text-slate-500">All clinic patient records, history and prescription archive</p>
+            <h1 className="text-xl font-bold text-slate-800">
+              Patient Management
+            </h1>
+            <p className="text-xs text-slate-500">
+              All clinic patient records, history and prescription archive
+            </p>
           </div>
         </div>
 
@@ -113,14 +122,14 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
 
         <div className="flex items-center gap-3 justify-between sm:justify-end">
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-medium text-slate-600">
-            {(['All', 'Male', 'Female'] as const).map((g) => (
+            {(["All", "Male", "Female"] as const).map((g) => (
               <button
                 key={g}
                 onClick={() => setGenderFilter(g)}
                 className={`px-3 py-1 rounded-md transition ${
                   genderFilter === g
-                    ? 'bg-white text-slate-900 font-bold shadow-xs'
-                    : 'hover:text-slate-900'
+                    ? "bg-white text-slate-900 font-bold shadow-xs"
+                    : "hover:text-slate-900"
                 }`}
               >
                 {g}
@@ -129,7 +138,10 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
           </div>
 
           <div className="text-xs font-bold text-slate-700 bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-lg">
-            Total: <span className="text-[#1e536e] font-black">{filteredPatients.length}</span>
+            Total:{" "}
+            <span className="text-[#1e536e] font-black">
+              {filteredPatients.length}
+            </span>
           </div>
         </div>
       </div>
@@ -153,7 +165,10 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-slate-400 text-sm">
+                  <td
+                    colSpan={8}
+                    className="px-5 py-12 text-center text-slate-400 text-sm"
+                  >
                     No patients match your search query.
                   </td>
                 </tr>
@@ -172,26 +187,33 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
                     <td className="px-5 py-3.5 font-semibold text-slate-900 capitalize">
                       {patient.fullName}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600">{patient.age}</td>
+                    <td className="px-4 py-3.5 text-slate-600">
+                      {patient.age}
+                    </td>
                     <td className="px-5 py-3.5 text-slate-500 font-mono text-xs">
                       {patient.dob || patient.registrationDate}
                     </td>
                     <td className="px-4 py-3.5">
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          patient.gender === 'Male'
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'bg-pink-50 text-pink-700'
+                          patient.gender === "Male"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-pink-50 text-pink-700"
                         }`}
                       >
                         {patient.gender}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-600 font-mono text-xs">{patient.mobile}</td>
+                    <td className="px-5 py-3.5 text-slate-600 font-mono text-xs">
+                      {patient.mobile}
+                    </td>
                     <td className="px-5 py-3.5 text-slate-700 font-medium font-mono text-xs">
                       {patient.lastVisitDate}
                     </td>
-                    <td className="px-5 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      className="px-5 py-3.5 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex items-center justify-center gap-1">
                         {/* Eye Icon - View (Page 7) */}
                         <button
@@ -249,28 +271,36 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Delete Patient Record</h3>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Delete Patient Record
+                </h3>
                 <p className="text-xs text-slate-500">Permanent data removal</p>
               </div>
             </div>
 
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-1.5 text-xs text-slate-700">
               <p>
-                <strong className="text-slate-900">Patient:</strong> {patientToDelete.fullName}
+                <strong className="text-slate-900">Patient:</strong>{" "}
+                {patientToDelete.fullName}
               </p>
               <p>
-                <strong className="text-slate-900">Patient ID:</strong> <span className="font-mono">{patientToDelete.id}</span>
+                <strong className="text-slate-900">Patient ID:</strong>{" "}
+                <span className="font-mono">{patientToDelete.id}</span>
               </p>
               <p>
-                <strong className="text-slate-900">Mobile:</strong> {patientToDelete.mobile}
+                <strong className="text-slate-900">Mobile:</strong>{" "}
+                {patientToDelete.mobile}
               </p>
               <p>
-                <strong className="text-slate-900">Total Visits:</strong> {patientToDelete.records ? patientToDelete.records.length : 0}
+                <strong className="text-slate-900">Total Visits:</strong>{" "}
+                {patientToDelete.records ? patientToDelete.records.length : 0}
               </p>
             </div>
 
             <p className="text-xs text-rose-600 leading-relaxed bg-rose-50 p-3 rounded-lg border border-rose-200">
-              Warning: Deleting this patient will permanently remove their records, OPD visits, prescriptions, and queue entries from both Supabase and local storage. This action cannot be undone.
+              Warning: Deleting this patient will permanently remove their
+              records, OPD visits, prescriptions, and queue entries from both
+              the database and local storage. This action cannot be undone.
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-2">
@@ -301,4 +331,3 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
     </div>
   );
 };
-

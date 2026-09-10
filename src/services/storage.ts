@@ -1,66 +1,62 @@
-import * as XLSX from 'xlsx';
-import { 
-  AppState, 
-  Patient, 
-  OPDRecord, 
-  DoctorProfile, 
-  ClinicSettings, 
-  EmailConfig, 
-  Appointment, 
+import * as XLSX from "xlsx";
+import {
+  AppState,
+  Patient,
+  OPDRecord,
+  DoctorProfile,
+  ClinicSettings,
+  EmailConfig,
+  Appointment,
   UserAccount,
   PatientVisit,
   PatientVitals,
   QueueItem,
-  QueueStatus
-} from '../types';
-import { 
-  initialDoctor, 
-  initialClinic, 
-  initialEmailConfig 
-} from './mockData';
+  QueueStatus,
+} from "../types";
+import { initialDoctor, initialClinic, initialEmailConfig } from "./mockData";
 import {
   insertVisitAndQueueInSupabase,
   updateQueueItemStatusInSupabase,
   cancelQueueTicketInSupabase,
   updateUserPasswordInSupabase,
   saveOpdRecordInSupabase,
-  fetchUserAccountsFromSupabase
-} from './supabaseService';
+  fetchUserAccountsFromSupabase,
+} from "./supabaseService";
 
-const STORAGE_KEY = 'medihive_app_state_v2';
-const AUTH_KEY = 'medihive_auth_user';
-const ACCOUNTS_KEY = 'medihive_accounts_v2';
-const QUEUE_CHANNEL_NAME = 'medihive_queue_sync_channel';
+const STORAGE_KEY = "medihive_app_state_v2";
+const AUTH_KEY = "medihive_auth_user";
+const ACCOUNTS_KEY = "medihive_accounts_v2";
+const QUEUE_CHANNEL_NAME = "medihive_queue_sync_channel";
 
 // Default multi-role accounts
 export const defaultAccounts: UserAccount[] = [
   {
-    id: 'usr-doc',
-    username: 'doctor',
-    name: 'Dr. Shweta N. Sawant',
-    role: 'doctor',
-    passwordHash: 'doctor123',
+    id: "usr-doc",
+    username: "doctor",
+    name: "Dr. Shweta N. Sawant",
+    role: "doctor",
+    passwordHash: "doctor123",
   },
   {
-    id: 'usr-admin',
-    username: 'admin',
-    name: 'Dr. Shweta (Admin)',
-    role: 'doctor',
-    passwordHash: 'admin123',
+    id: "usr-admin",
+    username: "admin",
+    name: "Dr. Shweta (Admin)",
+    role: "doctor",
+    passwordHash: "admin123",
   },
   {
-    id: 'usr-rec',
-    username: 'receptionist',
-    name: 'Clinic Reception',
-    role: 'receptionist',
-    passwordHash: 'reception123',
+    id: "usr-rec",
+    username: "receptionist",
+    name: "Clinic Reception",
+    role: "receptionist",
+    passwordHash: "reception123",
   },
   {
-    id: 'usr-rec2',
-    username: 'reception',
-    name: 'Reception Desk',
-    role: 'receptionist',
-    passwordHash: 'reception123',
+    id: "usr-rec2",
+    username: "reception",
+    name: "Reception Desk",
+    role: "receptionist",
+    passwordHash: "reception123",
   },
 ];
 
@@ -72,7 +68,7 @@ export const getStoredAccounts = (): UserAccount[] => {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch (e) {
-    console.error('Error loading accounts', e);
+    console.error("Error loading accounts", e);
   }
   return defaultAccounts;
 };
@@ -84,21 +80,94 @@ export const syncAccountsFromSupabase = async (): Promise<void> => {
       localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
     }
   } catch (e) {
-    console.warn('Sync accounts from Supabase notice:', e);
+    console.warn("Sync accounts from Supabase notice:", e);
   }
 };
 
-export const validateCredentials = (username: string, password: string): UserAccount | null => {
+export interface AuthResult {
+  success: boolean;
+  user: UserAccount | null;
+  error?: "INVALID_CREDENTIALS" | "ROLE_MISMATCH";
+  errorMessage?: string;
+}
+
+export const authenticateUser = (
+  username: string,
+  password: string,
+  expectedRole: "doctor" | "receptionist",
+): AuthResult => {
   const accounts = getStoredAccounts();
   const trimmedUser = username.trim().toLowerCase();
   const trimmedPass = password.trim();
-  const found = accounts.find(
-    (acc) => acc.username.toLowerCase() === trimmedUser && acc.passwordHash === trimmedPass
+
+  const matchingAccount = accounts.find(
+    (acc) =>
+      acc.username.toLowerCase() === trimmedUser &&
+      acc.passwordHash === trimmedPass,
   );
+
+  if (!matchingAccount) {
+    return {
+      success: false,
+      user: null,
+      error: "INVALID_CREDENTIALS",
+      errorMessage:
+        "Invalid username or password. Please verify your credentials.",
+    };
+  }
+
+  // Check if role matches expectedRole for this login portal
+  const isDoctorRole =
+    matchingAccount.role === "doctor" || matchingAccount.role === "admin";
+  const isRoleValid =
+    (expectedRole === "doctor" && isDoctorRole) ||
+    (expectedRole === "receptionist" &&
+      matchingAccount.role === "receptionist");
+
+  if (!isRoleValid) {
+    const roleName = isDoctorRole ? "Doctor" : "Receptionist";
+    return {
+      success: false,
+      user: null,
+      error: "ROLE_MISMATCH",
+      errorMessage: `Invalid credentials for this login type. This account has ${roleName} access. Please switch to the ${roleName} login tab.`,
+    };
+  }
+
+  return {
+    success: true,
+    user: matchingAccount,
+  };
+};
+
+export const validateCredentials = (
+  username: string,
+  password: string,
+  expectedRole?: "doctor" | "receptionist",
+): UserAccount | null => {
+  const accounts = getStoredAccounts();
+  const trimmedUser = username.trim().toLowerCase();
+  const trimmedPass = password.trim();
+  const found = accounts.find((acc) => {
+    const matchUser = acc.username.toLowerCase() === trimmedUser;
+    const matchPass = acc.passwordHash === trimmedPass;
+    if (!matchUser || !matchPass) return false;
+
+    if (expectedRole) {
+      if (expectedRole === "doctor") {
+        return acc.role === "doctor" || acc.role === "admin";
+      }
+      return acc.role === expectedRole;
+    }
+    return true;
+  });
   return found || null;
 };
 
-export const updateUserPassword = (username: string, newPassword: string): boolean => {
+export const updateUserPassword = (
+  username: string,
+  newPassword: string,
+): boolean => {
   try {
     const accounts = getStoredAccounts();
     const updated = accounts.map((acc) => {
@@ -110,11 +179,11 @@ export const updateUserPassword = (username: string, newPassword: string): boole
     localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updated));
     // Persist to Supabase
     updateUserPasswordInSupabase(username, newPassword).catch((err) => {
-      console.warn('Supabase updateUserPassword sync:', err);
+      console.warn("Supabase updateUserPassword sync:", err);
     });
     return true;
   } catch (e) {
-    console.error('Error updating password', e);
+    console.error("Error updating password", e);
     return false;
   }
 };
@@ -124,7 +193,7 @@ export const getStoredAuthUser = (): UserAccount | null => {
     const data = localStorage.getItem(AUTH_KEY);
     if (data) return JSON.parse(data);
   } catch (e) {
-    console.error('Error loading auth user', e);
+    console.error("Error loading auth user", e);
   }
   return null;
 };
@@ -140,42 +209,44 @@ export const setStoredAuthUser = (user: UserAccount | null) => {
 // Real-time synchronization via BroadcastChannel & Storage events
 export const broadcastQueueEvent = (event: { type: string; payload?: any }) => {
   try {
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
       const channel = new BroadcastChannel(QUEUE_CHANNEL_NAME);
       channel.postMessage({ ...event, timestamp: Date.now() });
       channel.close();
     }
   } catch (err) {
-    console.warn('BroadcastChannel error:', err);
+    console.warn("BroadcastChannel error:", err);
   }
 };
 
-export const subscribeQueueEvents = (callback: (event: any) => void): (() => void) => {
-  if (typeof window === 'undefined') return () => {};
+export const subscribeQueueEvents = (
+  callback: (event: any) => void,
+): (() => void) => {
+  if (typeof window === "undefined") return () => {};
 
   let channel: BroadcastChannel | null = null;
   const storageHandler = (e: StorageEvent) => {
     if (e.key === STORAGE_KEY) {
-      callback({ type: 'STORAGE_SYNC' });
+      callback({ type: "STORAGE_SYNC" });
     }
   };
 
   try {
-    if ('BroadcastChannel' in window) {
+    if ("BroadcastChannel" in window) {
       channel = new BroadcastChannel(QUEUE_CHANNEL_NAME);
       channel.onmessage = (msg) => {
         callback(msg.data);
       };
     }
   } catch (err) {
-    console.warn('BroadcastChannel init error:', err);
+    console.warn("BroadcastChannel init error:", err);
   }
 
-  window.addEventListener('storage', storageHandler);
+  window.addEventListener("storage", storageHandler);
 
   return () => {
     if (channel) channel.close();
-    window.removeEventListener('storage', storageHandler);
+    window.removeEventListener("storage", storageHandler);
   };
 };
 
@@ -183,7 +254,7 @@ export const subscribeQueueEvents = (callback: (event: any) => void): (() => voi
 export const generateNextVisitId = (visits: PatientVisit[]): string => {
   const currentYear = new Date().getFullYear();
   let maxNum = 0;
-  (visits || []).forEach(v => {
+  (visits || []).forEach((v) => {
     const match = v.id.match(/VIS-\d+-(\d+)/);
     if (match) {
       const num = parseInt(match[1], 10);
@@ -191,15 +262,15 @@ export const generateNextVisitId = (visits: PatientVisit[]): string => {
     }
   });
   const nextNum = maxNum + 1;
-  return `VIS-${currentYear}-${nextNum.toString().padStart(3, '0')}`;
+  return `VIS-${currentYear}-${nextNum.toString().padStart(3, "0")}`;
 };
 
 // Generate next Queue Number (e.g. Q-001)
 export const generateNextQueueNumber = (queue: QueueItem[]): string => {
   const today = new Date().toISOString().slice(0, 10);
-  const todaysItems = (queue || []).filter(q => q.visitDate === today);
+  const todaysItems = (queue || []).filter((q) => q.visitDate === today);
   let maxNum = 0;
-  todaysItems.forEach(item => {
+  todaysItems.forEach((item) => {
     const match = item.queueNumber.match(/Q-(\d+)/);
     if (match) {
       const num = parseInt(match[1], 10);
@@ -207,7 +278,7 @@ export const generateNextQueueNumber = (queue: QueueItem[]): string => {
     }
   });
   const nextNum = maxNum + 1;
-  return `Q-${nextNum.toString().padStart(3, '0')}`;
+  return `Q-${nextNum.toString().padStart(3, "0")}`;
 };
 
 export const loadAppState = (): AppState => {
@@ -228,7 +299,7 @@ export const loadAppState = (): AppState => {
       };
     }
   } catch (err) {
-    console.error('Failed to load state from localStorage:', err);
+    console.error("Failed to load state from localStorage:", err);
   }
 
   const freshState: AppState = {
@@ -250,31 +321,31 @@ export const saveAppState = (state: AppState): void => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
-    console.error('Failed to save state to localStorage:', err);
+    console.error("Failed to save state to localStorage:", err);
   }
 };
 
 // Helper: Generate next Patient ID (e.g. P0004)
 export const generateNextPatientId = (patients: Patient[]): string => {
-  if (!patients || patients.length === 0) return 'P0001';
+  if (!patients || patients.length === 0) return "P0001";
   const numericIds = patients
-    .map(p => {
+    .map((p) => {
       const match = p.id.match(/\d+/);
       return match ? parseInt(match[0], 10) : 0;
     })
-    .filter(n => !isNaN(n));
+    .filter((n) => !isNaN(n));
 
   const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
   const nextNum = maxId + 1;
-  return `P${nextNum.toString().padStart(4, '0')}`;
+  return `P${nextNum.toString().padStart(4, "0")}`;
 };
 
 // Helper: Generate next OPD record ID (e.g. OPD-2026-004)
 export const generateNextOpdId = (patients: Patient[]): string => {
   const currentYear = new Date().getFullYear();
   let maxNum = 0;
-  patients.forEach(p => {
-    p.records.forEach(r => {
+  patients.forEach((p) => {
+    p.records.forEach((r) => {
       const match = r.id.match(/OPD-\d+-(\d+)/);
       if (match) {
         const num = parseInt(match[1], 10);
@@ -283,7 +354,7 @@ export const generateNextOpdId = (patients: Patient[]): string => {
     });
   });
   const nextNum = maxNum + 1;
-  return `OPD-${currentYear}-${nextNum.toString().padStart(3, '0')}`;
+  return `OPD-${currentYear}-${nextNum.toString().padStart(3, "0")}`;
 };
 
 // Add new visit and create queue item in FIFO queue
@@ -297,20 +368,33 @@ export const createVisitAndAddToQueue = (
     vitals: PatientVitals;
     receptionistId?: string;
     receptionistName?: string;
-  }
-): { updatedState: AppState; newQueueItem: QueueItem; newVisit: PatientVisit } => {
+  },
+): {
+  updatedState: AppState;
+  newQueueItem: QueueItem;
+  newVisit: PatientVisit;
+} => {
   const visitId = generateNextVisitId(appState.visits);
   const queueNumber = generateNextQueueNumber(appState.queue);
   const today = new Date().toISOString().slice(0, 10);
-  const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  const timeNow = new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
   const queueId = `Q-${Date.now()}`;
 
   // Check if any patient is currently "With Doctor" or "Next"
-  const hasActivePatient = (appState.queue || []).some(q => q.status === 'With Doctor' && q.visitDate === today);
-  const hasNextPatient = (appState.queue || []).some(q => q.status === 'Next' && q.visitDate === today);
-  
+  const hasActivePatient = (appState.queue || []).some(
+    (q) => q.status === "With Doctor" && q.visitDate === today,
+  );
+  const hasNextPatient = (appState.queue || []).some(
+    (q) => q.status === "Next" && q.visitDate === today,
+  );
+
   // Strict FIFO: if no patient is currently with doctor and none is next, mark as Next, else Waiting
-  const initialStatus: QueueStatus = (!hasActivePatient && !hasNextPatient) ? 'Next' : 'Waiting';
+  const initialStatus: QueueStatus =
+    !hasActivePatient && !hasNextPatient ? "Next" : "Waiting";
 
   const newVisit: PatientVisit = {
     id: visitId,
@@ -359,11 +443,11 @@ export const createVisitAndAddToQueue = (
   };
 
   saveAppState(updatedState);
-  broadcastQueueEvent({ type: 'QUEUE_UPDATED', payload: { newQueueItem } });
+  broadcastQueueEvent({ type: "QUEUE_UPDATED", payload: { newQueueItem } });
 
   // Persist to Supabase in background
   insertVisitAndQueueInSupabase(newVisit, newQueueItem).catch((err) => {
-    console.warn('Supabase insertVisitAndQueue sync notice:', err);
+    console.warn("Supabase insertVisitAndQueue sync notice:", err);
   });
 
   return { updatedState, newQueueItem, newVisit };
@@ -372,7 +456,7 @@ export const createVisitAndAddToQueue = (
 // Doctor calls patient into cabin
 export const callPatientIntoCabin = (
   appState: AppState,
-  queueId?: string
+  queueId?: string,
 ): { updatedState: AppState; activePatient: QueueItem | null } => {
   const today = new Date().toISOString().slice(0, 10);
   const queue = [...(appState.queue || [])];
@@ -380,11 +464,15 @@ export const callPatientIntoCabin = (
   // Target item to call: either specified queueId, or the first 'Next', or the first 'Waiting'
   let targetIndex = -1;
   if (queueId) {
-    targetIndex = queue.findIndex(q => q.id === queueId);
+    targetIndex = queue.findIndex((q) => q.id === queueId);
   } else {
-    targetIndex = queue.findIndex(q => q.status === 'Next' && q.visitDate === today);
+    targetIndex = queue.findIndex(
+      (q) => q.status === "Next" && q.visitDate === today,
+    );
     if (targetIndex === -1) {
-      targetIndex = queue.findIndex(q => q.status === 'Waiting' && q.visitDate === today);
+      targetIndex = queue.findIndex(
+        (q) => q.status === "Waiting" && q.visitDate === today,
+      );
     }
   }
 
@@ -395,7 +483,7 @@ export const callPatientIntoCabin = (
   const nowIso = new Date().toISOString();
   const updatedItem: QueueItem = {
     ...queue[targetIndex],
-    status: 'With Doctor',
+    status: "With Doctor",
     calledAt: nowIso,
   };
   queue[targetIndex] = updatedItem;
@@ -403,19 +491,25 @@ export const callPatientIntoCabin = (
   // Make sure the next waiting patient in line is marked 'Next'
   let foundNext = false;
   for (let i = 0; i < queue.length; i++) {
-    if (i !== targetIndex && queue[i].visitDate === today && queue[i].status === 'Waiting') {
+    if (
+      i !== targetIndex &&
+      queue[i].visitDate === today &&
+      queue[i].status === "Waiting"
+    ) {
       if (!foundNext) {
-        queue[i] = { ...queue[i], status: 'Next' };
+        queue[i] = { ...queue[i], status: "Next" };
         foundNext = true;
         // Sync next status to Supabase
-        updateQueueItemStatusInSupabase(queue[i].id, 'Next').catch(() => {});
+        updateQueueItemStatusInSupabase(queue[i].id, "Next").catch(() => {});
       }
     }
   }
 
   // Update corresponding visit status
-  const updatedVisits = (appState.visits || []).map(v => 
-    v.queueId === updatedItem.id ? { ...v, status: 'With Doctor' as QueueStatus } : v
+  const updatedVisits = (appState.visits || []).map((v) =>
+    v.queueId === updatedItem.id
+      ? { ...v, status: "With Doctor" as QueueStatus }
+      : v,
   );
 
   const updatedState: AppState = {
@@ -425,13 +519,16 @@ export const callPatientIntoCabin = (
   };
 
   saveAppState(updatedState);
-  broadcastQueueEvent({ type: 'PATIENT_CALLED', payload: { activePatient: updatedItem } });
+  broadcastQueueEvent({
+    type: "PATIENT_CALLED",
+    payload: { activePatient: updatedItem },
+  });
 
   // Persist to Supabase in background
-  updateQueueItemStatusInSupabase(updatedItem.id, 'With Doctor', {
+  updateQueueItemStatusInSupabase(updatedItem.id, "With Doctor", {
     calledAt: nowIso,
   }).catch((err) => {
-    console.warn('Supabase callPatientIntoCabin sync notice:', err);
+    console.warn("Supabase callPatientIntoCabin sync notice:", err);
   });
 
   return { updatedState, activePatient: updatedItem };
@@ -441,24 +538,24 @@ export const callPatientIntoCabin = (
 export const completeConsultationAndAdvanceQueue = (
   appState: AppState,
   queueId: string,
-  opdRecord: OPDRecord
+  opdRecord: OPDRecord,
 ): { updatedState: AppState; nextPatient: QueueItem | null } => {
   const today = new Date().toISOString().slice(0, 10);
   const queue = [...(appState.queue || [])];
-  const qIdx = queue.findIndex(q => q.id === queueId);
+  const qIdx = queue.findIndex((q) => q.id === queueId);
 
   const completedTime = new Date().toISOString();
   if (qIdx !== -1) {
     queue[qIdx] = {
       ...queue[qIdx],
-      status: 'Completed',
+      status: "Completed",
       completedAt: completedTime,
     };
   }
 
   // Save the OPD record to the patient's record history
   let savedPatientRecord: Patient | null = null;
-  const updatedPatients = (appState.patients || []).map(p => {
+  const updatedPatients = (appState.patients || []).map((p) => {
     if (p.id === opdRecord.patientId) {
       const records = [opdRecord, ...(p.records || [])];
       savedPatientRecord = {
@@ -473,21 +570,25 @@ export const completeConsultationAndAdvanceQueue = (
   });
 
   // Update visit record
-  const updatedVisits = (appState.visits || []).map(v => 
-    v.queueId === queueId ? { ...v, status: 'Completed' as QueueStatus } : v
+  const updatedVisits = (appState.visits || []).map((v) =>
+    v.queueId === queueId ? { ...v, status: "Completed" as QueueStatus } : v,
   );
 
   // Automatically find the next FIFO patient
-  let nextPatientIdx = queue.findIndex(q => q.visitDate === today && q.status === 'Next');
+  let nextPatientIdx = queue.findIndex(
+    (q) => q.visitDate === today && q.status === "Next",
+  );
   if (nextPatientIdx === -1) {
-    nextPatientIdx = queue.findIndex(q => q.visitDate === today && q.status === 'Waiting');
+    nextPatientIdx = queue.findIndex(
+      (q) => q.visitDate === today && q.status === "Waiting",
+    );
   }
 
   let nextPatient: QueueItem | null = null;
   if (nextPatientIdx !== -1) {
     nextPatient = {
       ...queue[nextPatientIdx],
-      status: 'Next',
+      status: "Next",
     };
     queue[nextPatientIdx] = nextPatient;
   }
@@ -500,21 +601,24 @@ export const completeConsultationAndAdvanceQueue = (
   };
 
   saveAppState(updatedState);
-  broadcastQueueEvent({ type: 'CONSULTATION_COMPLETED', payload: { completedQueueId: queueId, nextPatient } });
+  broadcastQueueEvent({
+    type: "CONSULTATION_COMPLETED",
+    payload: { completedQueueId: queueId, nextPatient },
+  });
 
   // Persist completed consultation & OPD record to Supabase
   if (savedPatientRecord) {
     saveOpdRecordInSupabase(savedPatientRecord, opdRecord).catch((err) => {
-      console.warn('Supabase saveOpdRecord sync notice:', err);
+      console.warn("Supabase saveOpdRecord sync notice:", err);
     });
   }
-  updateQueueItemStatusInSupabase(queueId, 'Completed', {
+  updateQueueItemStatusInSupabase(queueId, "Completed", {
     completedAt: completedTime,
   }).catch((err) => {
-    console.warn('Supabase completeConsultation sync notice:', err);
+    console.warn("Supabase completeConsultation sync notice:", err);
   });
   if (nextPatient) {
-    updateQueueItemStatusInSupabase(nextPatient.id, 'Next').catch(() => {});
+    updateQueueItemStatusInSupabase(nextPatient.id, "Next").catch(() => {});
   }
 
   return { updatedState, nextPatient };
@@ -523,25 +627,29 @@ export const completeConsultationAndAdvanceQueue = (
 // Cancel a queue item (patient leaves before consultation)
 export const cancelPatientQueueItem = (
   appState: AppState,
-  queueId: string
+  queueId: string,
 ): AppState => {
   const today = new Date().toISOString().slice(0, 10);
-  const queue = (appState.queue || []).map(q => 
-    q.id === queueId ? { ...q, status: 'Cancelled' as QueueStatus } : q
+  const queue = (appState.queue || []).map((q) =>
+    q.id === queueId ? { ...q, status: "Cancelled" as QueueStatus } : q,
   );
 
   // Ensure next waiting patient becomes 'Next' if cancelled one was 'Next'
-  let hasNext = queue.some(q => q.status === 'Next' && q.visitDate === today);
+  let hasNext = queue.some((q) => q.status === "Next" && q.visitDate === today);
   if (!hasNext) {
-    const firstWaitingIdx = queue.findIndex(q => q.status === 'Waiting' && q.visitDate === today);
+    const firstWaitingIdx = queue.findIndex(
+      (q) => q.status === "Waiting" && q.visitDate === today,
+    );
     if (firstWaitingIdx !== -1) {
-      queue[firstWaitingIdx] = { ...queue[firstWaitingIdx], status: 'Next' };
-      updateQueueItemStatusInSupabase(queue[firstWaitingIdx].id, 'Next').catch(() => {});
+      queue[firstWaitingIdx] = { ...queue[firstWaitingIdx], status: "Next" };
+      updateQueueItemStatusInSupabase(queue[firstWaitingIdx].id, "Next").catch(
+        () => {},
+      );
     }
   }
 
-  const updatedVisits = (appState.visits || []).map(v => 
-    v.queueId === queueId ? { ...v, status: 'Cancelled' as QueueStatus } : v
+  const updatedVisits = (appState.visits || []).map((v) =>
+    v.queueId === queueId ? { ...v, status: "Cancelled" as QueueStatus } : v,
   );
 
   const updatedState: AppState = {
@@ -551,11 +659,11 @@ export const cancelPatientQueueItem = (
   };
 
   saveAppState(updatedState);
-  broadcastQueueEvent({ type: 'QUEUE_UPDATED' });
+  broadcastQueueEvent({ type: "QUEUE_UPDATED" });
 
   // Persist cancellation to Supabase
   cancelQueueTicketInSupabase(queueId).catch((err) => {
-    console.warn('Supabase cancelQueueTicket sync notice:', err);
+    console.warn("Supabase cancelQueueTicket sync notice:", err);
   });
 
   return updatedState;
@@ -564,26 +672,36 @@ export const cancelPatientQueueItem = (
 // Helper: Export Backup as Excel or JSON
 export const exportDataBackup = (
   state: AppState,
-  periodMonths: number | 'all',
-  format: 'json' | 'excel'
+  periodMonths: number | "all",
+  format: "json" | "excel",
 ) => {
   const cutoffDate = new Date();
-  if (typeof periodMonths === 'number') {
+  if (typeof periodMonths === "number") {
     cutoffDate.setMonth(cutoffDate.getMonth() - periodMonths);
   }
 
-  const filteredPatients = state.patients.map(p => {
-    if (periodMonths === 'all') return p;
-    const records = p.records.filter(r => new Date(r.visitDate) >= cutoffDate);
-    return { ...p, records };
-  }).filter(p => periodMonths === 'all' || p.records.length > 0 || new Date(p.registrationDate) >= cutoffDate);
+  const filteredPatients = state.patients
+    .map((p) => {
+      if (periodMonths === "all") return p;
+      const records = p.records.filter(
+        (r) => new Date(r.visitDate) >= cutoffDate,
+      );
+      return { ...p, records };
+    })
+    .filter(
+      (p) =>
+        periodMonths === "all" ||
+        p.records.length > 0 ||
+        new Date(p.registrationDate) >= cutoffDate,
+    );
 
   const timestamp = new Date().toISOString().slice(0, 10);
 
-  if (format === 'json') {
+  if (format === "json") {
     const backupObj = {
       exportDate: new Date().toISOString(),
-      period: periodMonths === 'all' ? 'All time' : `Last ${periodMonths} Months`,
+      period:
+        periodMonths === "all" ? "All time" : `Last ${periodMonths} Months`,
       doctor: state.doctor,
       clinic: state.clinic,
       patients: filteredPatients,
@@ -591,9 +709,11 @@ export const exportDataBackup = (
       dailyNotes: state.dailyNotes,
     };
 
-    const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(backupObj, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `MediHive_Backup_${periodMonths}_months_${timestamp}.json`;
     document.body.appendChild(link);
@@ -607,67 +727,68 @@ export const exportDataBackup = (
   const wb = XLSX.utils.book_new();
 
   // 1. Patients sheet
-  const patientsData = filteredPatients.map(p => ({
-    'Patient ID': p.id,
-    'Full Name': p.fullName,
-    'Age': p.age,
-    'Gender': p.gender,
-    'Mobile': p.mobile,
-    'Blood Group': p.bloodGroup || 'N/A',
-    'Weight (kg)': p.weight || 'N/A',
-    'Height': p.height || 'N/A',
-    'Registration Date': p.registrationDate,
-    'Last Visit Date': p.lastVisitDate,
-    'Total Visits': p.totalVisits,
-    'Address': p.address || 'N/A',
+  const patientsData = filteredPatients.map((p) => ({
+    "Patient ID": p.id,
+    "Full Name": p.fullName,
+    Age: p.age,
+    Gender: p.gender,
+    Mobile: p.mobile,
+    "Blood Group": p.bloodGroup || "N/A",
+    "Weight (kg)": p.weight || "N/A",
+    Height: p.height || "N/A",
+    "Registration Date": p.registrationDate,
+    "Last Visit Date": p.lastVisitDate,
+    "Total Visits": p.totalVisits,
+    Address: p.address || "N/A",
   }));
   const wsPatients = XLSX.utils.json_to_sheet(patientsData);
-  XLSX.utils.book_append_sheet(wb, wsPatients, 'Patients');
+  XLSX.utils.book_append_sheet(wb, wsPatients, "Patients");
 
   // 2. OPD Visits & Prescriptions sheet
   const visitsData: any[] = [];
-  filteredPatients.forEach(p => {
-    p.records.forEach(r => {
+  filteredPatients.forEach((p) => {
+    p.records.forEach((r) => {
       visitsData.push({
-        'OPD ID': r.id,
-        'Patient ID': p.id,
-        'Patient Name': p.fullName,
-        'Visit Date': r.visitDate,
-        'OPD Type': r.opdType,
-        'Charge Type': r.chargeType,
-        'Diagnosis': r.diagnosis,
-        'Symptoms': r.symptoms.join(', '),
-        'Medicines Prescribed': r.medicines.map(m => `${m.name} (${m.dosage}, ${m.frequency})`).join(' | '),
-        'Panchakarma / Notes': r.panchakarmaNotes || r.clinicalNotes || '',
-        'Next Visit Reminder': r.nextVisitDate || '',
-        'Consultation Fee (₹)': r.consultationFee,
-        'Medicine Fee (₹)': r.medicineFee,
-        'Panchakarma Fee (₹)': r.panchakarmaFee,
-        'Discount (₹)': r.discountValue,
-        'Total Fee (₹)': r.totalFee,
-        'Payment Mode': r.paymentMode,
+        "OPD ID": r.id,
+        "Patient ID": p.id,
+        "Patient Name": p.fullName,
+        "Visit Date": r.visitDate,
+        "OPD Type": r.opdType,
+        "Charge Type": r.chargeType,
+        Diagnosis: r.diagnosis,
+        Symptoms: r.symptoms.join(", "),
+        "Medicines Prescribed": r.medicines
+          .map((m) => `${m.name} (${m.dosage}, ${m.frequency})`)
+          .join(" | "),
+        "Panchakarma / Notes": r.panchakarmaNotes || r.clinicalNotes || "",
+        "Next Visit Reminder": r.nextVisitDate || "",
+        "Consultation Fee (₹)": r.consultationFee,
+        "Medicine Fee (₹)": r.medicineFee,
+        "Panchakarma Fee (₹)": r.panchakarmaFee,
+        "Discount (₹)": r.discountValue,
+        "Total Fee (₹)": r.totalFee,
+        "Payment Mode": r.paymentMode,
       });
     });
   });
   const wsVisits = XLSX.utils.json_to_sheet(visitsData);
-  XLSX.utils.book_append_sheet(wb, wsVisits, 'OPD_Visits');
+  XLSX.utils.book_append_sheet(wb, wsVisits, "OPD_Visits");
 
   // 3. Appointments sheet
-  const appointmentsData = state.appointments.map(a => ({
-    'Appointment ID': a.id,
-    'Patient ID': a.patientId,
-    'Patient Name': a.patientName,
-    'Mobile': a.patientMobile,
-    'Date': a.date,
-    'Time': a.time,
-    'Reason': a.reason,
-    'Type': a.type,
-    'Status': a.status,
+  const appointmentsData = state.appointments.map((a) => ({
+    "Appointment ID": a.id,
+    "Patient ID": a.patientId,
+    "Patient Name": a.patientName,
+    Mobile: a.patientMobile,
+    Date: a.date,
+    Time: a.time,
+    Reason: a.reason,
+    Type: a.type,
+    Status: a.status,
   }));
   const wsAppointments = XLSX.utils.json_to_sheet(appointmentsData);
-  XLSX.utils.book_append_sheet(wb, wsAppointments, 'Appointments');
+  XLSX.utils.book_append_sheet(wb, wsAppointments, "Appointments");
 
   // Download
   XLSX.writeFile(wb, `MediHive_Clinic_Records_${timestamp}.xlsx`);
 };
-

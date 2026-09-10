@@ -1,16 +1,25 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { AppState, Patient, OPDRecord, Appointment, DoctorProfile, ClinicSettings, EmailConfig, UserAccount } from './types';
-import { 
-  loadAppState, 
-  saveAppState, 
-  setStoredAuthUser, 
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  AppState,
+  Patient,
+  OPDRecord,
+  Appointment,
+  DoctorProfile,
+  ClinicSettings,
+  EmailConfig,
+  UserAccount,
+} from "./types";
+import {
+  loadAppState,
+  saveAppState,
+  setStoredAuthUser,
   getStoredAuthUser,
   subscribeQueueEvents,
   callPatientIntoCabin,
   completeConsultationAndAdvanceQueue,
   cancelPatientQueueItem,
-  syncAccountsFromSupabase
-} from './services/storage';
+  syncAccountsFromSupabase,
+} from "./services/storage";
 import {
   fetchFullAppStateFromSupabase,
   createPatientInSupabase,
@@ -31,33 +40,34 @@ import {
   clearAllClinicDataFromSupabase,
   insertVisitAndQueueInSupabase,
   updateQueueItemStatusInSupabase,
-  cancelQueueTicketInSupabase
-} from './services/supabaseService';
-import { isSupabaseConfigured } from './lib/supabase';
-import { QueueItem } from './types';
-import { ToastProvider, useToast } from './components/common/Toast';
-import { Navbar } from './components/layout/Navbar';
-import { Sidebar, NavigationTab } from './components/layout/Sidebar';
-import { LoginScreen } from './components/auth/LoginScreen';
-import { Dashboard } from './components/dashboard/Dashboard';
-import { OpdRegistration } from './components/opd/OpdRegistration';
-import { PrescriptionModal } from './components/prescription/PrescriptionModal';
-import { PatientManagement } from './components/patients/PatientManagement';
-import { PatientDetailsModal } from './components/patients/PatientDetailsModal';
-import { EditPatientModal } from './components/patients/EditPatientModal';
-import { CalendarView } from './components/calendar/CalendarView';
-import { SettingsView } from './components/settings/SettingsView';
-import { HelpCenter } from './components/help/HelpCenter';
-import { ReceptionistLayout } from './components/receptionist/ReceptionistLayout';
-import { ReceptionistQueueView } from './components/receptionist/ReceptionistQueueView';
-import { DoctorConsultationModal } from './components/consultation/DoctorConsultationModal';
-import { SupabaseConnectionModal } from './components/common/SupabaseConnectionModal';
-import { format } from 'date-fns';
+  cancelQueueTicketInSupabase,
+} from "./services/supabaseService";
+import { isSupabaseConfigured } from "./lib/supabase";
+import { QueueItem } from "./types";
+import { ToastProvider, useToast } from "./components/common/Toast";
+import { Navbar } from "./components/layout/Navbar";
+import { Sidebar, NavigationTab } from "./components/layout/Sidebar";
+import { LoginScreen } from "./components/auth/LoginScreen";
+import { Dashboard } from "./components/dashboard/Dashboard";
+import { OpdRegistration } from "./components/opd/OpdRegistration";
+import { PrescriptionModal } from "./components/prescription/PrescriptionModal";
+import { PatientManagement } from "./components/patients/PatientManagement";
+import { PatientDetailsModal } from "./components/patients/PatientDetailsModal";
+import { EditPatientModal } from "./components/patients/EditPatientModal";
+import { CalendarView } from "./components/calendar/CalendarView";
+import { SettingsView } from "./components/settings/SettingsView";
+import { HelpCenter } from "./components/help/HelpCenter";
+import { ReceptionistLayout } from "./components/receptionist/ReceptionistLayout";
+import { ReceptionistQueueView } from "./components/receptionist/ReceptionistQueueView";
+import { DoctorConsultationModal } from "./components/consultation/DoctorConsultationModal";
+import { format } from "date-fns";
 
 const MainAppContent: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
-  const [currentTab, setCurrentTab] = useState<NavigationTab>('dashboard');
-  const [preselectedOpdPatientId, setPreselectedOpdPatientId] = useState<string | undefined>(undefined);
+  const [currentTab, setCurrentTab] = useState<NavigationTab>("dashboard");
+  const [preselectedOpdPatientId, setPreselectedOpdPatientId] = useState<
+    string | undefined
+  >(undefined);
 
   // Modals
   const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
@@ -66,9 +76,9 @@ const MainAppContent: React.FC = () => {
     patient: Patient;
     record: OPDRecord;
   } | null>(null);
-  const [activeConsultationQueueItem, setActiveConsultationQueueItem] = useState<QueueItem | null>(null);
+  const [activeConsultationQueueItem, setActiveConsultationQueueItem] =
+    useState<QueueItem | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
 
   const { showToast } = useToast();
 
@@ -80,22 +90,38 @@ const MainAppContent: React.FC = () => {
   // Initial load from Supabase & Real-time multi-device sync
   useEffect(() => {
     let isMounted = true;
+    let unsubscribeRealtime: (() => void) | null = null;
 
-    // 1. Initial hydration from Supabase if configured
-    if (isSupabaseConfigured) {
+    const initSupabaseSync = () => {
+      if (!isSupabaseConfigured()) {
+        return;
+      }
+
+      console.log(
+        "[MediHive] Supabase cloud connection active. Hydrating clinic data...",
+      );
+
+      // 1. Initial hydration from Supabase
       fetchFullAppStateFromSupabase()
         .then((dbState) => {
           if (dbState && isMounted) {
             setAppState((prev) => {
               // 1. Identify any local patients created that are not yet in Supabase
-              const supabasePatientIds = new Set((dbState.patients || []).map((p) => p.id));
-              const localUnsyncedPatients = (prev.patients || []).filter((p) => !supabasePatientIds.has(p.id));
+              const supabasePatientIds = new Set(
+                (dbState.patients || []).map((p) => p.id),
+              );
+              const localUnsyncedPatients = (prev.patients || []).filter(
+                (p) => !supabasePatientIds.has(p.id),
+              );
 
               // Upload unsynced local patients to Supabase in background
               if (localUnsyncedPatients.length > 0) {
                 localUnsyncedPatients.forEach((patient) => {
                   createPatientInSupabase(patient).catch((err) => {
-                    console.warn('Initial sync of local patient to Supabase:', err);
+                    console.warn(
+                      "Initial sync of local patient to Supabase:",
+                      err,
+                    );
                   });
                   (patient.records || []).forEach((r) => {
                     saveOpdRecordInSupabase(patient, r).catch(() => {});
@@ -104,23 +130,39 @@ const MainAppContent: React.FC = () => {
               }
 
               // 2. Identify any local queue items created that are not yet in Supabase
-              const supabaseQueueIds = new Set((dbState.queue || []).map((q) => q.id));
-              const localUnsyncedQueue = (prev.queue || []).filter((q) => !supabaseQueueIds.has(q.id));
+              const supabaseQueueIds = new Set(
+                (dbState.queue || []).map((q) => q.id),
+              );
+              const localUnsyncedQueue = (prev.queue || []).filter(
+                (q) => !supabaseQueueIds.has(q.id),
+              );
               if (localUnsyncedQueue.length > 0) {
                 localUnsyncedQueue.forEach((q) => {
-                  const matchingVisit = (prev.visits || []).find((v) => v.id === q.visitId || v.queueId === q.id);
+                  const matchingVisit = (prev.visits || []).find(
+                    (v) => v.id === q.visitId || v.queueId === q.id,
+                  );
                   if (matchingVisit) {
-                    insertVisitAndQueueInSupabase(matchingVisit, q).catch(() => {});
+                    insertVisitAndQueueInSupabase(matchingVisit, q).catch(
+                      () => {},
+                    );
                   }
                 });
               }
 
               // Merge Supabase data with any local unsynced patients/queue
-              const mergedPatients = [...(dbState.patients || []), ...localUnsyncedPatients];
-              const mergedQueue = [...(dbState.queue || []), ...localUnsyncedQueue];
+              const mergedPatients = [
+                ...(dbState.patients || []),
+                ...localUnsyncedPatients,
+              ];
+              const mergedQueue = [
+                ...(dbState.queue || []),
+                ...localUnsyncedQueue,
+              ];
               const mergedVisits = [
                 ...(dbState.visits || []),
-                ...(prev.visits || []).filter((v) => !(dbState.visits || []).some((sv) => sv.id === v.id)),
+                ...(prev.visits || []).filter(
+                  (v) => !(dbState.visits || []).some((sv) => sv.id === v.id),
+                ),
               ];
 
               return {
@@ -135,14 +177,20 @@ const MainAppContent: React.FC = () => {
           }
         })
         .catch((err) => {
-          console.warn('Initial Supabase hydration notice:', err);
+          console.warn("Initial Supabase hydration notice:", err);
         });
 
       // Sync user accounts from Supabase into accounts cache
       syncAccountsFromSupabase().catch(() => {});
 
-      // 2. Real-time PostgreSQL subscription across all clinic screens
-      const unsubscribeRealtime = subscribeToClinicRealtime(async () => {
+      // 2. Real-time PostgreSQL subscription across all clinic screens & logins
+      if (unsubscribeRealtime) {
+        unsubscribeRealtime();
+      }
+      unsubscribeRealtime = subscribeToClinicRealtime(async () => {
+        console.log(
+          "[MediHive] Realtime cloud change detected. Syncing updates...",
+        );
         const refreshed = await fetchFullAppStateFromSupabase();
         if (refreshed && isMounted) {
           setAppState((prev) => ({
@@ -152,12 +200,26 @@ const MainAppContent: React.FC = () => {
           }));
         }
       });
+    };
 
-      return () => {
-        isMounted = false;
-        unsubscribeRealtime();
-      };
-    }
+    initSupabaseSync();
+
+    const handleConfigChange = () => {
+      initSupabaseSync();
+    };
+    window.addEventListener(
+      "medihive_supabase_config_changed",
+      handleConfigChange,
+    );
+
+    return () => {
+      isMounted = false;
+      if (unsubscribeRealtime) unsubscribeRealtime();
+      window.removeEventListener(
+        "medihive_supabase_config_changed",
+        handleConfigChange,
+      );
+    };
   }, []);
 
   // Real-time synchronization across browser tabs (via BroadcastChannel & Storage events)
@@ -167,7 +229,7 @@ const MainAppContent: React.FC = () => {
     });
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'medihive_app_state_v2' && e.newValue) {
+      if (e.key === "medihive_app_state_v2" && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
           setAppState((prev) => ({
@@ -179,20 +241,20 @@ const MainAppContent: React.FC = () => {
             dailyNotes: parsed.dailyNotes || {},
           }));
         } catch (err) {
-          console.error('Storage cross-tab sync error:', err);
+          console.error("Storage cross-tab sync error:", err);
         }
       }
     };
 
-    window.addEventListener('storage', handleStorage);
+    window.addEventListener("storage", handleStorage);
     return () => {
       unsubscribe();
-      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
   // Check follow-ups due today on load
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todayStr = format(new Date(), "yyyy-MM-dd");
   const todaysFollowUps = useMemo(() => {
     const list: { patient: Patient; record: OPDRecord }[] = [];
     appState.patients.forEach((p) => {
@@ -208,7 +270,9 @@ const MainAppContent: React.FC = () => {
   // Waiting queue count for today
   const activeWaitingQueueCount = useMemo(() => {
     return (appState.queue || []).filter(
-      (q) => q.visitDate === todayStr && (q.status === 'Waiting' || q.status === 'Next')
+      (q) =>
+        q.visitDate === todayStr &&
+        (q.status === "Waiting" || q.status === "Next"),
     ).length;
   }, [appState.queue, todayStr]);
 
@@ -221,7 +285,7 @@ const MainAppContent: React.FC = () => {
   const handleLogout = () => {
     setStoredAuthUser(null);
     setAppState((prev) => ({ ...prev, currentUser: null }));
-    showToast('Logged out successfully', 'info');
+    showToast("Logged out successfully", "info");
   };
 
   // State update actions (Optimistic UI + Supabase Persistence)
@@ -244,14 +308,14 @@ const MainAppContent: React.FC = () => {
 
     // Write to Supabase
     saveOpdRecordInSupabase(patient, opdRecord).catch((err) => {
-      console.warn('Supabase saveOpdRecord error:', err);
+      console.warn("Supabase saveOpdRecord error:", err);
     });
   };
 
   const handleSavePatient = (updatedPatient: Patient) => {
     setAppState((prev) => {
       const updatedPatients = prev.patients.map((p) =>
-        p.id === updatedPatient.id ? updatedPatient : p
+        p.id === updatedPatient.id ? updatedPatient : p,
       );
       return {
         ...prev,
@@ -264,7 +328,7 @@ const MainAppContent: React.FC = () => {
 
     // Write to Supabase
     updatePatientInSupabase(updatedPatient).catch((err) => {
-      console.warn('Supabase updatePatient error:', err);
+      console.warn("Supabase updatePatient error:", err);
     });
   };
 
@@ -279,7 +343,7 @@ const MainAppContent: React.FC = () => {
 
     // Write to Supabase
     saveDailyNoteInSupabase(date, note).catch((err) => {
-      console.warn('Supabase saveDailyNote error:', err);
+      console.warn("Supabase saveDailyNote error:", err);
     });
   };
 
@@ -291,7 +355,7 @@ const MainAppContent: React.FC = () => {
 
     // Write to Supabase
     saveAppointmentInSupabase(appointment).catch((err) => {
-      console.warn('Supabase saveAppointment error:', err);
+      console.warn("Supabase saveAppointment error:", err);
     });
   };
 
@@ -300,11 +364,11 @@ const MainAppContent: React.FC = () => {
       ...prev,
       appointments: prev.appointments.filter((a) => a.id !== id),
     }));
-    showToast('Appointment removed', 'info');
+    showToast("Appointment removed", "info");
 
     // Delete from Supabase
     deleteAppointmentInSupabase(id).catch((err) => {
-      console.warn('Supabase deleteAppointment error:', err);
+      console.warn("Supabase deleteAppointment error:", err);
     });
   };
 
@@ -322,9 +386,9 @@ const MainAppContent: React.FC = () => {
     if (editingPatient?.id === patientId) {
       setEditingPatient(null);
     }
-    showToast('Patient and associated records deleted.', 'info');
+    showToast("Patient and associated records deleted.", "info");
     deletePatientInSupabase(patientId).catch((err) => {
-      console.warn('Supabase deletePatient error:', err);
+      console.warn("Supabase deletePatient error:", err);
     });
   };
 
@@ -362,9 +426,9 @@ const MainAppContent: React.FC = () => {
       });
     }
 
-    showToast('Consultation record deleted.', 'info');
+    showToast("Consultation record deleted.", "info");
     deleteOpdRecordInSupabase(recordId, patientId).catch((err) => {
-      console.warn('Supabase deleteOpdRecord error:', err);
+      console.warn("Supabase deleteOpdRecord error:", err);
     });
   };
 
@@ -378,7 +442,7 @@ const MainAppContent: React.FC = () => {
       };
     });
     deleteDailyNoteInSupabase(date).catch((err) => {
-      console.warn('Supabase deleteDailyNote error:', err);
+      console.warn("Supabase deleteDailyNote error:", err);
     });
   };
 
@@ -388,7 +452,7 @@ const MainAppContent: React.FC = () => {
       queue: prev.queue.filter((q) => q.id !== queueId),
     }));
     deleteQueueItemInSupabase(queueId).catch((err) => {
-      console.warn('Supabase deleteQueueItem error:', err);
+      console.warn("Supabase deleteQueueItem error:", err);
     });
   };
 
@@ -397,11 +461,15 @@ const MainAppContent: React.FC = () => {
     setAppState((prev) => ({
       ...prev,
       queue: prev.queue.filter(
-        (q) => !(q.visitDate === today && (q.status === 'Completed' || q.status === 'Cancelled'))
+        (q) =>
+          !(
+            q.visitDate === today &&
+            (q.status === "Completed" || q.status === "Cancelled")
+          ),
       ),
     }));
     clearCompletedQueueInSupabase().catch((err) => {
-      console.warn('Supabase clearCompletedQueue error:', err);
+      console.warn("Supabase clearCompletedQueue error:", err);
     });
   };
 
@@ -419,28 +487,28 @@ const MainAppContent: React.FC = () => {
     setPrescriptionData(null);
     setActiveConsultationQueueItem(null);
     clearAllClinicDataFromSupabase().catch((err) => {
-      console.warn('Supabase clearAllClinicData error:', err);
+      console.warn("Supabase clearAllClinicData error:", err);
     });
   };
 
   const handleUpdateDoctor = (doctor: DoctorProfile) => {
     setAppState((prev) => ({ ...prev, doctor }));
     updateDoctorProfileInSupabase(doctor).catch((err) => {
-      console.warn('Supabase updateDoctorProfile error:', err);
+      console.warn("Supabase updateDoctorProfile error:", err);
     });
   };
 
   const handleUpdateClinic = (clinic: ClinicSettings) => {
     setAppState((prev) => ({ ...prev, clinic }));
     updateClinicSettingsInSupabase(clinic).catch((err) => {
-      console.warn('Supabase updateClinicSettings error:', err);
+      console.warn("Supabase updateClinicSettings error:", err);
     });
   };
 
   const handleUpdateEmailConfig = (emailConfig: EmailConfig) => {
     setAppState((prev) => ({ ...prev, emailConfig }));
     updateEmailConfigInSupabase(emailConfig).catch((err) => {
-      console.warn('Supabase updateEmailConfig error:', err);
+      console.warn("Supabase updateEmailConfig error:", err);
     });
   };
 
@@ -451,37 +519,50 @@ const MainAppContent: React.FC = () => {
 
   // Queue actions for doctor
   const handleDoctorCallPatient = (queueId?: string) => {
-    const { updatedState, activePatient } = callPatientIntoCabin(appState, queueId);
+    const { updatedState, activePatient } = callPatientIntoCabin(
+      appState,
+      queueId,
+    );
     setAppState(updatedState);
     if (activePatient) {
-      showToast(`Calling ${activePatient.patientName} (${activePatient.queueNumber}) into Cabin`, 'info');
-      updateQueueItemStatusInSupabase(activePatient.id, 'With Doctor', {
+      showToast(
+        `Calling ${activePatient.patientName} (${activePatient.queueNumber}) into Cabin`,
+        "info",
+      );
+      updateQueueItemStatusInSupabase(activePatient.id, "With Doctor", {
         calledAt: new Date().toISOString(),
       }).catch((err) => {
-        console.warn('Supabase updateQueueItemStatus error:', err);
+        console.warn("Supabase updateQueueItemStatus error:", err);
       });
     }
   };
 
-  const handleCompleteConsultation = (opdRecord: OPDRecord, autoCallNext: boolean) => {
+  const handleCompleteConsultation = (
+    opdRecord: OPDRecord,
+    autoCallNext: boolean,
+  ) => {
     if (!activeConsultationQueueItem) return;
     const { updatedState, nextPatient } = completeConsultationAndAdvanceQueue(
       appState,
       activeConsultationQueueItem.id,
-      opdRecord
+      opdRecord,
     );
 
     // Explicitly persist completed consultation & OPD record to Supabase
     const patient = appState.patients.find((p) => p.id === opdRecord.patientId);
     if (patient) {
       saveOpdRecordInSupabase(patient, opdRecord).catch((err) => {
-        console.warn('Supabase saveOpdRecord error:', err);
+        console.warn("Supabase saveOpdRecord error:", err);
       });
     }
-    updateQueueItemStatusInSupabase(activeConsultationQueueItem.id, 'Completed', {
-      completedAt: new Date().toISOString(),
-    }).catch((err) => {
-      console.warn('Supabase updateQueueItemStatus error:', err);
+    updateQueueItemStatusInSupabase(
+      activeConsultationQueueItem.id,
+      "Completed",
+      {
+        completedAt: new Date().toISOString(),
+      },
+    ).catch((err) => {
+      console.warn("Supabase updateQueueItemStatus error:", err);
     });
 
     if (autoCallNext && nextPatient) {
@@ -489,9 +570,13 @@ const MainAppContent: React.FC = () => {
       setAppState(advanced.updatedState);
       setActiveConsultationQueueItem(advanced.activePatient);
       if (advanced.activePatient) {
-        updateQueueItemStatusInSupabase(advanced.activePatient.id, 'With Doctor', {
-          calledAt: new Date().toISOString(),
-        }).catch(() => {});
+        updateQueueItemStatusInSupabase(
+          advanced.activePatient.id,
+          "With Doctor",
+          {
+            calledAt: new Date().toISOString(),
+          },
+        ).catch(() => {});
       }
     } else {
       setAppState(updatedState);
@@ -502,9 +587,9 @@ const MainAppContent: React.FC = () => {
   const handleCancelQueueItem = (queueId: string) => {
     const updated = cancelPatientQueueItem(appState, queueId);
     setAppState(updated);
-    showToast('Queue ticket cancelled', 'info');
+    showToast("Queue ticket cancelled", "info");
     cancelQueueTicketInSupabase(queueId).catch((err) => {
-      console.warn('Supabase cancelQueueTicket error:', err);
+      console.warn("Supabase cancelQueueTicket error:", err);
     });
   };
 
@@ -514,7 +599,7 @@ const MainAppContent: React.FC = () => {
   }
 
   // If user is receptionist, show dedicated Receptionist Portal
-  if (appState.currentUser.role === 'receptionist') {
+  if (appState.currentUser.role === "receptionist") {
     return (
       <ReceptionistLayout
         appState={appState}
@@ -525,7 +610,7 @@ const MainAppContent: React.FC = () => {
   }
 
   return (
-    <div className="flex h-[100dvh] min-h-[100dvh] bg-[#f4f7f9] overflow-hidden">
+    <div className="flex h-dvh min-h-dvh bg-[#f4f7f9] overflow-hidden">
       {/* Left Sidebar (Desktop fixed + Mobile/Tablet slide-in drawer) */}
       <Sidebar
         currentTab={currentTab}
@@ -542,47 +627,52 @@ const MainAppContent: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-[100dvh] min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col h-dvh min-h-0 overflow-hidden">
         {/* Top Navbar */}
         <Navbar
           doctor={appState.doctor}
           clinic={appState.clinic}
           activeFollowUpsCount={todaysFollowUps.length}
-          onNavigateToCalendar={() => setCurrentTab('calendar')}
+          onNavigateToCalendar={() => setCurrentTab("calendar")}
           onToggleSidebar={() => setMobileSidebarOpen((prev) => !prev)}
-          onOpenSupabaseModal={() => setShowSupabaseModal(true)}
         />
 
         {/* Scrollable View Container */}
         <main className="flex-1 overflow-y-auto">
-          {currentTab === 'dashboard' && (
+          {currentTab === "dashboard" && (
             <Dashboard
               patients={appState.patients}
               queue={appState.queue}
               onAddPatient={() => {
                 setPreselectedOpdPatientId(undefined);
-                setCurrentTab('opd');
+                setCurrentTab("opd");
               }}
               onViewPatient={(patient) => setViewingPatient(patient)}
               onEditPatient={(patient) => setEditingPatient(patient)}
               onNavigateToOpd={(patientId) => {
                 setPreselectedOpdPatientId(patientId);
-                setCurrentTab('opd');
+                setCurrentTab("opd");
               }}
-              onNavigateToCalendar={() => setCurrentTab('calendar')}
-              onNavigateToPatients={() => setCurrentTab('patients')}
+              onNavigateToCalendar={() => setCurrentTab("calendar")}
+              onNavigateToPatients={() => setCurrentTab("patients")}
               onCallPatientIntoCabin={handleDoctorCallPatient}
-              onOpenConsultation={(item) => setActiveConsultationQueueItem(item)}
-              onNavigateToQueue={() => setCurrentTab('queue')}
+              onOpenConsultation={(item) =>
+                setActiveConsultationQueueItem(item)
+              }
+              onNavigateToQueue={() => setCurrentTab("queue")}
             />
           )}
 
-          {currentTab === 'queue' && (
+          {currentTab === "queue" && (
             <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 page-fade-in">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                 <div>
-                  <h1 className="text-xl font-bold text-slate-900">Doctor's Live Clinic Queue</h1>
-                  <p className="text-xs text-slate-500">Live FIFO patient sequence and cabin admission</p>
+                  <h1 className="text-xl font-bold text-slate-900">
+                    Doctor's Live Clinic Queue
+                  </h1>
+                  <p className="text-xs text-slate-500">
+                    Live FIFO patient sequence and cabin admission
+                  </p>
                 </div>
               </div>
               <ReceptionistQueueView
@@ -594,11 +684,11 @@ const MainAppContent: React.FC = () => {
             </div>
           )}
 
-          {currentTab === 'opd' && (
+          {currentTab === "opd" && (
             <OpdRegistration
               patients={appState.patients}
               preselectedPatientId={preselectedOpdPatientId}
-              onBack={() => setCurrentTab('dashboard')}
+              onBack={() => setCurrentTab("dashboard")}
               onSaveOpdRecord={handleSaveOpdRecord}
               onGeneratePrescription={(patient, record) => {
                 setPrescriptionData({ patient, record });
@@ -606,12 +696,12 @@ const MainAppContent: React.FC = () => {
             />
           )}
 
-          {currentTab === 'patients' && (
+          {currentTab === "patients" && (
             <PatientManagement
               patients={appState.patients}
               onAddPatient={() => {
                 setPreselectedOpdPatientId(undefined);
-                setCurrentTab('opd');
+                setCurrentTab("opd");
               }}
               onViewPatient={(patient) => setViewingPatient(patient)}
               onEditPatient={(patient) => setEditingPatient(patient)}
@@ -619,11 +709,11 @@ const MainAppContent: React.FC = () => {
               onPrintLatestPrescription={(patient, record) => {
                 setPrescriptionData({ patient, record });
               }}
-              onBack={() => setCurrentTab('dashboard')}
+              onBack={() => setCurrentTab("dashboard")}
             />
           )}
 
-          {currentTab === 'calendar' && (
+          {currentTab === "calendar" && (
             <CalendarView
               patients={appState.patients}
               appointments={appState.appointments}
@@ -632,11 +722,11 @@ const MainAppContent: React.FC = () => {
               onDeleteDailyNote={handleDeleteDailyNote}
               onSaveAppointment={handleSaveAppointment}
               onDeleteAppointment={handleDeleteAppointment}
-              onBack={() => setCurrentTab('dashboard')}
+              onBack={() => setCurrentTab("dashboard")}
             />
           )}
 
-          {currentTab === 'settings' && (
+          {currentTab === "settings" && (
             <SettingsView
               doctor={appState.doctor}
               clinic={appState.clinic}
@@ -647,13 +737,12 @@ const MainAppContent: React.FC = () => {
               onUpdateEmailConfig={handleUpdateEmailConfig}
               onRestoreBackup={handleRestoreBackup}
               onClearAllClinicData={handleClearAllClinicData}
-              onOpenSupabaseModal={() => setShowSupabaseModal(true)}
-              onBack={() => setCurrentTab('dashboard')}
+              onBack={() => setCurrentTab("dashboard")}
             />
           )}
 
-          {currentTab === 'help' && (
-            <HelpCenter onBack={() => setCurrentTab('dashboard')} />
+          {currentTab === "help" && (
+            <HelpCenter onBack={() => setCurrentTab("dashboard")} />
           )}
         </main>
       </div>
@@ -677,7 +766,7 @@ const MainAppContent: React.FC = () => {
         onAddNewOpd={(patientId) => {
           setViewingPatient(null);
           setPreselectedOpdPatientId(patientId);
-          setCurrentTab('opd');
+          setCurrentTab("opd");
         }}
       />
 
@@ -701,11 +790,11 @@ const MainAppContent: React.FC = () => {
           onEdit={() => {
             setPrescriptionData(null);
             setPreselectedOpdPatientId(prescriptionData.patient.id);
-            setCurrentTab('opd');
+            setCurrentTab("opd");
           }}
           onConfirmSave={() => {
             setPrescriptionData(null);
-            showToast('Prescription confirmed and archived!', 'success');
+            showToast("Prescription confirmed and archived!", "success");
           }}
         />
       )}
@@ -717,7 +806,9 @@ const MainAppContent: React.FC = () => {
           onClose={() => setActiveConsultationQueueItem(null)}
           queueItem={activeConsultationQueueItem}
           patient={
-            appState.patients.find((p) => p.id === activeConsultationQueueItem.patientId) || {
+            appState.patients.find(
+              (p) => p.id === activeConsultationQueueItem.patientId,
+            ) || {
               id: activeConsultationQueueItem.patientId,
               fullName: activeConsultationQueueItem.patientName,
               age: activeConsultationQueueItem.patientAge,
@@ -727,7 +818,7 @@ const MainAppContent: React.FC = () => {
               lastVisitDate: todayStr,
               records: [],
               totalVisits: 0,
-              createdAt: '',
+              createdAt: "",
             }
           }
           doctor={appState.doctor}
@@ -740,12 +831,6 @@ const MainAppContent: React.FC = () => {
           }}
         />
       )}
-
-      {/* MODAL: Supabase Connection & Diagnostics Modal */}
-      <SupabaseConnectionModal
-        isOpen={showSupabaseModal}
-        onClose={() => setShowSupabaseModal(false)}
-      />
     </div>
   );
 };
@@ -759,4 +844,3 @@ export function App() {
 }
 
 export default App;
- 

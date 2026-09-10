@@ -1,9 +1,8 @@
-import React from 'react';
-import { DoctorProfile, ClinicSettings } from '../../types';
-import { MediHiveLogo } from '../common/MediHiveLogo';
-import { User, Bell, Calendar as CalendarIcon, Menu, Database } from 'lucide-react';
-import { format } from 'date-fns';
-import { isSupabaseConfigured } from '../../lib/supabase';
+import React from "react";
+import { DoctorProfile, ClinicSettings } from "../../types";
+import { MediHiveLogo } from "../common/MediHiveLogo";
+import { User, Bell, Calendar as CalendarIcon, Menu } from "lucide-react";
+import { format } from "date-fns";
 
 interface NavbarProps {
   doctor: DoctorProfile;
@@ -12,7 +11,6 @@ interface NavbarProps {
   onNavigateToCalendar?: () => void;
   onOpenFollowUps?: () => void;
   onToggleSidebar?: () => void;
-  onOpenSupabaseModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -22,12 +20,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateToCalendar,
   onOpenFollowUps,
   onToggleSidebar,
-  onOpenSupabaseModal,
 }) => {
-  const currentDateFormatted = format(new Date(), 'dd MMMM yyyy');
+  const currentDateFormatted = format(new Date(), "dd MMMM yyyy");
 
   return (
-    <header className="bg-gradient-to-r from-[#1e536e] via-[#236484] to-[#1e536e] text-white px-3 sm:px-6 py-2.5 shadow-md flex items-center justify-between z-30 no-print">
+    <header className="bg-linear-to-r from-[#1e536e] via-[#236484] to-[#1e536e] text-white px-3 sm:px-6 py-2.5 shadow-md flex items-center justify-between z-30 no-print">
       {/* Left side: Mobile Menu Toggle + Brand or Greeting */}
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Hamburger button on mobile & tablet */}
@@ -43,7 +40,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           <MediHiveLogo size="sm" textColor="text-white" />
           <div className="border-l border-white/20 pl-3 py-0.5 hidden sm:block">
             <span className="text-xs sm:text-sm font-semibold tracking-wide text-sky-100">
-              Welcome <span className="text-white font-bold">{doctor.name}</span>
+              Welcome{" "}
+              <span className="text-white font-bold">{doctor.name}</span>
             </span>
           </div>
         </div>
@@ -71,45 +69,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        {/* Supabase Cloud Database Status Indicator */}
-        <button
-          onClick={onOpenSupabaseModal}
-          type="button"
-          title={
-            isSupabaseConfigured
-              ? "Cloud DB (Supabase) is connected. Click to test or manage connection."
-              : "Cloud DB not connected (Running in local offline mode). Click to setup Supabase."
-          }
-          className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border transition cursor-pointer ${
-            isSupabaseConfigured
-              ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30 hover:bg-emerald-500/30'
-              : 'bg-amber-400/20 text-amber-200 border-amber-300/40 hover:bg-amber-400/30'
-          }`}
-        >
-          <span
-            className={`w-2 h-2 rounded-full shrink-0 ${
-              isSupabaseConfigured ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'
-            }`}
-          />
-          <Database className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Cloud DB:</span>
-          <span>{isSupabaseConfigured ? 'Live' : 'Setup'}</span>
-        </button>
-
         {/* Doctor & Clinic Profile Pill matching screenshots (top-right card) */}
         <div className="flex items-center gap-2.5 bg-white text-slate-800 px-3 py-1 rounded-full shadow-sm border border-slate-100 text-left">
           <div className="w-7 h-7 rounded-full bg-[#1e536e] text-white flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
             {doctor.photoUrl ? (
-              <img src={doctor.photoUrl} alt={doctor.name} className="w-full h-full object-cover" />
+              <img
+                src={doctor.photoUrl}
+                alt={doctor.name}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <User className="w-4 h-4 text-sky-200" />
             )}
           </div>
           <div className="pr-1 leading-tight hidden xs:block">
-            <p className="text-xs font-bold text-slate-900 truncate max-w-[150px] sm:max-w-[180px]">
+            <p className="text-xs font-bold text-slate-900 truncate max-w-37.5 sm:max-w-45">
               {doctor.name}
             </p>
-            <p className="text-[10px] font-medium text-slate-500 truncate max-w-[150px] sm:max-w-[180px]">
+            <p className="text-[10px] font-medium text-slate-500 truncate max-w-37.5 sm:max-w-45">
               {clinic.name}
             </p>
           </div>
@@ -118,4 +95,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-

@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  UserPlus, 
-  Clock, 
-  FileText, 
-  IndianRupee, 
-  Bell, 
-  ChevronRight, 
-  Eye, 
-  Edit3, 
-  ChevronLeft, 
+import React, { useState, useMemo } from "react";
+import {
+  Search,
+  UserPlus,
+  Clock,
+  FileText,
+  IndianRupee,
+  Bell,
+  ChevronRight,
+  Eye,
+  Edit3,
+  ChevronLeft,
   Calendar as CalendarIcon,
   CheckCircle2,
   TrendingUp,
@@ -18,10 +18,23 @@ import {
   ArrowRight,
   Activity,
   UserCheck,
-  Phone
-} from 'lucide-react';
-import { Patient, OPDRecord, QueueItem } from '../../types';
-import { format, isSameDay, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isAfter, isBefore, addDays, addMonths, subMonths } from 'date-fns';
+  Phone,
+} from "lucide-react";
+import { Patient, OPDRecord, QueueItem } from "../../types";
+import {
+  format,
+  isSameDay,
+  parseISO,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  isAfter,
+  isBefore,
+  addDays,
+  addMonths,
+  subMonths,
+} from "date-fns";
 
 interface DashboardProps {
   patients: Patient[];
@@ -50,8 +63,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenConsultation,
   onNavigateToQueue,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [revenuePeriod, setRevenuePeriod] = useState<'today' | 'weekly' | 'monthly' | 'yearly'>('today');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [revenuePeriod, setRevenuePeriod] = useState<
+    "today" | "weekly" | "monthly" | "yearly"
+  >("today");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // All OPD visits flattened
@@ -62,11 +77,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
         records.push({ record: r, patient: p });
       });
     });
-    return records.sort((a, b) => new Date(b.record.visitDate).getTime() - new Date(a.record.visitDate).getTime());
+    return records.sort(
+      (a, b) =>
+        new Date(b.record.visitDate).getTime() -
+        new Date(a.record.visitDate).getTime(),
+    );
   }, [patients]);
 
   // Today's OPD count
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todayStr = format(new Date(), "yyyy-MM-dd");
   const todaysOpdRecords = useMemo(() => {
     return allRecords.filter((r) => r.record.visitDate === todayStr);
   }, [allRecords, todayStr]);
@@ -134,7 +153,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       (p) =>
         p.fullName.toLowerCase().includes(q) ||
         p.id.toLowerCase().includes(q) ||
-        p.mobile.includes(q)
+        p.mobile.includes(q),
     );
   }, [patients, searchQuery]);
 
@@ -145,8 +164,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const d = addDays(start, i);
       return {
         num: d.getDate(),
-        label: format(d, 'EEE'),
-        date: format(d, 'yyyy-MM-dd'),
+        label: format(d, "EEE"),
+        date: format(d, "yyyy-MM-dd"),
         fullDate: d,
       };
     });
@@ -158,18 +177,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [queue, todayStr]);
 
   const currentWithDoctor = useMemo(() => {
-    return todaysQueue.find((q) => q.status === 'With Doctor');
+    return todaysQueue.find((q) => q.status === "With Doctor");
   }, [todaysQueue]);
 
   const nextInLine = useMemo(() => {
     return todaysQueue
-      .filter((q) => q.status === 'Next' || q.status === 'Waiting')
+      .filter((q) => q.status === "Next" || q.status === "Waiting")
       .sort((a, b) => a.sequenceNumber - b.sequenceNumber)[0];
   }, [todaysQueue]);
 
   const waitingQueueList = useMemo(() => {
     return todaysQueue
-      .filter((q) => q.status === 'Next' || q.status === 'Waiting')
+      .filter((q) => q.status === "Next" || q.status === "Waiting")
       .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
   }, [todaysQueue]);
 
@@ -211,7 +230,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
             <span className="font-semibold text-slate-700 px-1">
-              {format(selectedDate, 'MMMM yyyy')}
+              {format(selectedDate, "MMMM yyyy")}
             </span>
             <button
               onClick={() => setSelectedDate(addMonths(selectedDate, 1))}
@@ -234,10 +253,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     title={`${d.label} ${d.date}`}
                     className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] transition ${
                       isSelected
-                        ? 'bg-[#1e536e] text-white shadow-xs'
+                        ? "bg-[#1e536e] text-white shadow-xs"
                         : isToday
-                        ? 'bg-emerald-100 text-emerald-800 font-extrabold'
-                        : 'text-slate-600 hover:bg-slate-200'
+                          ? "bg-emerald-100 text-emerald-800 font-extrabold"
+                          : "text-slate-600 hover:bg-slate-200"
                     }`}
                   >
                     {d.num}
@@ -251,18 +270,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Live Clinic Queue & Cabin Status Widget */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-[#194358] to-[#255f7c] text-white px-5 py-3.5 flex items-center justify-between">
+        <div className="bg-linear-to-r from-[#194358] to-[#255f7c] text-white px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <h2 className="text-sm font-bold tracking-wide uppercase">Live Consultation Cabin</h2>
-            <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-white/15 text-sky-100 border border-white/20">
-              FIFO Real-Time Queue
-            </span>
+            <h2 className="text-sm font-bold tracking-wide uppercase">
+              Live Consultation Cabin
+            </h2>
+            <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-white/15 text-sky-100 border border-white/20"></span>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="text-xs text-sky-200 font-medium">
-              Waiting: <strong className="text-white">{waitingQueueList.length}</strong>
+              Waiting:{" "}
+              <strong className="text-white">{waitingQueueList.length}</strong>
             </span>
             {onNavigateToQueue && (
               <button
@@ -282,7 +302,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4 sm:p-5">
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center font-black text-lg shadow-sm shrink-0">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-100">Token</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-100">
+                    Token
+                  </span>
                   <span>{currentWithDoctor.queueNumber}</span>
                 </div>
                 <div className="space-y-1">
@@ -290,9 +312,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white tracking-wide uppercase">
                       Now in Cabin
                     </span>
-                    <h3 className="text-lg font-bold text-slate-900">{currentWithDoctor.patientName}</h3>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {currentWithDoctor.patientName}
+                    </h3>
                     <span className="text-xs text-slate-500 font-medium">
-                      ({currentWithDoctor.patientAge}y, {currentWithDoctor.patientGender}) • ID: {currentWithDoctor.patientId}
+                      ({currentWithDoctor.patientAge}y,{" "}
+                      {currentWithDoctor.patientGender}) • ID:{" "}
+                      {currentWithDoctor.patientId}
                     </span>
                   </div>
 
@@ -303,29 +329,51 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                     <span>•</span>
                     <span>
-                      Complaint: <strong className="text-slate-800">{currentWithDoctor.complaint || 'Checkup'}</strong>
+                      Complaint:{" "}
+                      <strong className="text-slate-800">
+                        {currentWithDoctor.complaint || "Checkup"}
+                      </strong>
                     </span>
-                    {currentWithDoctor.symptoms && currentWithDoctor.symptoms.length > 0 && (
-                      <span className="hidden sm:inline-flex items-center gap-1">
-                        ({currentWithDoctor.symptoms.slice(0, 3).join(', ')})
-                      </span>
-                    )}
+                    {currentWithDoctor.symptoms &&
+                      currentWithDoctor.symptoms.length > 0 && (
+                        <span className="hidden sm:inline-flex items-center gap-1">
+                          ({currentWithDoctor.symptoms.slice(0, 3).join(", ")})
+                        </span>
+                      )}
                   </div>
 
                   {/* Vitals summary preview */}
                   {currentWithDoctor.vitals && (
                     <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600 pt-1.5">
                       <span className="bg-white px-2 py-0.5 rounded border border-emerald-200">
-                        BP: <strong className="text-slate-800">{currentWithDoctor.vitals.bp || '—'}</strong>
+                        BP:{" "}
+                        <strong className="text-slate-800">
+                          {currentWithDoctor.vitals.bp || "—"}
+                        </strong>
                       </span>
                       <span className="bg-white px-2 py-0.5 rounded border border-emerald-200">
-                        Temp: <strong className="text-slate-800">{currentWithDoctor.vitals.temp ? `${currentWithDoctor.vitals.temp}°F` : '—'}</strong>
+                        Temp:{" "}
+                        <strong className="text-slate-800">
+                          {currentWithDoctor.vitals.temp
+                            ? `${currentWithDoctor.vitals.temp}°F`
+                            : "—"}
+                        </strong>
                       </span>
                       <span className="bg-white px-2 py-0.5 rounded border border-emerald-200">
-                        Pulse: <strong className="text-slate-800">{currentWithDoctor.vitals.pulse ? `${currentWithDoctor.vitals.pulse} bpm` : '—'}</strong>
+                        Pulse:{" "}
+                        <strong className="text-slate-800">
+                          {currentWithDoctor.vitals.pulse
+                            ? `${currentWithDoctor.vitals.pulse} bpm`
+                            : "—"}
+                        </strong>
                       </span>
                       <span className="bg-white px-2 py-0.5 rounded border border-emerald-200">
-                        SpO2: <strong className="text-slate-800">{currentWithDoctor.vitals.spo2 ? `${currentWithDoctor.vitals.spo2}%` : '—'}</strong>
+                        SpO2:{" "}
+                        <strong className="text-slate-800">
+                          {currentWithDoctor.vitals.spo2
+                            ? `${currentWithDoctor.vitals.spo2}%`
+                            : "—"}
+                        </strong>
                       </span>
                     </div>
                   )}
@@ -334,7 +382,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
               <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
                 <button
-                  onClick={() => onOpenConsultation && onOpenConsultation(currentWithDoctor)}
+                  onClick={() =>
+                    onOpenConsultation && onOpenConsultation(currentWithDoctor)
+                  }
                   className="w-full md:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
                 >
                   <Stethoscope className="w-4 h-4" />
@@ -347,7 +397,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 bg-sky-50/60 border border-sky-200/80 rounded-xl p-4 sm:p-5">
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex flex-col items-center justify-center font-black text-lg shadow-sm shrink-0">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-amber-100">Next</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-amber-100">
+                    Next
+                  </span>
                   <span>{nextInLine.queueNumber}</span>
                 </div>
                 <div className="space-y-1">
@@ -355,28 +407,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white tracking-wide uppercase">
                       Ready to Call
                     </span>
-                    <h3 className="text-lg font-bold text-slate-900">{nextInLine.patientName}</h3>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {nextInLine.patientName}
+                    </h3>
                     <span className="text-xs text-slate-500 font-medium">
-                      ({nextInLine.patientAge}y, {nextInLine.patientGender}) • ID: {nextInLine.patientId}
+                      ({nextInLine.patientAge}y, {nextInLine.patientGender}) •
+                      ID: {nextInLine.patientId}
                     </span>
                   </div>
 
                   <p className="text-xs text-slate-600">
-                    Complaint: <strong className="text-slate-800">{nextInLine.complaint || 'Checkup'}</strong>
-                    {nextInLine.symptoms && nextInLine.symptoms.length > 0 && ` (${nextInLine.symptoms.join(', ')})`}
-                    {nextInLine.symptomDuration && ` • Duration: ${nextInLine.symptomDuration}`}
+                    Complaint:{" "}
+                    <strong className="text-slate-800">
+                      {nextInLine.complaint || "Checkup"}
+                    </strong>
+                    {nextInLine.symptoms &&
+                      nextInLine.symptoms.length > 0 &&
+                      ` (${nextInLine.symptoms.join(", ")})`}
+                    {nextInLine.symptomDuration &&
+                      ` • Duration: ${nextInLine.symptomDuration}`}
                   </p>
 
                   {nextInLine.vitals && (
                     <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600 pt-1">
                       <span className="bg-white px-2 py-0.5 rounded border border-sky-200">
-                        BP: <strong className="text-slate-800">{nextInLine.vitals.bp || '—'}</strong>
+                        BP:{" "}
+                        <strong className="text-slate-800">
+                          {nextInLine.vitals.bp || "—"}
+                        </strong>
                       </span>
                       <span className="bg-white px-2 py-0.5 rounded border border-sky-200">
-                        Temp: <strong className="text-slate-800">{nextInLine.vitals.temp ? `${nextInLine.vitals.temp}°F` : '—'}</strong>
+                        Temp:{" "}
+                        <strong className="text-slate-800">
+                          {nextInLine.vitals.temp
+                            ? `${nextInLine.vitals.temp}°F`
+                            : "—"}
+                        </strong>
                       </span>
                       <span className="bg-white px-2 py-0.5 rounded border border-sky-200">
-                        SpO2: <strong className="text-slate-800">{nextInLine.vitals.spo2 ? `${nextInLine.vitals.spo2}%` : '—'}</strong>
+                        SpO2:{" "}
+                        <strong className="text-slate-800">
+                          {nextInLine.vitals.spo2
+                            ? `${nextInLine.vitals.spo2}%`
+                            : "—"}
+                        </strong>
                       </span>
                     </div>
                   )}
@@ -385,7 +459,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
               <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
                 <button
-                  onClick={() => onCallPatientIntoCabin && onCallPatientIntoCabin(nextInLine.id)}
+                  onClick={() =>
+                    onCallPatientIntoCabin &&
+                    onCallPatientIntoCabin(nextInLine.id)
+                  }
                   className="w-full md:w-auto px-5 py-2.5 bg-[#194358] hover:bg-[#205570] text-white text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
                 >
                   <UserCheck className="w-4 h-4 text-emerald-400" />
@@ -397,9 +474,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             /* Queue is empty */
             <div className="py-6 text-center text-slate-500 bg-slate-50 rounded-xl border border-slate-100">
               <Clock className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-slate-700">Cabin is open and queue is empty</p>
+              <p className="text-sm font-semibold text-slate-700">
+                Cabin is open and queue is empty
+              </p>
               <p className="text-xs text-slate-400 mt-0.5">
-                Patients registered by the receptionist will immediately appear here in FIFO order.
+                Patients registered by the receptionist will immediately appear
+                here in FIFO order.
               </p>
             </div>
           )}
@@ -423,13 +503,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         #{idx + 1}
                       </span>
                       <div className="overflow-hidden">
-                        <p className="text-xs font-bold text-slate-800 truncate">{item.patientName}</p>
-                        <p className="text-[11px] text-slate-500 truncate">{item.queueNumber} • {item.complaint || 'Checkup'}</p>
+                        <p className="text-xs font-bold text-slate-800 truncate">
+                          {item.patientName}
+                        </p>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {item.queueNumber} • {item.complaint || "Checkup"}
+                        </p>
                       </div>
                     </div>
-                    {item.status !== 'With Doctor' && (
+                    {item.status !== "With Doctor" && (
                       <button
-                        onClick={() => onCallPatientIntoCabin && onCallPatientIntoCabin(item.id)}
+                        onClick={() =>
+                          onCallPatientIntoCabin &&
+                          onCallPatientIntoCabin(item.id)
+                        }
                         className="px-2 py-1 bg-white hover:bg-slate-200 text-[11px] font-semibold text-sky-800 rounded border border-slate-300 shrink-0 transition"
                       >
                         Call
@@ -446,7 +533,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Overdue followups */}
-        <div 
+        <div
           onClick={() => onNavigateToCalendar()}
           className="bg-white p-5 rounded-xl border border-sky-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
         >
@@ -455,7 +542,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Overdue</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Overdue
+              </p>
               <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
                 {overdueFollowUps.length}
               </h3>
@@ -465,7 +554,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Card 2: Today's OPD */}
-        <div 
+        <div
           onClick={() => onNavigateToOpd()}
           className="bg-white p-5 rounded-xl border border-amber-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
         >
@@ -474,7 +563,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <FileText className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today's OPD</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Today's OPD
+              </p>
               <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
                 {todaysOpdRecords.length}
               </h3>
@@ -504,7 +595,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </select>
                 </div>
                 <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
-                  ₹{revenueStats[revenuePeriod].toLocaleString('en-IN')}
+                  ₹{revenueStats[revenuePeriod].toLocaleString("en-IN")}
                 </h3>
               </div>
             </div>
@@ -512,7 +603,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Card 4: Follow-ups Due */}
-        <div 
+        <div
           onClick={() => onNavigateToCalendar()}
           className="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
         >
@@ -521,7 +612,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Bell className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Follow-ups Due</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Follow-ups Due
+              </p>
               <h3 className="text-2xl font-bold text-slate-800 mt-0.5">
                 {followUpsDue.length}
               </h3>
@@ -535,8 +628,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden">
         <div className="p-4 sm:px-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
           <div>
-            <h2 className="text-base font-bold text-slate-800">Recent Patients</h2>
-            <p className="text-xs text-slate-500">Recently registered and treated clinic patients</p>
+            <h2 className="text-base font-bold text-slate-800">
+              Recent Patients
+            </h2>
+            <p className="text-xs text-slate-500">
+              Recently registered and treated clinic patients
+            </p>
           </div>
           <button
             onClick={onNavigateToPatients}
@@ -547,7 +644,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <div className="overflow-x-auto touch-scroll">
-          <table className="w-full text-left text-sm min-w-[650px]">
+          <table className="w-full text-left text-sm min-w-162.5">
             <thead className="bg-[#1e536e] text-white text-xs uppercase font-semibold">
               <tr>
                 <th className="px-5 py-3">Patient ID</th>
@@ -563,14 +660,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-8 text-center text-slate-400 text-sm">
+                  <td
+                    colSpan={8}
+                    className="px-5 py-8 text-center text-slate-400 text-sm"
+                  >
                     No matching patient records found.
                   </td>
                 </tr>
               ) : (
                 filteredPatients.map((patient) => (
-                  <tr 
-                    key={patient.id} 
+                  <tr
+                    key={patient.id}
                     className="hover:bg-slate-50/80 transition-colors cursor-pointer"
                     onClick={() => onViewPatient(patient)}
                   >
@@ -582,22 +682,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <td className="px-5 py-3.5 font-semibold text-slate-900 capitalize">
                       {patient.fullName}
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600">{patient.age}</td>
+                    <td className="px-4 py-3.5 text-slate-600">
+                      {patient.age}
+                    </td>
                     <td className="px-5 py-3.5 text-slate-500 font-mono text-xs">
                       {patient.dob || patient.registrationDate}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        patient.gender === 'Male' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'
-                      }`}>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          patient.gender === "Male"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-pink-50 text-pink-700"
+                        }`}
+                      >
                         {patient.gender}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-600 font-mono text-xs">{patient.mobile}</td>
+                    <td className="px-5 py-3.5 text-slate-600 font-mono text-xs">
+                      {patient.mobile}
+                    </td>
                     <td className="px-5 py-3.5 text-slate-700 font-medium font-mono text-xs">
                       {patient.lastVisitDate}
                     </td>
-                    <td className="px-5 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      className="px-5 py-3.5 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => onViewPatient(patient)}
@@ -625,4 +736,3 @@ export const Dashboard: React.FC<DashboardProps> = ({
     </div>
   );
 };
-

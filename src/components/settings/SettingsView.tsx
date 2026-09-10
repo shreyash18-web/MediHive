@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Save, 
-  User, 
-  Building2, 
-  Mail, 
-  Database, 
-  Lock, 
-  Upload, 
-  Check, 
-  Download, 
-  UploadCloud, 
+import React, { useState } from "react";
+import {
+  ArrowLeft,
+  Save,
+  User,
+  Building2,
+  Mail,
+  Database,
+  Lock,
+  Upload,
+  Check,
+  Download,
+  UploadCloud,
   HelpCircle,
   FileSpreadsheet,
   FileCode,
@@ -18,12 +18,20 @@ import {
   Eye,
   KeyRound,
   Trash2,
-  AlertTriangle
-} from 'lucide-react';
-import { DoctorProfile, ClinicSettings, EmailConfig, AppState } from '../../types';
-import { useToast } from '../common/Toast';
-import { exportDataBackup, updateUserPassword, validateCredentials } from '../../services/storage';
-import { isSupabaseConfigured } from '../../lib/supabase';
+  AlertTriangle,
+} from "lucide-react";
+import {
+  DoctorProfile,
+  ClinicSettings,
+  EmailConfig,
+  AppState,
+} from "../../types";
+import { useToast } from "../common/Toast";
+import {
+  exportDataBackup,
+  updateUserPassword,
+  validateCredentials,
+} from "../../services/storage";
 
 interface SettingsViewProps {
   doctor: DoctorProfile;
@@ -35,11 +43,10 @@ interface SettingsViewProps {
   onUpdateEmailConfig: (cfg: EmailConfig) => void;
   onRestoreBackup: (restoredState: AppState) => void;
   onClearAllClinicData?: () => void;
-  onOpenSupabaseModal?: () => void;
   onBack: () => void;
 }
 
-type SettingsSubView = 'main' | 'email' | 'backup' | 'auth';
+type SettingsSubView = "main" | "email" | "backup" | "auth";
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   doctor,
@@ -51,15 +58,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateEmailConfig,
   onRestoreBackup,
   onClearAllClinicData,
-  onOpenSupabaseModal,
   onBack,
 }) => {
   const { showToast } = useToast();
-  const [currentSubView, setCurrentSubView] = useState<SettingsSubView>('main');
+  const [currentSubView, setCurrentSubView] = useState<SettingsSubView>("main");
   const [showResetModal, setShowResetModal] = useState(false);
-  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetConfirmText, setResetConfirmText] = useState("");
 
-  const totalOpdRecords = (fullState.patients || []).reduce((acc, p) => acc + (p.records?.length || 0), 0);
+  const totalOpdRecords = (fullState.patients || []).reduce(
+    (acc, p) => acc + (p.records?.length || 0),
+    0,
+  );
   const totalNotes = Object.keys(fullState.dailyNotes || {}).length;
 
   // Doctor Info state
@@ -69,15 +78,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [docLicense, setDocLicense] = useState(doctor.medicalLicenseNo);
   const [docEmail, setDocEmail] = useState(doctor.email);
   const [docContact, setDocContact] = useState(doctor.contact);
-  const [docPhoto, setDocPhoto] = useState(doctor.photoUrl || '');
+  const [docPhoto, setDocPhoto] = useState(doctor.photoUrl || "");
 
   // Clinic Info state
   const [clinicName, setClinicName] = useState(clinic.name);
   const [clinicAddress, setClinicAddress] = useState(clinic.address);
   const [clinicPhone, setClinicPhone] = useState(clinic.phone);
-  const [clinicWebsite, setClinicWebsite] = useState(clinic.website || '');
+  const [clinicWebsite, setClinicWebsite] = useState(clinic.website || "");
   const [clinicHours, setClinicHours] = useState(clinic.operatingHours);
-  const [clinicLogo, setClinicLogo] = useState(clinic.logoUrl || '');
+  const [clinicLogo, setClinicLogo] = useState(clinic.logoUrl || "");
 
   // SMTP state
   const [smtpEmail, setSmtpEmail] = useState(emailConfig.smtpEmail);
@@ -86,13 +95,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [smtpPort, setSmtpPort] = useState(emailConfig.smtpPort);
 
   // Auth state
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // Backup state
-  const [backupPeriod, setBackupPeriod] = useState<number | 'all'>('all');
-  const [backupFormat, setBackupFormat] = useState<'excel' | 'json'>('excel');
+  const [backupPeriod, setBackupPeriod] = useState<number | "all">("all");
+  const [backupFormat, setBackupFormat] = useState<"excel" | "json">("excel");
 
   // Photo / Logo upload handlers
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,7 +150,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     onUpdateDoctor(updatedDoctor);
     onUpdateClinic(updatedClinic);
-    showToast('Doctor and Clinic settings saved successfully!', 'success');
+    showToast("Doctor and Clinic settings saved successfully!", "success");
   };
 
   // Save SMTP
@@ -155,50 +164,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       enableNotifications: true,
     };
     onUpdateEmailConfig(updatedEmail);
-    showToast('Email SMTP configuration saved successfully!', 'success');
+    showToast("Email SMTP configuration saved successfully!", "success");
   };
 
   // Test Email
   const handleTestEmail = () => {
-    showToast(`Test email dispatched to ${smtpEmail} (Simulated)`, 'info');
+    showToast(`Test email dispatched to ${smtpEmail} (Simulated)`, "info");
   };
 
   // Change Password
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword.trim()) {
-      showToast('Please enter your current password', 'error');
+      showToast("Please enter your current password", "error");
       return;
     }
-    const currentUsername = fullState.currentUser?.username || 'admin';
-    const isCurrentValid = validateCredentials(currentUsername, currentPassword);
+    const currentUsername = fullState.currentUser?.username || "admin";
+    const isCurrentValid = validateCredentials(
+      currentUsername,
+      currentPassword,
+    );
     if (!isCurrentValid) {
-      showToast('Current password is incorrect.', 'error');
+      showToast("Current password is incorrect.", "error");
       return;
     }
     if (!newPassword.trim()) {
-      showToast('Please enter a new password', 'error');
+      showToast("Please enter a new password", "error");
       return;
     }
     if (newPassword !== confirmPassword) {
-      showToast('New password and confirm password do not match', 'error');
+      showToast("New password and confirm password do not match", "error");
       return;
     }
     const success = updateUserPassword(currentUsername, newPassword);
     if (success) {
-      showToast('Password changed successfully! Keep it safe.', 'success');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      showToast("Password changed successfully! Keep it safe.", "success");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } else {
-      showToast('Failed to update password.', 'error');
+      showToast("Failed to update password.", "error");
     }
   };
 
   // Generate Backup
   const handleGenerateBackup = () => {
     exportDataBackup(fullState, backupPeriod, backupFormat);
-    showToast(`Backup exported successfully as ${backupFormat.toUpperCase()}`, 'success');
+    showToast(
+      `Backup exported successfully as ${backupFormat.toUpperCase()}`,
+      "success",
+    );
   };
 
   // Restore Backup
@@ -213,12 +228,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const parsed = JSON.parse(content);
         if (parsed.patients && parsed.doctor && parsed.clinic) {
           onRestoreBackup(parsed as AppState);
-          showToast('Clinic backup restored successfully!', 'success');
+          showToast("Clinic backup restored successfully!", "success");
         } else {
-          showToast('Invalid backup file format.', 'error');
+          showToast("Invalid backup file format.", "error");
         }
       } catch (err) {
-        showToast('Error reading backup file.', 'error');
+        showToast("Error reading backup file.", "error");
       }
     };
     reader.readAsText(file);
@@ -226,14 +241,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 page-fade-in no-print">
-      
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              if (currentSubView !== 'main') {
-                setCurrentSubView('main');
+              if (currentSubView !== "main") {
+                setCurrentSubView("main");
               } else {
                 onBack();
               }
@@ -245,26 +259,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </button>
           <div>
             <h1 className="text-xl font-bold text-slate-800">
-              {currentSubView === 'main' && 'Settings'}
-              {currentSubView === 'email' && 'Email Configuration'}
-              {currentSubView === 'backup' && 'Backup Data'}
-              {currentSubView === 'auth' && 'Authentication Settings'}
+              {currentSubView === "main" && "Settings"}
+              {currentSubView === "email" && "Email Configuration"}
+              {currentSubView === "backup" && "Backup Data"}
+              {currentSubView === "auth" && "Authentication Settings"}
             </h1>
             <p className="text-xs text-slate-500">
-              {currentSubView === 'main' && 'Personalise doctor profile, clinic branding and documents'}
-              {currentSubView === 'email' && 'Configure SMTP settings for sending prescriptions and alerts'}
-              {currentSubView === 'backup' && 'Generate monthly or full backups of your clinic data'}
-              {currentSubView === 'auth' && 'Manage passwords and staff account security'}
+              {currentSubView === "main" &&
+                "Personalise doctor profile, clinic branding and documents"}
+              {currentSubView === "email" &&
+                "Configure SMTP settings for sending prescriptions and alerts"}
+              {currentSubView === "backup" &&
+                "Generate monthly or full backups of your clinic data"}
+              {currentSubView === "auth" &&
+                "Manage passwords and staff account security"}
             </p>
           </div>
         </div>
       </div>
 
       {/* VIEW 1: Main Settings (Doctor Info + Clinic Details) matching Pages 10 & 11 */}
-      {currentSubView === 'main' && (
+      {currentSubView === "main" && (
         <div className="space-y-6">
-          <form onSubmit={handleSaveMainSettings} className="bg-white rounded-xl shadow-sm border border-slate-200/90 divide-y divide-slate-100 overflow-hidden">
-            
+          <form
+            onSubmit={handleSaveMainSettings}
+            className="bg-white rounded-xl shadow-sm border border-slate-200/90 divide-y divide-slate-100 overflow-hidden"
+          >
             {/* Doctor Information (Page 10) */}
             <div className="p-6 space-y-4">
               <h2 className="text-sm font-bold text-[#1e536e] uppercase tracking-wider flex items-center gap-2">
@@ -274,25 +294,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
                 <div className="sm:col-span-4 space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-700">Profile Photo</label>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Profile Photo
+                  </label>
                   <div className="flex items-center gap-3">
                     <div className="w-14 h-14 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                       {docPhoto ? (
-                        <img src={docPhoto} alt="Doctor avatar" className="w-full h-full object-cover" />
+                        <img
+                          src={docPhoto}
+                          alt="Doctor avatar"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <User className="w-7 h-7 text-slate-400" />
                       )}
                     </div>
                     <label className="cursor-pointer px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition border border-slate-200">
                       <span>Choose File</span>
-                      <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
                     </label>
                   </div>
                 </div>
 
                 <div className="sm:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Doctor's Name</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Doctor's Name
+                    </label>
                     <input
                       type="text"
                       value={docName}
@@ -302,7 +335,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Medical License No.</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Medical License No.
+                    </label>
                     <input
                       type="text"
                       value={docLicense}
@@ -312,7 +347,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Qualifications</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Qualifications
+                    </label>
                     <input
                       type="text"
                       value={docQual}
@@ -322,7 +359,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Specialisation</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Specialisation
+                    </label>
                     <input
                       type="text"
                       value={docSpec}
@@ -332,7 +371,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Email
+                    </label>
                     <input
                       type="email"
                       value={docEmail}
@@ -342,7 +383,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Phone</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Contact Phone
+                    </label>
                     <input
                       type="tel"
                       value={docContact}
@@ -363,7 +406,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Clinic Name</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Clinic Name
+                  </label>
                   <input
                     type="text"
                     value={clinicName}
@@ -373,7 +418,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Clinic Phone</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Clinic Phone
+                  </label>
                   <input
                     type="tel"
                     value={clinicPhone}
@@ -383,7 +430,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Clinic Address</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Clinic Address
+                  </label>
                   <input
                     type="text"
                     value={clinicAddress}
@@ -393,7 +442,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Website (if any)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Website (if any)
+                  </label>
                   <input
                     type="text"
                     value={clinicWebsite}
@@ -404,7 +455,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Operating Hours</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Operating Hours
+                  </label>
                   <input
                     type="text"
                     value={clinicHours}
@@ -422,10 +475,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </span>
                 <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-xs flex items-center justify-between">
                   <div>
-                    <h4 className="font-bold text-[#1e536e] text-sm">{clinicName}</h4>
+                    <h4 className="font-bold text-[#1e536e] text-sm">
+                      {clinicName}
+                    </h4>
                     <p className="text-xs text-slate-700">{docName}</p>
-                    <p className="text-[10px] text-emerald-700 font-medium">{docQual}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">Reg: {docLicense}</p>
+                    <p className="text-[10px] text-emerald-700 font-medium">
+                      {docQual}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono">
+                      Reg: {docLicense}
+                    </p>
                   </div>
                   <div className="text-right text-[10px] text-slate-500">
                     <p>Phone: {clinicPhone}</p>
@@ -447,45 +506,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </form>
 
-          {/* Sub-Cards matching Page 11: Email Configuration, Backup Data, Authentication + Supabase Cloud DB */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Cloud Database (Supabase) Card */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                    <Database className="w-4 h-4 text-[#1e536e]" />
-                    <span>Cloud Database</span>
-                  </h3>
-                  <span
-                    className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-                      isSupabaseConfigured
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}
-                  >
-                    {isSupabaseConfigured ? '🟢 Live' : '🟠 Offline'}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                  {isSupabaseConfigured
-                    ? 'Connected to Supabase. Clinic records synchronize in real-time.'
-                    : 'Running in local mode. Connect Supabase to sync across devices.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onOpenSupabaseModal}
-                className={`w-full py-2 text-white text-xs font-semibold rounded-lg transition text-center shadow-xs cursor-pointer ${
-                  isSupabaseConfigured
-                    ? 'bg-[#1e536e] hover:bg-[#163f54]'
-                    : 'bg-amber-600 hover:bg-amber-700'
-                }`}
-              >
-                {isSupabaseConfigured ? 'Manage Connection' : 'Connect Supabase'}
-              </button>
-            </div>
-
+          {/* Sub-Cards matching Page 11: Email Configuration, Backup Data, Authentication */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Email Config Card */}
             <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm flex flex-col justify-between">
               <div>
@@ -494,12 +516,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Email Configuration</span>
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                  Manage SMTP email and app password for automated prescriptions.
+                  Manage SMTP email and app password for automated
+                  prescriptions.
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setCurrentSubView('email')}
+                onClick={() => setCurrentSubView("email")}
                 className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs cursor-pointer"
               >
                 Configure Email
@@ -514,12 +537,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Backup Data</span>
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                  Generate monthly or full backups of all patient and clinic data.
+                  Generate monthly or full backups of all patient and clinic
+                  data.
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setCurrentSubView('backup')}
+                onClick={() => setCurrentSubView("backup")}
                 className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs cursor-pointer"
               >
                 Generate Backup
@@ -539,7 +563,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setCurrentSubView('auth')}
+                onClick={() => setCurrentSubView("auth")}
                 className="w-full py-2 bg-[#2ba4c7] hover:bg-[#228da8] text-white text-xs font-semibold rounded-lg transition text-center shadow-xs cursor-pointer"
               >
                 Authentication
@@ -550,17 +574,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* VIEW 2: Email / SMTP Configuration matching Page 11 Bottom */}
-      {currentSubView === 'email' && (
+      {currentSubView === "email" && (
         <div className="space-y-6">
-          <form onSubmit={handleSaveSmtp} className="bg-white rounded-xl shadow-sm border border-slate-200/90 p-6 space-y-5">
+          <form
+            onSubmit={handleSaveSmtp}
+            className="bg-white rounded-xl shadow-sm border border-slate-200/90 p-6 space-y-5"
+          >
             <div className="border-b border-slate-100 pb-3">
-              <h2 className="text-base font-bold text-[#1e536e]">SMTP Settings</h2>
-              <p className="text-xs text-slate-500">Configure SMTP credentials for automated emails</p>
+              <h2 className="text-base font-bold text-[#1e536e]">
+                SMTP Settings
+              </h2>
+              <p className="text-xs text-slate-500">
+                Configure SMTP credentials for automated emails
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">SMTP Email</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  SMTP Email
+                </label>
                 <input
                   type="email"
                   value={smtpEmail}
@@ -571,7 +604,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">SMTP App Password</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  SMTP App Password
+                </label>
                 <input
                   type="password"
                   value={smtpPassword}
@@ -582,7 +617,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">SMTP Server</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  SMTP Server
+                </label>
                 <input
                   type="text"
                   value={smtpServer}
@@ -593,7 +630,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">SMTP Port</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  SMTP Port
+                </label>
                 <input
                   type="number"
                   value={smtpPort}
@@ -630,32 +669,52 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span>Help Guide — How to get Gmail App Password</span>
             </h3>
             <ol className="list-decimal list-inside space-y-1.5 text-xs text-slate-600 leading-relaxed pl-2">
-              <li>Go to your Google Account settings (<em>myaccount.google.com</em>)</li>
-              <li>Navigate to <strong>Security &gt; 2-Step Verification</strong></li>
+              <li>
+                Go to your Google Account settings (
+                <em>myaccount.google.com</em>)
+              </li>
+              <li>
+                Navigate to <strong>Security &gt; 2-Step Verification</strong>
+              </li>
               <li>Enable 2-Step Verification if not already enabled</li>
-              <li>Go to <strong>App Passwords</strong> (under 2-Step Verification)</li>
-              <li>Create a new app password for <em>'Mail'</em> and paste the 16-character code here.</li>
+              <li>
+                Go to <strong>App Passwords</strong> (under 2-Step Verification)
+              </li>
+              <li>
+                Create a new app password for <em>'Mail'</em> and paste the
+                16-character code here.
+              </li>
             </ol>
           </div>
         </div>
       )}
 
       {/* VIEW 3: Backup Data matching Page 12 Top */}
-      {currentSubView === 'backup' && (
+      {currentSubView === "backup" && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200/90 p-6 space-y-6">
             <div className="border-b border-slate-100 pb-3">
-              <h2 className="text-base font-bold text-[#1e536e]">Backup Data</h2>
-              <p className="text-xs text-slate-500">Generate monthly or full backups of all clinic records</p>
+              <h2 className="text-base font-bold text-[#1e536e]">
+                Backup Data
+              </h2>
+              <p className="text-xs text-slate-500">
+                Generate monthly or full backups of all clinic records
+              </p>
             </div>
 
             {/* Generator Form */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Backup Time Range</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Backup Time Range
+                </label>
                 <select
                   value={backupPeriod}
-                  onChange={(e) => setBackupPeriod(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  onChange={(e) =>
+                    setBackupPeriod(
+                      e.target.value === "all" ? "all" : Number(e.target.value),
+                    )
+                  }
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
                 >
                   <option value={1}>1 Month (Last 30 days)</option>
@@ -667,7 +726,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Export Format</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Export Format
+                </label>
                 <select
                   value={backupFormat}
                   onChange={(e) => setBackupFormat(e.target.value as any)}
@@ -692,11 +753,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             {/* Restore Section */}
             <div className="pt-4 border-t border-slate-100">
-              <h3 className="text-xs font-bold text-slate-700 mb-2">Restore from Existing Backup File</h3>
+              <h3 className="text-xs font-bold text-slate-700 mb-2">
+                Restore from Existing Backup File
+              </h3>
               <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
                 <UploadCloud className="w-4 h-4 text-medihive-600" />
                 <span>Upload & Restore JSON Backup</span>
-                <input type="file" accept=".json" onChange={handleRestoreFile} className="hidden" />
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleRestoreFile}
+                  className="hidden"
+                />
               </label>
             </div>
           </div>
@@ -708,14 +776,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span>Help Guide — About Backups</span>
             </h3>
             <ul className="space-y-1.5 text-xs text-slate-600 pl-2">
-              <li>• <strong>1 Month:</strong> Export patient data from the last 30 days</li>
-              <li>• <strong>3 Months:</strong> Export patient data from the last 3 months</li>
-              <li>• <strong>6 Months:</strong> Export patient data from the last 6 months</li>
-              <li>• <strong>12 Months:</strong> Export patient data from the last 12 months</li>
-              <li>• <strong>Complete Backup:</strong> Export all of your clinic data permanently</li>
+              <li>
+                • <strong>1 Month:</strong> Export patient data from the last 30
+                days
+              </li>
+              <li>
+                • <strong>3 Months:</strong> Export patient data from the last 3
+                months
+              </li>
+              <li>
+                • <strong>6 Months:</strong> Export patient data from the last 6
+                months
+              </li>
+              <li>
+                • <strong>12 Months:</strong> Export patient data from the last
+                12 months
+              </li>
+              <li>
+                • <strong>Complete Backup:</strong> Export all of your clinic
+                data permanently
+              </li>
             </ul>
             <p className="text-[11px] text-slate-400 mt-2">
-              Backups will be downloaded as Excel/JSON files containing patient records, visit history, prescriptions, and billing info.
+              Backups will be downloaded as Excel/JSON files containing patient
+              records, visit history, prescriptions, and billing info.
             </p>
           </div>
 
@@ -728,7 +812,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Danger Zone — Reset Clinic Records</span>
                 </h2>
                 <p className="text-xs text-rose-600/90 mt-0.5">
-                  Permanently clear all existing patient demographics, visit histories, consultations, live queues, and calendar notes.
+                  Permanently clear all existing patient demographics, visit
+                  histories, consultations, live queues, and calendar notes.
                 </p>
               </div>
             </div>
@@ -738,35 +823,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <span className="block text-2xl font-black text-rose-900 font-mono">
                   {fullState.patients.length}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-700">Patients</span>
+                <span className="text-[11px] font-semibold text-rose-700">
+                  Patients
+                </span>
               </div>
               <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
                 <span className="block text-2xl font-black text-rose-900 font-mono">
                   {totalOpdRecords}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-700">OPD Records</span>
+                <span className="text-[11px] font-semibold text-rose-700">
+                  OPD Records
+                </span>
               </div>
               <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
                 <span className="block text-2xl font-black text-rose-900 font-mono">
                   {fullState.queue.length}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-700">Queue Items</span>
+                <span className="text-[11px] font-semibold text-rose-700">
+                  Queue Items
+                </span>
               </div>
               <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
                 <span className="block text-2xl font-black text-rose-900 font-mono">
                   {totalNotes}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-700">Calendar Notes</span>
+                <span className="text-[11px] font-semibold text-rose-700">
+                  Calendar Notes
+                </span>
               </div>
             </div>
 
             <div className="bg-rose-50/70 rounded-lg p-3.5 border border-rose-200/80 text-xs text-rose-900 space-y-1">
               <p className="font-semibold flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                This will delete test/demo data from both Supabase Cloud Database and browser local storage.
+                This will delete test/demo data from both cloud database and
+                browser local storage.
               </p>
               <p className="text-rose-700 text-[11px] pl-5">
-                Your clinic information, doctor profile, and login credentials will remain intact. Before resetting, ensure you have exported a backup if needed.
+                Your clinic information, doctor profile, and login credentials
+                will remain intact. Before resetting, ensure you have exported a
+                backup if needed.
               </p>
             </div>
 
@@ -774,7 +870,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setResetConfirmText('');
+                  setResetConfirmText("");
                   setShowResetModal(true);
                 }}
                 className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-lg shadow-sm flex items-center gap-2 transition"
@@ -788,16 +884,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* VIEW 4: Authentication / Change Password matching Page 12 Bottom */}
-      {currentSubView === 'auth' && (
-        <form onSubmit={handleChangePassword} className="bg-white rounded-xl shadow-sm border border-slate-200/90 p-6 space-y-5">
+      {currentSubView === "auth" && (
+        <form
+          onSubmit={handleChangePassword}
+          className="bg-white rounded-xl shadow-sm border border-slate-200/90 p-6 space-y-5"
+        >
           <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-base font-bold text-[#1e536e]">Authentication Settings</h2>
-            <p className="text-xs text-slate-500">Change your password securely</p>
+            <h2 className="text-base font-bold text-[#1e536e]">
+              Authentication Settings
+            </h2>
+            <p className="text-xs text-slate-500">
+              Change your password securely
+            </p>
           </div>
 
           <div className="space-y-4 max-w-md">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Current Password</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Current Password
+              </label>
               <input
                 type="password"
                 required
@@ -809,7 +914,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">New Password</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                New Password
+              </label>
               <input
                 type="password"
                 required
@@ -821,7 +928,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm Password</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Confirm Password
+              </label>
               <input
                 type="password"
                 required
@@ -854,13 +963,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <AlertTriangle className="w-6 h-6 text-rose-600" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Permanently Clear All Clinic Data?</h3>
-                <p className="text-xs text-slate-500">This action cannot be undone</p>
+                <h3 className="text-base font-bold text-slate-900">
+                  Permanently Clear All Clinic Data?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  This action cannot be undone
+                </p>
               </div>
             </div>
 
             <div className="text-xs text-slate-600 space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-              <p className="font-medium text-slate-800">The following records will be permanently erased:</p>
+              <p className="font-medium text-slate-800">
+                The following records will be permanently erased:
+              </p>
               <ul className="list-disc list-inside text-[11px] text-slate-600 space-y-1 pl-1 font-mono">
                 <li>{fullState.patients.length} Patient files & visit logs</li>
                 <li>{totalOpdRecords} OPD consultations & prescriptions</li>
@@ -871,7 +986,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-slate-700">
-                To confirm, type <span className="font-mono font-black text-rose-600 select-all">RESET</span> below:
+                To confirm, type{" "}
+                <span className="font-mono font-black text-rose-600 select-all">
+                  RESET
+                </span>{" "}
+                below:
               </label>
               <input
                 type="text"
@@ -887,7 +1006,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 type="button"
                 onClick={() => {
                   setShowResetModal(false);
-                  setResetConfirmText('');
+                  setResetConfirmText("");
                 }}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
               >
@@ -895,14 +1014,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
               <button
                 type="button"
-                disabled={resetConfirmText.trim().toUpperCase() !== 'RESET'}
+                disabled={resetConfirmText.trim().toUpperCase() !== "RESET"}
                 onClick={() => {
                   if (onClearAllClinicData) {
                     onClearAllClinicData();
                   }
                   setShowResetModal(false);
-                  setResetConfirmText('');
-                  showToast('All clinic patient and consultation records have been cleared.', 'info');
+                  setResetConfirmText("");
+                  showToast(
+                    "All clinic patient and consultation records have been cleared.",
+                    "info",
+                  );
                 }}
                 className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition shadow-sm flex items-center gap-1.5"
               >
@@ -916,4 +1038,3 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </div>
   );
 };
-

@@ -1,35 +1,53 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { 
-  AppState, 
-  Patient, 
-  OPDRecord, 
-  PatientVisit, 
-  QueueItem, 
-  Appointment, 
-  DoctorProfile, 
-  ClinicSettings, 
-  EmailConfig, 
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import {
+  AppState,
+  Patient,
+  OPDRecord,
+  PatientVisit,
+  QueueItem,
+  Appointment,
+  DoctorProfile,
+  ClinicSettings,
+  EmailConfig,
   UserAccount,
-  QueueStatus
-} from '../types';
-import { 
-  initialDoctor, 
-  initialClinic, 
-  initialEmailConfig 
-} from './mockData';
-import { defaultAccounts } from './storage';
+  QueueStatus,
+} from "../types";
+import { initialDoctor, initialClinic, initialEmailConfig } from "./mockData";
+import { defaultAccounts } from "./storage";
+
+// ==============================================================================
+// SANITIZATION HELPERS
+// ==============================================================================
+
+export const sanitizeDate = (d?: string | null): string | null => {
+  if (!d || typeof d !== "string") return null;
+  const trimmed = d.trim();
+  if (!trimmed || trimmed === "null" || trimmed === "undefined") return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.slice(0, 10);
+  }
+  return null;
+};
+
+export const sanitizeNumber = (val: any, fallback = 0): number => {
+  const num = Number(val);
+  return isNaN(num) ? fallback : num;
+};
 
 // ==============================================================================
 // TYPE CONVERTERS / MAPPERS (Database snake_case <-> Frontend camelCase)
 // ==============================================================================
 
-export const mapPatientFromDb = (row: any, records: OPDRecord[] = []): Patient => ({
+export const mapPatientFromDb = (
+  row: any,
+  records: OPDRecord[] = [],
+): Patient => ({
   id: row.id,
   fullName: row.full_name,
   dob: row.dob || undefined,
   age: Number(row.age) || 0,
-  gender: row.gender,
-  mobile: row.mobile,
+  gender: row.gender || "Male",
+  mobile: row.mobile || "",
   address: row.address || undefined,
   bloodGroup: row.blood_group || undefined,
   weight: row.weight || undefined,
@@ -37,8 +55,9 @@ export const mapPatientFromDb = (row: any, records: OPDRecord[] = []): Patient =
   emergencyContact: row.emergency_contact || undefined,
   allergies: row.allergies || undefined,
   medicalHistory: row.medical_history || undefined,
-  registrationDate: row.registration_date,
-  lastVisitDate: row.last_visit_date,
+  registrationDate:
+    row.registration_date || new Date().toISOString().slice(0, 10),
+  lastVisitDate: row.last_visit_date || new Date().toISOString().slice(0, 10),
   totalVisits: Number(row.total_visits) || records.length,
   records: records,
   notes: row.notes || undefined,
@@ -48,10 +67,10 @@ export const mapPatientFromDb = (row: any, records: OPDRecord[] = []): Patient =
 export const mapPatientToDb = (p: Patient) => ({
   id: p.id,
   full_name: p.fullName,
-  dob: p.dob || null,
-  age: p.age,
-  gender: p.gender,
-  mobile: p.mobile,
+  dob: sanitizeDate(p.dob),
+  age: sanitizeNumber(p.age, 0),
+  gender: p.gender || "Male",
+  mobile: p.mobile || "",
   address: p.address || null,
   blood_group: p.bloodGroup || null,
   weight: p.weight || null,
@@ -59,9 +78,11 @@ export const mapPatientToDb = (p: Patient) => ({
   emergency_contact: p.emergencyContact || null,
   allergies: p.allergies || null,
   medical_history: p.medicalHistory || null,
-  registration_date: p.registrationDate,
-  last_visit_date: p.lastVisitDate,
-  total_visits: p.totalVisits || (p.records ? p.records.length : 0),
+  registration_date:
+    sanitizeDate(p.registrationDate) || new Date().toISOString().slice(0, 10),
+  last_visit_date:
+    sanitizeDate(p.lastVisitDate) || new Date().toISOString().slice(0, 10),
+  total_visits: sanitizeNumber(p.totalVisits, p.records ? p.records.length : 0),
   notes: p.notes || null,
   updated_at: new Date().toISOString(),
 });
@@ -75,50 +96,53 @@ export const mapOpdRecordFromDb = (row: any): OPDRecord => ({
   diagnosis: row.diagnosis,
   symptoms: Array.isArray(row.symptoms) ? row.symptoms : [],
   complaint: row.complaint || undefined,
-  vitals: row.vitals || undefined,
+  vitals: row.vitals || {},
   uploadedImages: Array.isArray(row.uploaded_images) ? row.uploaded_images : [],
   medicines: Array.isArray(row.medicines) ? row.medicines : [],
+  prescriptions: Array.isArray(row.medicines) ? row.medicines : [],
   panchakarmaNotes: row.panchakarma_notes || undefined,
   clinicalNotes: row.clinical_notes || undefined,
   dietaryAdvice: row.dietary_advice || undefined,
   nextVisitDate: row.next_visit_date || undefined,
   tests: row.tests || undefined,
-  consultationFee: row.consultation_fee != null ? Number(row.consultation_fee) : 0,
+  consultationFee:
+    row.consultation_fee != null ? Number(row.consultation_fee) : 0,
   medicineFee: row.medicine_fee != null ? Number(row.medicine_fee) : 0,
   panchakarmaFee: row.panchakarma_fee != null ? Number(row.panchakarma_fee) : 0,
   discountType: row.discount_type || undefined,
   discountValue: row.discount_value != null ? Number(row.discount_value) : 0,
   totalFee: Number(row.total_fee) || 0,
-  paymentMode: row.payment_mode || 'Cash',
-  paymentStatus: row.payment_status || 'Paid',
+  paymentMode: row.payment_mode || "Cash",
+  paymentStatus: row.payment_status || "Paid",
   createdAt: row.created_at || new Date().toISOString(),
 });
 
 export const mapOpdRecordToDb = (r: OPDRecord) => ({
   id: r.id,
   patient_id: r.patientId,
-  visit_date: r.visitDate,
+  visit_date:
+    sanitizeDate(r.visitDate) || new Date().toISOString().slice(0, 10),
   opd_type: r.opdType || null,
   charge_type: r.chargeType || null,
-  diagnosis: r.diagnosis,
-  symptoms: r.symptoms || [],
+  diagnosis: r.diagnosis || "General Consultation",
+  symptoms: Array.isArray(r.symptoms) ? r.symptoms : [],
   complaint: r.complaint || null,
   vitals: r.vitals || {},
-  uploaded_images: r.uploadedImages || [],
-  medicines: r.medicines || [],
+  uploaded_images: Array.isArray(r.uploadedImages) ? r.uploadedImages : [],
+  medicines: r.medicines || r.prescriptions || [],
   panchakarma_notes: r.panchakarmaNotes || null,
   clinical_notes: r.clinicalNotes || null,
   dietary_advice: r.dietaryAdvice || null,
-  next_visit_date: r.nextVisitDate || null,
+  next_visit_date: sanitizeDate(r.nextVisitDate),
   tests: r.tests || null,
-  consultation_fee: r.consultationFee || 0,
-  medicine_fee: r.medicineFee || 0,
-  panchakarma_fee: r.panchakarmaFee || 0,
+  consultation_fee: sanitizeNumber(r.consultationFee, 0),
+  medicine_fee: sanitizeNumber(r.medicineFee, 0),
+  panchakarma_fee: sanitizeNumber(r.panchakarmaFee, 0),
   discount_type: r.discountType || null,
-  discount_value: r.discountValue || 0,
-  total_fee: r.totalFee || 0,
-  payment_mode: r.paymentMode || 'Cash',
-  payment_status: r.paymentStatus || 'Paid',
+  discount_value: sanitizeNumber(r.discountValue, 0),
+  total_fee: sanitizeNumber(r.totalFee, 0),
+  payment_mode: r.paymentMode || "Cash",
+  payment_status: r.paymentStatus || "Paid",
   created_at: r.createdAt || new Date().toISOString(),
 });
 
@@ -147,20 +171,21 @@ export const mapVisitToDb = (v: PatientVisit) => ({
   id: v.id,
   patient_id: v.patientId,
   patient_name: v.patientName,
-  patient_age: v.patientAge,
-  patient_gender: v.patientGender,
-  patient_mobile: v.patientMobile,
-  visit_date: v.visitDate,
-  visit_time: v.visitTime,
-  complaint: v.complaint,
-  symptoms: v.symptoms || [],
+  patient_age: sanitizeNumber(v.patientAge, 0),
+  patient_gender: v.patientGender || "Male",
+  patient_mobile: v.patientMobile || "",
+  visit_date:
+    sanitizeDate(v.visitDate) || new Date().toISOString().slice(0, 10),
+  visit_time: v.visitTime || "10:00",
+  complaint: v.complaint || "Consultation",
+  symptoms: Array.isArray(v.symptoms) ? v.symptoms : [],
   symptom_duration: v.symptomDuration || null,
   vitals: v.vitals || {},
   receptionist_id: v.receptionistId || null,
   receptionist_name: v.receptionistName || null,
   queue_id: v.queueId || null,
   queue_number: v.queueNumber || null,
-  status: v.status,
+  status: v.status || "Waiting",
   created_at: v.createdAt || new Date().toISOString(),
 });
 
@@ -187,10 +212,14 @@ export const mapQueueItemFromDb = (row: any): QueueItem => ({
 });
 
 export const mapQueueItemToDb = (q: QueueItem) => {
-  const parsedQueueNum = parseInt((q.queueNumber || '').replace(/\D/g, ''), 10) || 1;
-  const safeSeq = (typeof q.sequenceNumber === 'number' && q.sequenceNumber > 0 && q.sequenceNumber < 2147483647)
-    ? q.sequenceNumber
-    : parsedQueueNum;
+  const parsedQueueNum =
+    parseInt((q.queueNumber || "").replace(/\D/g, ""), 10) || 1;
+  const safeSeq =
+    typeof q.sequenceNumber === "number" &&
+    q.sequenceNumber > 0 &&
+    q.sequenceNumber < 2147483647
+      ? q.sequenceNumber
+      : parsedQueueNum;
 
   return {
     id: q.id,
@@ -199,16 +228,17 @@ export const mapQueueItemToDb = (q: QueueItem) => {
     visit_id: q.visitId || null,
     patient_id: q.patientId,
     patient_name: q.patientName,
-    patient_age: q.patientAge,
-    patient_gender: q.patientGender,
-    patient_mobile: q.patientMobile,
-    complaint: q.complaint,
-    symptoms: q.symptoms || [],
+    patient_age: sanitizeNumber(q.patientAge, 0),
+    patient_gender: q.patientGender || "Male",
+    patient_mobile: q.patientMobile || "",
+    complaint: q.complaint || "Consultation",
+    symptoms: Array.isArray(q.symptoms) ? q.symptoms : [],
     symptom_duration: q.symptomDuration || null,
     vitals: q.vitals || {},
-    arrival_time: q.arrivalTime,
-    visit_date: q.visitDate,
-    status: q.status,
+    arrival_time: q.arrivalTime || "10:00",
+    visit_date:
+      sanitizeDate(q.visitDate) || new Date().toISOString().slice(0, 10),
+    status: q.status || "Waiting",
     doctor_id: q.doctorId || null,
     called_at: q.calledAt || null,
     completed_at: q.completedAt || null,
@@ -218,14 +248,14 @@ export const mapQueueItemToDb = (q: QueueItem) => {
 
 export const mapAppointmentFromDb = (row: any): Appointment => ({
   id: row.id,
-  patientId: row.patient_id || '',
+  patientId: row.patient_id || "",
   patientName: row.patient_name,
   patientMobile: row.patient_mobile,
   date: row.date,
   time: row.time,
   reason: row.reason,
-  type: row.type || 'Appointment',
-  status: row.status || 'Scheduled',
+  type: row.type || "Appointment",
+  status: row.status || "Scheduled",
   notes: row.notes || undefined,
 });
 
@@ -234,11 +264,11 @@ export const mapAppointmentToDb = (a: Appointment) => ({
   patient_id: a.patientId || null,
   patient_name: a.patientName,
   patient_mobile: a.patientMobile,
-  date: a.date,
-  time: a.time,
-  reason: a.reason,
-  type: a.type,
-  status: a.status,
+  date: sanitizeDate(a.date) || new Date().toISOString().slice(0, 10),
+  time: a.time || "10:00",
+  reason: a.reason || "General Follow-up",
+  type: a.type || "Appointment",
+  status: a.status || "Scheduled",
   notes: a.notes || null,
   created_at: new Date().toISOString(),
 });
@@ -247,169 +277,214 @@ export const mapAppointmentToDb = (a: Appointment) => ({
 // FULL APPLICATION STATE: READ / FETCH (Supabase -> Frontend)
 // ==============================================================================
 
-export const fetchFullAppStateFromSupabase = async (): Promise<Partial<AppState> | null> => {
-  if (!isSupabaseConfigured) {
-    return null;
-  }
-
-  try {
-    const [
-      patientsRes,
-      opdRes,
-      visitsRes,
-      queueRes,
-      aptsRes,
-      notesRes,
-      docRes,
-      clinicRes,
-      emailRes,
-    ] = await Promise.all([
-      supabase.from('patients').select('*').order('created_at', { ascending: false }),
-      supabase.from('opd_records').select('*').order('visit_date', { ascending: false }),
-      supabase.from('patient_visits').select('*').order('created_at', { ascending: false }),
-      supabase.from('queue_items').select('*').order('sequence_number', { ascending: true }),
-      supabase.from('appointments').select('*').order('date', { ascending: true }),
-      supabase.from('daily_notes').select('*'),
-      supabase.from('doctor_profile').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('clinic_settings').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('email_config').select('*').eq('id', 1).maybeSingle(),
-    ]);
-
-    // Handle any table errors gracefully
-    if (patientsRes.error) {
-      console.warn('Supabase fetch patients notice:', patientsRes.error.message);
+export const fetchFullAppStateFromSupabase =
+  async (): Promise<Partial<AppState> | null> => {
+    if (!isSupabaseConfigured()) {
       return null;
     }
 
-    // Group OPD records by patient_id
-    const opdRecordsByPatient: Record<string, OPDRecord[]> = {};
-    if (opdRes.data) {
-      opdRes.data.forEach((row: any) => {
-        const record = mapOpdRecordFromDb(row);
-        if (!opdRecordsByPatient[record.patientId]) {
-          opdRecordsByPatient[record.patientId] = [];
-        }
-        opdRecordsByPatient[record.patientId].push(record);
-      });
-    }
+    try {
+      const [
+        patientsRes,
+        opdRes,
+        visitsRes,
+        queueRes,
+        aptsRes,
+        notesRes,
+        docRes,
+        clinicRes,
+        emailRes,
+      ] = await Promise.all([
+        supabase
+          .from("patients")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("opd_records")
+          .select("*")
+          .order("visit_date", { ascending: false }),
+        supabase
+          .from("patient_visits")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("queue_items")
+          .select("*")
+          .order("sequence_number", { ascending: true }),
+        supabase
+          .from("appointments")
+          .select("*")
+          .order("date", { ascending: true }),
+        supabase.from("daily_notes").select("*"),
+        supabase.from("doctor_profile").select("*").eq("id", 1).maybeSingle(),
+        supabase.from("clinic_settings").select("*").eq("id", 1).maybeSingle(),
+        supabase.from("email_config").select("*").eq("id", 1).maybeSingle(),
+      ]);
 
-    // Map patients with nested records
-    const patients: Patient[] = (patientsRes.data || []).map((row: any) =>
-      mapPatientFromDb(row, opdRecordsByPatient[row.id] || [])
-    );
+      // Handle any table errors gracefully
+      if (patientsRes.error) {
+        console.warn(
+          "Supabase fetch patients notice:",
+          patientsRes.error.message,
+        );
+        return null;
+      }
 
-    const visits: PatientVisit[] = (visitsRes.data || []).map(mapVisitFromDb);
-    const queue: QueueItem[] = (queueRes.data || []).map(mapQueueItemFromDb);
-    const appointments: Appointment[] = (aptsRes.data || []).map(mapAppointmentFromDb);
+      // Group OPD records by patient_id
+      const opdRecordsByPatient: Record<string, OPDRecord[]> = {};
+      if (opdRes.data) {
+        opdRes.data.forEach((row: any) => {
+          const record = mapOpdRecordFromDb(row);
+          if (!opdRecordsByPatient[record.patientId]) {
+            opdRecordsByPatient[record.patientId] = [];
+          }
+          opdRecordsByPatient[record.patientId].push(record);
+        });
+      }
 
-    // Map daily notes
-    const dailyNotes: Record<string, string> = {};
-    if (notesRes.data) {
-      notesRes.data.forEach((row: any) => {
-        dailyNotes[row.date] = row.note;
-      });
-    }
+      // Map patients with nested records
+      const patients: Patient[] = (patientsRes.data || []).map((row: any) =>
+        mapPatientFromDb(row, opdRecordsByPatient[row.id] || []),
+      );
 
-    // Map Doctor Profile
-    let doctor = initialDoctor;
-    if (docRes.data) {
-      doctor = {
-        name: docRes.data.name || initialDoctor.name,
-        qualifications: docRes.data.qualifications || initialDoctor.qualifications,
-        specialisation: docRes.data.specialisation || initialDoctor.specialisation,
-        medicalLicenseNo: docRes.data.medical_license_no || initialDoctor.medicalLicenseNo,
-        email: docRes.data.email || initialDoctor.email,
-        contact: docRes.data.contact || initialDoctor.contact,
-        photoUrl: docRes.data.photo_url || '',
-        consultationFee: docRes.data.consultation_fee != null ? Number(docRes.data.consultation_fee) : 500,
+      const visits: PatientVisit[] = (visitsRes.data || []).map(mapVisitFromDb);
+      const queue: QueueItem[] = (queueRes.data || []).map(mapQueueItemFromDb);
+      const appointments: Appointment[] = (aptsRes.data || []).map(
+        mapAppointmentFromDb,
+      );
+
+      // Map daily notes
+      const dailyNotes: Record<string, string> = {};
+      if (notesRes.data) {
+        notesRes.data.forEach((row: any) => {
+          dailyNotes[row.date] = row.note;
+        });
+      }
+
+      // Map Doctor Profile
+      let doctor = initialDoctor;
+      if (docRes.data) {
+        doctor = {
+          name: docRes.data.name || initialDoctor.name,
+          qualifications:
+            docRes.data.qualifications || initialDoctor.qualifications,
+          specialisation:
+            docRes.data.specialisation || initialDoctor.specialisation,
+          medicalLicenseNo:
+            docRes.data.medical_license_no || initialDoctor.medicalLicenseNo,
+          email: docRes.data.email || initialDoctor.email,
+          contact: docRes.data.contact || initialDoctor.contact,
+          photoUrl: docRes.data.photo_url || "",
+          consultationFee:
+            docRes.data.consultation_fee != null
+              ? Number(docRes.data.consultation_fee)
+              : 500,
+        };
+      }
+
+      // Map Clinic Settings
+      let clinic = initialClinic;
+      if (clinicRes.data) {
+        clinic = {
+          name: clinicRes.data.name || initialClinic.name,
+          address: clinicRes.data.address || initialClinic.address,
+          phone: clinicRes.data.phone || initialClinic.phone,
+          email: clinicRes.data.email || initialClinic.email,
+          website: clinicRes.data.website || initialClinic.website,
+          operatingHours:
+            clinicRes.data.operating_hours || initialClinic.operatingHours,
+          logoUrl: clinicRes.data.logo_url || "",
+          currency: clinicRes.data.currency || "₹",
+          taxNumber: clinicRes.data.tax_number || undefined,
+        };
+      }
+
+      // Map Email Config
+      let emailConfig = initialEmailConfig;
+      if (emailRes.data) {
+        emailConfig = {
+          smtpEmail: emailRes.data.smtp_email || initialEmailConfig.smtpEmail,
+          smtpAppPassword:
+            emailRes.data.smtp_app_password ||
+            initialEmailConfig.smtpAppPassword,
+          smtpServer:
+            emailRes.data.smtp_server || initialEmailConfig.smtpServer,
+          smtpPort:
+            emailRes.data.smtp_port != null
+              ? Number(emailRes.data.smtp_port)
+              : 587,
+          enableNotifications: emailRes.data.enable_notifications ?? true,
+        };
+      }
+
+      return {
+        doctor,
+        clinic,
+        emailConfig,
+        patients,
+        visits,
+        queue,
+        appointments,
+        dailyNotes,
       };
+    } catch (err) {
+      console.warn("Failed to load application state from Supabase:", err);
+      return null;
     }
-
-    // Map Clinic Settings
-    let clinic = initialClinic;
-    if (clinicRes.data) {
-      clinic = {
-        name: clinicRes.data.name || initialClinic.name,
-        address: clinicRes.data.address || initialClinic.address,
-        phone: clinicRes.data.phone || initialClinic.phone,
-        email: clinicRes.data.email || initialClinic.email,
-        website: clinicRes.data.website || initialClinic.website,
-        operatingHours: clinicRes.data.operating_hours || initialClinic.operatingHours,
-        logoUrl: clinicRes.data.logo_url || '',
-        currency: clinicRes.data.currency || '₹',
-        taxNumber: clinicRes.data.tax_number || undefined,
-      };
-    }
-
-    // Map Email Config
-    let emailConfig = initialEmailConfig;
-    if (emailRes.data) {
-      emailConfig = {
-        smtpEmail: emailRes.data.smtp_email || initialEmailConfig.smtpEmail,
-        smtpAppPassword: emailRes.data.smtp_app_password || initialEmailConfig.smtpAppPassword,
-        smtpServer: emailRes.data.smtp_server || initialEmailConfig.smtpServer,
-        smtpPort: emailRes.data.smtp_port != null ? Number(emailRes.data.smtp_port) : 587,
-        enableNotifications: emailRes.data.enable_notifications ?? true,
-      };
-    }
-
-    return {
-      doctor,
-      clinic,
-      emailConfig,
-      patients,
-      visits,
-      queue,
-      appointments,
-      dailyNotes,
-    };
-  } catch (err) {
-    console.warn('Failed to load application state from Supabase:', err);
-    return null;
-  }
-};
+  };
 
 // ==============================================================================
 // PATIENTS CRUD OPERATIONS
 // ==============================================================================
 
-export const createPatientInSupabase = async (patient: Patient): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const createPatientInSupabase = async (
+  patient: Patient,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
     const payload = mapPatientToDb(patient);
-    const { error } = await supabase.from('patients').insert(payload);
+    const { error } = await supabase.from("patients").upsert(payload);
     if (error) throw error;
+    console.log(
+      `[Supabase] Patient ${patient.id} (${patient.fullName}) synced to cloud.`,
+    );
     return true;
   } catch (err) {
-    console.error('Supabase createPatient error:', err);
+    console.error("Supabase createPatient error:", err);
     return false;
   }
 };
 
-export const updatePatientInSupabase = async (patient: Patient): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const updatePatientInSupabase = async (
+  patient: Patient,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
     const payload = mapPatientToDb(patient);
+    const { error } = await supabase.from("patients").upsert(payload);
+    if (error) throw error;
+    console.log(`[Supabase] Patient ${patient.id} updated in cloud.`);
+    return true;
+  } catch (err) {
+    console.error("Supabase updatePatient error:", err);
+    return false;
+  }
+};
+
+export const deletePatientInSupabase = async (
+  patientId: string,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+  try {
     const { error } = await supabase
-      .from('patients')
-      .update(payload)
-      .eq('id', patient.id);
+      .from("patients")
+      .delete()
+      .eq("id", patientId);
     if (error) throw error;
+    console.log(`[Supabase] Patient ${patientId} deleted from cloud.`);
     return true;
   } catch (err) {
-    console.error('Supabase updatePatient error:', err);
-    return false;
-  }
-};
-
-export const deletePatientInSupabase = async (patientId: string): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
-  try {
-    const { error } = await supabase.from('patients').delete().eq('id', patientId);
-    if (error) throw error;
-    return true;
-  } catch (err) {
-    console.error('Supabase deletePatient error:', err);
+    console.error("Supabase deletePatient error:", err);
     return false;
   }
 };
@@ -420,25 +495,30 @@ export const deletePatientInSupabase = async (patientId: string): Promise<boolea
 
 export const saveOpdRecordInSupabase = async (
   patient: Patient,
-  opdRecord: OPDRecord
+  opdRecord: OPDRecord,
 ): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+  if (!isSupabaseConfigured()) return false;
   try {
     // 1. Ensure patient exists in Supabase (upsert) to satisfy FK constraint on opd_records.patient_id
     const patientPayload = mapPatientToDb(patient);
     const { error: patErr } = await supabase
-      .from('patients')
+      .from("patients")
       .upsert(patientPayload);
     if (patErr) throw patErr;
 
     // 2. Insert or update OPD Record
     const recordPayload = mapOpdRecordToDb(opdRecord);
-    const { error: opdErr } = await supabase.from('opd_records').upsert(recordPayload);
+    const { error: opdErr } = await supabase
+      .from("opd_records")
+      .upsert(recordPayload);
     if (opdErr) throw opdErr;
 
+    console.log(
+      `[Supabase] OPD Record ${opdRecord.id} saved for patient ${patient.fullName}.`,
+    );
     return true;
   } catch (err) {
-    console.error('Supabase saveOpdRecord error:', err);
+    console.error("Supabase saveOpdRecord error:", err);
     return false;
   }
 };
@@ -449,24 +529,55 @@ export const saveOpdRecordInSupabase = async (
 
 export const insertVisitAndQueueInSupabase = async (
   visit: PatientVisit,
-  queueItem: QueueItem
+  queueItem: QueueItem,
+  patient?: Patient,
 ): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+  if (!isSupabaseConfigured()) return false;
   try {
+    // 1. Ensure the patient exists in patients table first (satisfies FK in patient_visits & queue_items)
+    if (patient) {
+      const patientPayload = mapPatientToDb(patient);
+      await supabase.from("patients").upsert(patientPayload);
+    } else {
+      // Create minimal patient record if not already present
+      const minimalPatient = {
+        id: visit.patientId,
+        full_name: visit.patientName,
+        age: sanitizeNumber(visit.patientAge, 0),
+        gender: visit.patientGender || "Male",
+        mobile: visit.patientMobile || "",
+        registration_date:
+          sanitizeDate(visit.visitDate) ||
+          new Date().toISOString().slice(0, 10),
+        last_visit_date:
+          sanitizeDate(visit.visitDate) ||
+          new Date().toISOString().slice(0, 10),
+        total_visits: 1,
+      };
+      await supabase.from("patients").upsert(minimalPatient);
+    }
+
     const visitPayload = mapVisitToDb(visit);
     const queuePayload = mapQueueItemToDb(queueItem);
 
-    // 1. Insert patient visit first (queue_items references patient_visits.id)
-    const { error: visitErr } = await supabase.from('patient_visits').upsert(visitPayload);
+    // 2. Insert patient visit first (queue_items references patient_visits.id)
+    const { error: visitErr } = await supabase
+      .from("patient_visits")
+      .upsert(visitPayload);
     if (visitErr) throw visitErr;
 
-    // 2. Insert queue item
-    const { error: queueErr } = await supabase.from('queue_items').upsert(queuePayload);
+    // 3. Insert queue item
+    const { error: queueErr } = await supabase
+      .from("queue_items")
+      .upsert(queuePayload);
     if (queueErr) throw queueErr;
 
+    console.log(
+      `[Supabase] Visit ${visit.id} & Queue ${queueItem.queueNumber} pushed to cloud.`,
+    );
     return true;
   } catch (err) {
-    console.error('Supabase insertVisitAndQueue error:', err);
+    console.error("Supabase insertVisitAndQueue error:", err);
     return false;
   }
 };
@@ -478,9 +589,9 @@ export const updateQueueItemStatusInSupabase = async (
     doctorId?: string;
     calledAt?: string;
     completedAt?: string;
-  }
+  },
 ): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+  if (!isSupabaseConfigured()) return false;
   try {
     const updatePayload: any = {
       status,
@@ -490,49 +601,61 @@ export const updateQueueItemStatusInSupabase = async (
     if (extras?.completedAt) updatePayload.completed_at = extras.completedAt;
 
     const [qRes, vRes] = await Promise.all([
-      supabase.from('queue_items').update(updatePayload).eq('id', queueId),
-      supabase.from('patient_visits').update({ status }).eq('queue_id', queueId),
+      supabase.from("queue_items").update(updatePayload).eq("id", queueId),
+      supabase
+        .from("patient_visits")
+        .update({ status })
+        .eq("queue_id", queueId),
     ]);
 
     if (qRes.error) throw qRes.error;
     if (vRes.error) throw vRes.error;
 
+    console.log(`[Supabase] Queue item ${queueId} updated to ${status}.`);
     return true;
   } catch (err) {
-    console.error('Supabase updateQueueItemStatus error:', err);
+    console.error("Supabase updateQueueItemStatus error:", err);
     return false;
   }
 };
 
-export const cancelQueueTicketInSupabase = async (queueId: string): Promise<boolean> => {
-  return updateQueueItemStatusInSupabase(queueId, 'Cancelled');
+export const cancelQueueTicketInSupabase = async (
+  queueId: string,
+): Promise<boolean> => {
+  return updateQueueItemStatusInSupabase(queueId, "Cancelled");
 };
 
 // ==============================================================================
 // APPOINTMENTS CRUD OPERATIONS
 // ==============================================================================
 
-export const saveAppointmentInSupabase = async (appointment: Appointment): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const saveAppointmentInSupabase = async (
+  appointment: Appointment,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
     const payload = mapAppointmentToDb(appointment);
-    const { error } = await supabase.from('appointments').upsert(payload);
+    const { error } = await supabase.from("appointments").upsert(payload);
     if (error) throw error;
+    console.log(`[Supabase] Appointment ${appointment.id} saved to cloud.`);
     return true;
   } catch (err) {
-    console.error('Supabase saveAppointment error:', err);
+    console.error("Supabase saveAppointment error:", err);
     return false;
   }
 };
 
-export const deleteAppointmentInSupabase = async (id: string): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const deleteAppointmentInSupabase = async (
+  id: string,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('appointments').delete().eq('id', id);
+    const { error } = await supabase.from("appointments").delete().eq("id", id);
     if (error) throw error;
+    console.log(`[Supabase] Appointment ${id} deleted from cloud.`);
     return true;
   } catch (err) {
-    console.error('Supabase deleteAppointment error:', err);
+    console.error("Supabase deleteAppointment error:", err);
     return false;
   }
 };
@@ -543,100 +666,131 @@ export const deleteAppointmentInSupabase = async (id: string): Promise<boolean> 
 
 export const deleteOpdRecordInSupabase = async (
   recordId: string,
-  patientId: string
+  patientId: string,
 ): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('opd_records').delete().eq('id', recordId);
+    const { error } = await supabase
+      .from("opd_records")
+      .delete()
+      .eq("id", recordId);
     if (error) throw error;
+    console.log(`[Supabase] OPD Record ${recordId} deleted.`);
     return true;
   } catch (err) {
-    console.error('Supabase deleteOpdRecord error:', err);
+    console.error("Supabase deleteOpdRecord error:", err);
     return false;
   }
 };
 
-export const deleteQueueItemInSupabase = async (queueId: string): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const deleteQueueItemInSupabase = async (
+  queueId: string,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('queue_items').delete().eq('id', queueId);
+    const { error } = await supabase
+      .from("queue_items")
+      .delete()
+      .eq("id", queueId);
     if (error) throw error;
+    console.log(`[Supabase] Queue item ${queueId} deleted.`);
     return true;
   } catch (err) {
-    console.error('Supabase deleteQueueItem error:', err);
+    console.error("Supabase deleteQueueItem error:", err);
     return false;
   }
 };
 
-export const deleteVisitInSupabase = async (visitId: string): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const deleteVisitInSupabase = async (
+  visitId: string,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('patient_visits').delete().eq('id', visitId);
+    const { error } = await supabase
+      .from("patient_visits")
+      .delete()
+      .eq("id", visitId);
     if (error) throw error;
+    console.log(`[Supabase] Visit ${visitId} deleted.`);
     return true;
   } catch (err) {
-    console.error('Supabase deleteVisit error:', err);
+    console.error("Supabase deleteVisit error:", err);
     return false;
   }
 };
 
 export const clearCompletedQueueInSupabase = async (): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+  if (!isSupabaseConfigured()) return false;
   try {
     const { error } = await supabase
-      .from('queue_items')
+      .from("queue_items")
       .delete()
-      .in('status', ['Completed', 'Cancelled']);
+      .in("status", ["Completed", "Cancelled"]);
     if (error) throw error;
+    console.log(`[Supabase] Cleared completed/cancelled queue tickets.`);
     return true;
   } catch (err) {
-    console.error('Supabase clearCompletedQueue error:', err);
+    console.error("Supabase clearCompletedQueue error:", err);
     return false;
   }
 };
 
-export const saveDailyNoteInSupabase = async (date: string, note: string): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const saveDailyNoteInSupabase = async (
+  date: string,
+  note: string,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('daily_notes').upsert({
-      date,
+    const cleanDate =
+      sanitizeDate(date) || new Date().toISOString().slice(0, 10);
+    const { error } = await supabase.from("daily_notes").upsert({
+      date: cleanDate,
       note,
       updated_at: new Date().toISOString(),
     });
     if (error) throw error;
+    console.log(`[Supabase] Daily note for ${cleanDate} saved.`);
     return true;
   } catch (err) {
-    console.error('Supabase saveDailyNote error:', err);
+    console.error("Supabase saveDailyNote error:", err);
     return false;
   }
 };
 
-export const deleteDailyNoteInSupabase = async (date: string): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const deleteDailyNoteInSupabase = async (
+  date: string,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('daily_notes').delete().eq('date', date);
+    const cleanDate = sanitizeDate(date) || date;
+    const { error } = await supabase
+      .from("daily_notes")
+      .delete()
+      .eq("date", cleanDate);
     if (error) throw error;
+    console.log(`[Supabase] Daily note for ${cleanDate} deleted.`);
     return true;
   } catch (err) {
-    console.error('Supabase deleteDailyNote error:', err);
+    console.error("Supabase deleteDailyNote error:", err);
     return false;
   }
 };
 
 export const clearAllClinicDataFromSupabase = async (): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+  if (!isSupabaseConfigured()) return false;
   try {
     // Delete transactional items in order
-    await supabase.from('queue_items').delete().neq('id', '');
-    await supabase.from('patient_visits').delete().neq('id', '');
-    await supabase.from('opd_records').delete().neq('id', '');
-    await supabase.from('appointments').delete().neq('id', '');
-    await supabase.from('daily_notes').delete().neq('date', '1970-01-01');
-    const { error } = await supabase.from('patients').delete().neq('id', '');
+    await supabase.from("queue_items").delete().neq("id", "");
+    await supabase.from("patient_visits").delete().neq("id", "");
+    await supabase.from("opd_records").delete().neq("id", "");
+    await supabase.from("appointments").delete().neq("id", "");
+    await supabase.from("daily_notes").delete().neq("date", "1970-01-01");
+    const { error } = await supabase.from("patients").delete().neq("id", "");
     if (error) throw error;
+    console.log(`[Supabase] All clinic data cleared from cloud.`);
     return true;
   } catch (err) {
-    console.error('Supabase clearAllClinicData error:', err);
+    console.error("Supabase clearAllClinicData error:", err);
     return false;
   }
 };
@@ -645,10 +799,12 @@ export const clearAllClinicDataFromSupabase = async (): Promise<boolean> => {
 // CLINIC & DOCTOR SETTINGS CRUD
 // ==============================================================================
 
-export const updateDoctorProfileInSupabase = async (doctor: DoctorProfile): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const updateDoctorProfileInSupabase = async (
+  doctor: DoctorProfile,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('doctor_profile').upsert({
+    const { error } = await supabase.from("doctor_profile").upsert({
       id: 1,
       name: doctor.name,
       qualifications: doctor.qualifications,
@@ -657,21 +813,24 @@ export const updateDoctorProfileInSupabase = async (doctor: DoctorProfile): Prom
       email: doctor.email,
       contact: doctor.contact,
       photo_url: doctor.photoUrl || null,
-      consultation_fee: doctor.consultationFee || 500,
+      consultation_fee: sanitizeNumber(doctor.consultationFee, 500),
       updated_at: new Date().toISOString(),
     });
     if (error) throw error;
+    console.log(`[Supabase] Doctor profile updated.`);
     return true;
   } catch (err) {
-    console.error('Supabase updateDoctorProfile error:', err);
+    console.error("Supabase updateDoctorProfile error:", err);
     return false;
   }
 };
 
-export const updateClinicSettingsInSupabase = async (clinic: ClinicSettings): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const updateClinicSettingsInSupabase = async (
+  clinic: ClinicSettings,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('clinic_settings').upsert({
+    const { error } = await supabase.from("clinic_settings").upsert({
       id: 1,
       name: clinic.name,
       address: clinic.address,
@@ -680,34 +839,38 @@ export const updateClinicSettingsInSupabase = async (clinic: ClinicSettings): Pr
       website: clinic.website || null,
       operating_hours: clinic.operatingHours,
       logo_url: clinic.logoUrl || null,
-      currency: clinic.currency || '₹',
+      currency: clinic.currency || "₹",
       tax_number: clinic.taxNumber || null,
       updated_at: new Date().toISOString(),
     });
     if (error) throw error;
+    console.log(`[Supabase] Clinic settings updated.`);
     return true;
   } catch (err) {
-    console.error('Supabase updateClinicSettings error:', err);
+    console.error("Supabase updateClinicSettings error:", err);
     return false;
   }
 };
 
-export const updateEmailConfigInSupabase = async (config: EmailConfig): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+export const updateEmailConfigInSupabase = async (
+  config: EmailConfig,
+): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const { error } = await supabase.from('email_config').upsert({
+    const { error } = await supabase.from("email_config").upsert({
       id: 1,
       smtp_email: config.smtpEmail,
       smtp_app_password: config.smtpAppPassword,
-      smtp_server: config.smtpServer || 'smtp.gmail.com',
-      smtp_port: config.smtpPort || 587,
+      smtp_server: config.smtpServer || "smtp.gmail.com",
+      smtp_port: sanitizeNumber(config.smtpPort, 587),
       enable_notifications: config.enableNotifications,
       updated_at: new Date().toISOString(),
     });
     if (error) throw error;
+    console.log(`[Supabase] Email config updated.`);
     return true;
   } catch (err) {
-    console.error('Supabase updateEmailConfig error:', err);
+    console.error("Supabase updateEmailConfig error:", err);
     return false;
   }
 };
@@ -716,10 +879,12 @@ export const updateEmailConfigInSupabase = async (config: EmailConfig): Promise<
 // USER ACCOUNTS & AUTHENTICATION CRUD
 // ==============================================================================
 
-export const fetchUserAccountsFromSupabase = async (): Promise<UserAccount[]> => {
-  if (!isSupabaseConfigured) return defaultAccounts;
+export const fetchUserAccountsFromSupabase = async (): Promise<
+  UserAccount[]
+> => {
+  if (!isSupabaseConfigured()) return defaultAccounts;
   try {
-    const { data, error } = await supabase.from('user_accounts').select('*');
+    const { data, error } = await supabase.from("user_accounts").select("*");
     if (error || !data || data.length === 0) {
       return defaultAccounts;
     }
@@ -731,25 +896,26 @@ export const fetchUserAccountsFromSupabase = async (): Promise<UserAccount[]> =>
       passwordHash: u.password_hash,
     }));
   } catch (err) {
-    console.warn('Supabase fetchUserAccounts fallback to default:', err);
+    console.warn("Supabase fetchUserAccounts fallback to default:", err);
     return defaultAccounts;
   }
 };
 
 export const updateUserPasswordInSupabase = async (
   username: string,
-  newPassword: string
+  newPassword: string,
 ): Promise<boolean> => {
-  if (!isSupabaseConfigured) return false;
+  if (!isSupabaseConfigured()) return false;
   try {
     const { error } = await supabase
-      .from('user_accounts')
+      .from("user_accounts")
       .update({ password_hash: newPassword.trim() })
-      .eq('username', username.trim().toLowerCase());
+      .eq("username", username.trim().toLowerCase());
     if (error) throw error;
+    console.log(`[Supabase] User password updated for ${username}.`);
     return true;
   } catch (err) {
-    console.error('Supabase updateUserPassword error:', err);
+    console.error("Supabase updateUserPassword error:", err);
     return false;
   }
 };
@@ -759,42 +925,42 @@ export const updateUserPasswordInSupabase = async (
 // ==============================================================================
 
 export const subscribeToClinicRealtime = (onSync: () => void): (() => void) => {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured()) {
     return () => {};
   }
 
   try {
     const channel = supabase
-      .channel('medihive_realtime_changes')
+      .channel("medihive_realtime_changes")
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'queue_items' },
-        () => onSync()
+        "postgres_changes",
+        { event: "*", schema: "public", table: "queue_items" },
+        () => onSync(),
       )
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'patient_visits' },
-        () => onSync()
+        "postgres_changes",
+        { event: "*", schema: "public", table: "patient_visits" },
+        () => onSync(),
       )
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'patients' },
-        () => onSync()
+        "postgres_changes",
+        { event: "*", schema: "public", table: "patients" },
+        () => onSync(),
       )
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointments' },
-        () => onSync()
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointments" },
+        () => onSync(),
       )
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'opd_records' },
-        () => onSync()
+        "postgres_changes",
+        { event: "*", schema: "public", table: "opd_records" },
+        () => onSync(),
       )
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'daily_notes' },
-        () => onSync()
+        "postgres_changes",
+        { event: "*", schema: "public", table: "daily_notes" },
+        () => onSync(),
       )
       .subscribe();
 
@@ -802,7 +968,7 @@ export const subscribeToClinicRealtime = (onSync: () => void): (() => void) => {
       supabase.removeChannel(channel);
     };
   } catch (err) {
-    console.warn('Supabase Realtime subscription error:', err);
+    console.warn("Supabase Realtime subscription error:", err);
     return () => {};
   }
 };

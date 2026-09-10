@@ -1,57 +1,54 @@
-import React, { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  Search, 
-  UserPlus, 
-  ListOrdered, 
-  LogOut, 
-  Clock, 
-  Bell, 
-  Shield, 
-  User, 
+import React, { useState } from "react";
+import {
+  LayoutDashboard,
+  Search,
+  UserPlus,
+  ListOrdered,
+  LogOut,
+  Clock,
+  Bell,
+  Shield,
+  User,
   Activity,
   HeartPulse,
   Building2,
   Phone,
   Menu,
   X,
-  Database
-} from 'lucide-react';
-import { MediHiveLogo } from '../common/MediHiveLogo';
-import { 
-  AppState, 
-  Patient, 
-  PatientVisit, 
-  PatientVitals, 
-  QueueItem, 
-  UserAccount, 
-  ClinicSettings 
-} from '../../types';
-import { 
-  createVisitAndAddToQueue, 
-  cancelPatientQueueItem 
-} from '../../services/storage';
-import { 
-  createPatientInSupabase, 
+} from "lucide-react";
+import { MediHiveLogo } from "../common/MediHiveLogo";
+import {
+  AppState,
+  Patient,
+  PatientVisit,
+  PatientVitals,
+  QueueItem,
+  UserAccount,
+  ClinicSettings,
+} from "../../types";
+import {
+  createVisitAndAddToQueue,
+  cancelPatientQueueItem,
+} from "../../services/storage";
+import {
+  createPatientInSupabase,
   deletePatientInSupabase,
   updatePatientInSupabase,
-  deleteQueueItemInSupabase, 
+  deleteQueueItemInSupabase,
   clearCompletedQueueInSupabase,
   deleteVisitInSupabase,
   insertVisitAndQueueInSupabase,
-  cancelQueueTicketInSupabase
-} from '../../services/supabaseService';
-import { isSupabaseConfigured } from '../../lib/supabase';
-import { SupabaseConnectionModal } from '../common/SupabaseConnectionModal';
-import { ReceptionistDashboard } from './ReceptionistDashboard';
-import { PatientSearchAndVisit } from './PatientSearchAndVisit';
-import { NewPatientRegistration } from './NewPatientRegistration';
-import { ReceptionistQueueView } from './ReceptionistQueueView';
-import { PatientVisitForm } from './PatientVisitForm';
-import { EditPatientModal } from '../patients/EditPatientModal';
-import { useToast } from '../common/Toast';
+  cancelQueueTicketInSupabase,
+} from "../../services/supabaseService";
+import { ReceptionistDashboard } from "./ReceptionistDashboard";
+import { PatientSearchAndVisit } from "./PatientSearchAndVisit";
+import { NewPatientRegistration } from "./NewPatientRegistration";
+import { ReceptionistQueueView } from "./ReceptionistQueueView";
+import { PatientVisitForm } from "./PatientVisitForm";
+import { EditPatientModal } from "../patients/EditPatientModal";
+import { useToast } from "../common/Toast";
 
-export type ReceptionistTab = 'dashboard' | 'search' | 'new-patient' | 'queue';
+export type ReceptionistTab = "dashboard" | "search" | "new-patient" | "queue";
 
 interface ReceptionistLayoutProps {
   appState: AppState;
@@ -64,18 +61,20 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   onUpdateAppState,
   onLogout,
 }) => {
-  const [currentTab, setCurrentTab] = useState<ReceptionistTab>('dashboard');
-  const [activeVisitPatient, setActiveVisitPatient] = useState<Patient | null>(null);
+  const [currentTab, setCurrentTab] = useState<ReceptionistTab>("dashboard");
+  const [activeVisitPatient, setActiveVisitPatient] = useState<Patient | null>(
+    null,
+  );
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-  const [initialSearchQuery, setInitialSearchQuery] = useState<string>('');
+  const [initialSearchQuery, setInitialSearchQuery] = useState<string>("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showSupabaseModal, setShowSupabaseModal] = useState(false);
 
   const { showToast } = useToast();
 
   const today = new Date().toISOString().slice(0, 10);
   const activeWaitingCount = (appState.queue || []).filter(
-    (q) => q.visitDate === today && (q.status === 'Waiting' || q.status === 'Next')
+    (q) =>
+      q.visitDate === today && (q.status === "Waiting" || q.status === "Next"),
   ).length;
 
   // Handle saving new patient
@@ -84,12 +83,30 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
       ...prev,
       patients: [newPatient, ...prev.patients],
     }));
-    showToast(`Patient ${newPatient.fullName} registered successfully!`, 'success');
+    showToast(
+      `Patient ${newPatient.fullName} registered successfully!`,
+      "success",
+    );
 
-    // Persist new patient to Supabase
-    createPatientInSupabase(newPatient).catch((err) => {
-      console.warn('Supabase createPatient notice:', err);
-    });
+    console.log(
+      "[Receptionist] Registering new patient in Supabase:",
+      newPatient,
+    );
+    createPatientInSupabase(newPatient)
+      .then((success) => {
+        if (success) {
+          console.log(
+            `[Receptionist] Patient ${newPatient.id} successfully saved to Supabase.`,
+          );
+        } else {
+          console.error(
+            `[Receptionist] Failed to save patient ${newPatient.id} to Supabase.`,
+          );
+        }
+      })
+      .catch((err) => {
+        console.error("[Receptionist] Supabase createPatient error:", err);
+      });
 
     // Offer to immediately start visit for this patient
     setActiveVisitPatient(newPatient);
@@ -103,7 +120,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     vitals: PatientVitals;
   }) => {
     if (!activeVisitPatient) {
-      throw new Error('No active patient selected for visit');
+      throw new Error("No active patient selected for visit");
     }
 
     const { updatedState, newQueueItem, newVisit } = createVisitAndAddToQueue(
@@ -113,15 +130,32 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
         ...visitData,
         receptionistId: appState.currentUser?.id,
         receptionistName: appState.currentUser?.name,
-      }
+      },
     );
 
     onUpdateAppState(() => updatedState);
 
-    // Persist visit and live queue item to Supabase for instant multi-screen sync with Doctor
-    insertVisitAndQueueInSupabase(newVisit, newQueueItem).catch((err) => {
-      console.warn('Supabase insertVisitAndQueue error:', err);
-    });
+    console.log(
+      `[Receptionist] Submitting visit ${newVisit.id} & queue ${newQueueItem.queueNumber} to Supabase for ${activeVisitPatient.fullName}...`,
+    );
+
+    // Persist visit and live queue item to Supabase with patient data for instant multi-screen sync with Doctor
+    insertVisitAndQueueInSupabase(newVisit, newQueueItem, activeVisitPatient)
+      .then((success) => {
+        if (success) {
+          console.log(
+            `[Receptionist] Live queue token ${newQueueItem.queueNumber} and visit ${newVisit.id} saved in Supabase!`,
+          );
+        } else {
+          console.error(`[Receptionist] Could not save visit to Supabase.`);
+        }
+      })
+      .catch((err) => {
+        console.error(
+          "[Receptionist] Supabase insertVisitAndQueue error:",
+          err,
+        );
+      });
 
     return { newQueueItem, newVisit };
   };
@@ -130,11 +164,11 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   const handleCancelQueueItem = (queueId: string) => {
     const updated = cancelPatientQueueItem(appState, queueId);
     onUpdateAppState(() => updated);
-    showToast('Queue ticket cancelled', 'info');
+    showToast("Queue ticket cancelled", "info");
 
     // Persist cancellation to Supabase
     cancelQueueTicketInSupabase(queueId).catch((err) => {
-      console.warn('Supabase cancelQueueTicket error:', err);
+      console.warn("Supabase cancelQueueTicket error:", err);
     });
   };
 
@@ -145,7 +179,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
       queue: prev.queue.filter((q) => q.id !== queueId),
     }));
     deleteQueueItemInSupabase(queueId).catch((err) => {
-      console.warn('Supabase deleteQueueItem error:', err);
+      console.warn("Supabase deleteQueueItem error:", err);
     });
   };
 
@@ -155,11 +189,15 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     onUpdateAppState((prev) => ({
       ...prev,
       queue: prev.queue.filter(
-        (q) => !(q.visitDate === todayStr && (q.status === 'Completed' || q.status === 'Cancelled'))
+        (q) =>
+          !(
+            q.visitDate === todayStr &&
+            (q.status === "Completed" || q.status === "Cancelled")
+          ),
       ),
     }));
     clearCompletedQueueInSupabase().catch((err) => {
-      console.warn('Supabase clearCompletedQueue error:', err);
+      console.warn("Supabase clearCompletedQueue error:", err);
     });
   };
 
@@ -172,7 +210,9 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   const handleSavePatient = (updatedPatient: Patient) => {
     onUpdateAppState((prev) => ({
       ...prev,
-      patients: prev.patients.map((p) => (p.id === updatedPatient.id ? updatedPatient : p)),
+      patients: prev.patients.map((p) =>
+        p.id === updatedPatient.id ? updatedPatient : p,
+      ),
     }));
     if (editingPatient?.id === updatedPatient.id) {
       setEditingPatient(null);
@@ -180,9 +220,9 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     if (activeVisitPatient?.id === updatedPatient.id) {
       setActiveVisitPatient(updatedPatient);
     }
-    showToast('Patient details updated successfully.', 'success');
+    showToast("Patient details updated successfully.", "success");
     updatePatientInSupabase(updatedPatient).catch((err) => {
-      console.warn('Supabase updatePatient error:', err);
+      console.warn("Supabase updatePatient error:", err);
     });
   };
 
@@ -201,9 +241,9 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     if (activeVisitPatient?.id === patientId) {
       setActiveVisitPatient(null);
     }
-    showToast('Patient and associated records deleted.', 'info');
+    showToast("Patient and associated records deleted.", "info");
     deletePatientInSupabase(patientId).catch((err) => {
-      console.warn('Supabase deletePatient error:', err);
+      console.warn("Supabase deletePatient error:", err);
     });
   };
 
@@ -214,29 +254,43 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
       return {
         ...prev,
         visits: prev.visits.filter((v) => v.id !== visitId),
-        queue: visit?.queueId ? prev.queue.filter((q) => q.id !== visit.queueId) : prev.queue,
+        queue: visit?.queueId
+          ? prev.queue.filter((q) => q.id !== visit.queueId)
+          : prev.queue,
       };
     });
-    showToast('Visit record deleted.', 'info');
+    showToast("Visit record deleted.", "info");
     deleteVisitInSupabase(visitId).catch((err) => {
-      console.warn('Supabase deleteVisit error:', err);
+      console.warn("Supabase deleteVisit error:", err);
     });
   };
 
   const navItems = [
-    { id: 'dashboard' as ReceptionistTab, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'search' as ReceptionistTab, label: 'Patient Check-in', icon: Search },
-    { id: 'new-patient' as ReceptionistTab, label: 'New Patient', icon: UserPlus },
-    { 
-      id: 'queue' as ReceptionistTab, 
-      label: 'Live Queue', 
+    {
+      id: "dashboard" as ReceptionistTab,
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      id: "search" as ReceptionistTab,
+      label: "Patient Check-in",
+      icon: Search,
+    },
+    {
+      id: "new-patient" as ReceptionistTab,
+      label: "New Patient",
+      icon: UserPlus,
+    },
+    {
+      id: "queue" as ReceptionistTab,
+      label: "Live Queue",
       icon: ListOrdered,
-      badge: activeWaitingCount > 0 ? activeWaitingCount : undefined
+      badge: activeWaitingCount > 0 ? activeWaitingCount : undefined,
     },
   ];
 
   return (
-    <div className="flex h-[100dvh] min-h-[100dvh] bg-[#f4f7f9] overflow-hidden">
+    <div className="flex h-dvh min-h-dvh bg-[#f4f7f9] overflow-hidden">
       {/* Mobile Drawer Backdrop Overlay */}
       {mobileMenuOpen && (
         <div
@@ -248,8 +302,8 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
 
       {/* Left Sidebar (Drawer on mobile/tablet, static on desktop) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#143242] text-slate-100 flex flex-col justify-between h-[100dvh] shrink-0 border-r border-[#0f2835] select-none no-print transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
-          mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#143242] text-slate-100 flex flex-col justify-between h-dvh shrink-0 border-r border-[#0f2835] select-none no-print transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+          mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
       >
         <div>
@@ -288,12 +342,14 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all group ${
                     isActive
-                      ? 'bg-[#235874] text-white shadow-inner font-semibold'
-                      : 'text-sky-100/80 hover:bg-[#1a4257] hover:text-white'
+                      ? "bg-[#235874] text-white shadow-inner font-semibold"
+                      : "text-sky-100/80 hover:bg-[#1a4257] hover:text-white"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-teal-300' : 'text-sky-200/70 group-hover:text-white'}`} />
+                    <Icon
+                      className={`w-4 h-4 transition-colors ${isActive ? "text-teal-300" : "text-sky-200/70 group-hover:text-white"}`}
+                    />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
@@ -315,10 +371,10 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
             </div>
             <div className="overflow-hidden">
               <p className="text-xs font-bold text-white truncate">
-                {appState.currentUser?.name || 'Reception Staff'}
+                {appState.currentUser?.name || "Reception Staff"}
               </p>
               <p className="text-[10px] text-teal-300/80 font-medium capitalize">
-                Role: {appState.currentUser?.role || 'Receptionist'}
+                Role: {appState.currentUser?.role || "Receptionist"}
               </p>
             </div>
           </div>
@@ -334,7 +390,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-[100dvh] min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col h-dvh min-h-0 overflow-hidden">
         {/* Top Navbar */}
         <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -351,8 +407,8 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
               <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="overflow-hidden">
-              <h2 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-none">
-                {appState.clinic?.name || 'MediHive Health Center'}
+              <h2 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate max-w-35 xs:max-w-[200px] sm:max-w-none">
+                {appState.clinic?.name || "MediHive Health Center"}
               </h2>
               <p className="text-[10px] sm:text-xs text-slate-500 truncate">
                 Front Desk / Patient Triage
@@ -365,45 +421,29 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
             <button
               onClick={() => {
                 setActiveVisitPatient(null);
-                setCurrentTab('queue');
+                setCurrentTab("queue");
                 setMobileMenuOpen(false);
               }}
               className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition cursor-pointer shrink-0"
               title="Click to view live queue"
             >
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-              <span>{activeWaitingCount} <span className="hidden xs:inline">in Line</span></span>
-            </button>
-
-            {/* Cloud DB Status Pill */}
-            <button
-              onClick={() => setShowSupabaseModal(true)}
-              type="button"
-              title={
-                isSupabaseConfigured
-                  ? "Cloud Database (Supabase) is connected. Click to test or manage connection."
-                  : "Cloud Database not connected (Running in local offline mode). Click to setup Supabase."
-              }
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition cursor-pointer shrink-0 ${
-                isSupabaseConfigured
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full shrink-0 ${
-                  isSupabaseConfigured ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
-                }`}
-              />
-              <Database className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Cloud DB:</span>
-              <span>{isSupabaseConfigured ? 'Live' : 'Setup'}</span>
+              <span>
+                {activeWaitingCount}{" "}
+                <span className="hidden xs:inline">in Line</span>
+              </span>
             </button>
 
             {/* Current Time Display */}
             <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span>
+                {new Date().toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
             </div>
           </div>
         </header>
@@ -419,22 +459,22 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
               onSubmitVisit={handleSubmitVisit}
               onQueueSuccess={() => {
                 setActiveVisitPatient(null);
-                setCurrentTab('queue');
+                setCurrentTab("queue");
               }}
             />
           ) : (
             <>
-              {currentTab === 'dashboard' && (
+              {currentTab === "dashboard" && (
                 <ReceptionistDashboard
                   patients={appState.patients}
                   visits={appState.visits}
                   queue={appState.queue}
                   onNavigateToSearch={(q) => {
-                    setInitialSearchQuery(q || '');
-                    setCurrentTab('search');
+                    setInitialSearchQuery(q || "");
+                    setCurrentTab("search");
                   }}
-                  onNavigateToNewPatient={() => setCurrentTab('new-patient')}
-                  onNavigateToQueue={() => setCurrentTab('queue')}
+                  onNavigateToNewPatient={() => setCurrentTab("new-patient")}
+                  onNavigateToQueue={() => setCurrentTab("queue")}
                   onStartVisit={(patient) => setActiveVisitPatient(patient)}
                   onEditPatient={handleEditPatient}
                   onDeletePatient={handleDeletePatient}
@@ -442,27 +482,27 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
                 />
               )}
 
-              {currentTab === 'search' && (
+              {currentTab === "search" && (
                 <PatientSearchAndVisit
                   patients={appState.patients}
                   visits={appState.visits}
                   onStartNewVisit={(patient) => setActiveVisitPatient(patient)}
-                  onNavigateToNewPatient={() => setCurrentTab('new-patient')}
+                  onNavigateToNewPatient={() => setCurrentTab("new-patient")}
                   onEditPatient={handleEditPatient}
                   onDeletePatient={handleDeletePatient}
                   onDeleteVisit={handleDeleteVisit}
                 />
               )}
 
-              {currentTab === 'new-patient' && (
+              {currentTab === "new-patient" && (
                 <NewPatientRegistration
                   existingPatients={appState.patients}
-                  onBack={() => setCurrentTab('dashboard')}
+                  onBack={() => setCurrentTab("dashboard")}
                   onPatientRegistered={handlePatientRegistered}
                 />
               )}
 
-              {currentTab === 'queue' && (
+              {currentTab === "queue" && (
                 <ReceptionistQueueView
                   queue={appState.queue}
                   onCancelQueueItem={handleCancelQueueItem}
@@ -484,12 +524,6 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
           onSavePatient={handleSavePatient}
         />
       )}
-
-      {/* MODAL: Supabase Connection & Diagnostics Modal */}
-      <SupabaseConnectionModal
-        isOpen={showSupabaseModal}
-        onClose={() => setShowSupabaseModal(false)}
-      />
     </div>
   );
 };

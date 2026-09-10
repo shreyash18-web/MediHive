@@ -1,7 +1,20 @@
-import React, { useState, useMemo } from 'react';
-import { Search, UserPlus, FileText, Calendar, Phone, ArrowRight, Eye, UserCheck, AlertCircle, Sparkles, Edit2, Trash2 } from 'lucide-react';
-import { Patient, PatientVisit } from '../../types';
-import { PatientHistoryModal } from './PatientHistoryModal';
+import React, { useState, useMemo } from "react";
+import {
+  Search,
+  UserPlus,
+  FileText,
+  Calendar,
+  Phone,
+  ArrowRight,
+  Eye,
+  UserCheck,
+  AlertCircle,
+  Sparkles,
+  Edit2,
+  Trash2,
+} from "lucide-react";
+import { Patient, PatientVisit } from "../../types";
+import { PatientHistoryModal } from "./PatientHistoryModal";
 
 interface PatientSearchAndVisitProps {
   patients: Patient[];
@@ -22,8 +35,9 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
   onDeletePatient,
   onDeleteVisit,
 }) => {
-  const [query, setQuery] = useState('');
-  const [selectedPatientForHistory, setSelectedPatientForHistory] = useState<Patient | null>(null);
+  const [query, setQuery] = useState("");
+  const [selectedPatientForHistory, setSelectedPatientForHistory] =
+    useState<Patient | null>(null);
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
 
   const searchResults = useMemo(() => {
@@ -33,8 +47,8 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
       (p) =>
         p.fullName.toLowerCase().includes(q) ||
         p.id.toLowerCase().includes(q) ||
-        p.mobile.replace(/\D/g, '').includes(q.replace(/\D/g, '')) ||
-        (p.dob && p.dob.includes(q))
+        p.mobile.replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
+        (p.dob && p.dob.includes(q)),
     );
   }, [patients, query]);
 
@@ -43,8 +57,12 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Patient Directory & Search</h1>
-          <p className="text-xs text-slate-500">Search existing clinic patients or register a first-time visitor</p>
+          <h1 className="text-xl font-bold text-slate-800">
+            Patient Directory & Search
+          </h1>
+          <p className="text-xs text-slate-500">
+            Search existing clinic patients or register a first-time visitor
+          </p>
         </div>
 
         <button
@@ -75,7 +93,8 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
           />
         </div>
         <p className="text-[11px] text-slate-400">
-          Tip: Before registering a new patient, always search by phone number or name to prevent duplicate records.
+          Tip: Before registering a new patient, always search by phone number
+          or name to prevent duplicate records.
         </p>
       </div>
 
@@ -85,7 +104,9 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
           <div className="flex items-center justify-between text-xs text-slate-500 px-1">
             <span>Search Results ({searchResults.length})</span>
             {searchResults.length === 0 && (
-              <span className="text-amber-600 font-medium">No record matching "{query}"</span>
+              <span className="text-amber-600 font-medium">
+                No record matching "{query}"
+              </span>
             )}
           </div>
 
@@ -94,9 +115,12 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
               <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Search className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-bold text-slate-700">No Existing Patient Found</h3>
+              <h3 className="text-sm font-bold text-slate-700">
+                No Existing Patient Found
+              </h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                No patient records match your search criteria. This might be a first-time visitor.
+                No patient records match your search criteria. This might be a
+                first-time visitor.
               </p>
               <button
                 onClick={onNavigateToNewPatient}
@@ -120,13 +144,18 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="text-base font-bold text-slate-900 capitalize">{patient.fullName}</h3>
+                          <h3 className="text-base font-bold text-slate-900 capitalize">
+                            {patient.fullName}
+                          </h3>
                           <span className="text-xs font-mono font-bold bg-sky-50 text-sky-700 px-2 py-0.5 rounded border border-sky-100">
                             {patient.id}
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">
-                          {patient.gender}  {patient.age} yrs  Mobile: <strong className="font-mono text-slate-700">{patient.mobile}</strong>
+                          {patient.gender} {patient.age} yrs Mobile:{" "}
+                          <strong className="font-mono text-slate-700">
+                            {patient.mobile}
+                          </strong>
                         </p>
                       </div>
                     </div>
@@ -142,19 +171,24 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
                     <div className="flex items-center justify-between text-slate-600">
                       <span>Previous Visits:</span>
                       <strong className="text-slate-900 font-bold font-mono">
-                        {patient.records?.length || patient.totalVisits || 0} visits
+                        {patient.records?.length || patient.totalVisits || 0}{" "}
+                        visits
                       </strong>
                     </div>
                     {patient.dob && (
                       <div className="flex items-center justify-between text-slate-600">
                         <span>DOB:</span>
-                        <span className="font-mono text-slate-700">{patient.dob}</span>
+                        <span className="font-mono text-slate-700">
+                          {patient.dob}
+                        </span>
                       </div>
                     )}
                     {patient.lastVisitDate && (
                       <div className="flex items-center justify-between text-slate-600">
                         <span>Last Visited:</span>
-                        <span className="font-mono text-slate-700">{patient.lastVisitDate}</span>
+                        <span className="font-mono text-slate-700">
+                          {patient.lastVisitDate}
+                        </span>
                       </div>
                     )}
                     {patient.allergies && (
@@ -221,8 +255,12 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
         <div className="bg-white rounded-xl shadow-sm border border-slate-200/90 overflow-hidden">
           <div className="p-4 sm:px-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <div>
-              <h2 className="text-sm font-bold text-slate-800">All Registered Patients ({patients.length})</h2>
-              <p className="text-xs text-slate-500">List of all patients registered in MediHive</p>
+              <h2 className="text-sm font-bold text-slate-800">
+                All Registered Patients ({patients.length})
+              </h2>
+              <p className="text-xs text-slate-500">
+                List of all patients registered in MediHive
+              </p>
             </div>
           </div>
 
@@ -242,23 +280,35 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
               <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
                 {patients.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
-                      No patients registered yet. Click <strong>+ Register New Patient</strong> above to begin.
+                    <td
+                      colSpan={7}
+                      className="px-5 py-12 text-center text-slate-400"
+                    >
+                      No patients registered yet. Click{" "}
+                      <strong>+ Register New Patient</strong> above to begin.
                     </td>
                   </tr>
                 ) : (
                   patients.map((p) => (
                     <tr key={p.id} className="hover:bg-slate-50 transition">
-                      <td className="px-5 py-3.5 font-bold text-slate-900 font-mono">{p.id}</td>
-                      <td className="px-5 py-3.5 font-semibold text-slate-900 capitalize">{p.fullName}</td>
-                      <td className="px-4 py-3.5 text-slate-600">
-                        {p.age} yrs  {p.gender}
+                      <td className="px-5 py-3.5 font-bold text-slate-900 font-mono">
+                        {p.id}
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-slate-600">{p.mobile}</td>
+                      <td className="px-5 py-3.5 font-semibold text-slate-900 capitalize">
+                        {p.fullName}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600">
+                        {p.age} yrs {p.gender}
+                      </td>
+                      <td className="px-5 py-3.5 font-mono text-slate-600">
+                        {p.mobile}
+                      </td>
                       <td className="px-4 py-3.5 font-bold text-slate-800">
                         {p.records?.length || p.totalVisits || 0}
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-slate-500">{p.lastVisitDate || 'Today'}</td>
+                      <td className="px-5 py-3.5 font-mono text-slate-500">
+                        {p.lastVisitDate || "Today"}
+                      </td>
                       <td className="px-5 py-3.5 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
@@ -328,18 +378,31 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
                 <Trash2 className="w-5 h-5 text-rose-600" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Delete Patient Record?</h3>
-                <p className="text-xs text-slate-500">This action cannot be undone</p>
+                <h3 className="text-base font-bold text-slate-900">
+                  Delete Patient Record?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  This action cannot be undone
+                </p>
               </div>
             </div>
 
             <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-3.5 text-xs text-rose-900 space-y-1">
-              <p className="font-semibold capitalize text-sm text-slate-900">{patientToDelete.fullName}</p>
+              <p className="font-semibold capitalize text-sm text-slate-900">
+                {patientToDelete.fullName}
+              </p>
               <p className="text-[11px] text-slate-600">
-                ID: <span className="font-mono font-bold">{patientToDelete.id}</span> | Mobile: <span className="font-mono">{patientToDelete.mobile}</span>
+                ID:{" "}
+                <span className="font-mono font-bold">
+                  {patientToDelete.id}
+                </span>{" "}
+                | Mobile:{" "}
+                <span className="font-mono">{patientToDelete.mobile}</span>
               </p>
               <p className="text-[11px] text-rose-700 pt-1">
-                ⚠️ This will permanently delete this patient from Supabase and automatically cascade to remove all associated visits, consultations, and queue tokens.
+                ⚠️ This will permanently delete this patient from the database
+                and automatically cascade to remove all associated visits,
+                consultations, and queue tokens.
               </p>
             </div>
 
