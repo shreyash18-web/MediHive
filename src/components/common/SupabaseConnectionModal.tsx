@@ -23,6 +23,7 @@ import {
   SupabaseConfigInfo,
 } from "../../lib/supabase";
 import { useToast } from "./Toast";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface SupabaseConnectionModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export const SupabaseConnectionModal: React.FC<
   SupabaseConnectionModalProps
 > = ({ isOpen, onClose, onConnectionSuccess }) => {
   const { showToast } = useToast();
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
   const [config, setConfig] = useState<SupabaseConfigInfo>(() =>
     getSupabaseConfig(),
   );
@@ -150,7 +152,13 @@ export const SupabaseConnectionModal: React.FC<
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[96dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="supabase-modal-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[96dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="px-5 py-4 bg-linear-to-r from-[#194358] via-[#205570] to-[#2c7295] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -158,7 +166,10 @@ export const SupabaseConnectionModal: React.FC<
               <Database className="w-5 h-5 text-sky-200" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <h2
+                id="supabase-modal-title"
+                className="text-base font-bold text-white flex items-center gap-2"
+              >
                 <span>Supabase Cloud Database Connection</span>
               </h2>
               <p className="text-xs text-sky-100/90">

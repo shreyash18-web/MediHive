@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Patient, PatientVisit } from "../../types";
 import { PatientHistoryModal } from "./PatientHistoryModal";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface PatientSearchAndVisitProps {
   patients: Patient[];
@@ -84,6 +85,7 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
             <Search className="w-5 h-5" />
           </div>
           <input
+            id="receptionist-search-input"
             type="text"
             autoFocus
             value={query}
@@ -371,66 +373,91 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
 
       {/* Delete Patient Confirmation Modal */}
       {patientToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 text-rose-600">
-              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
-                <Trash2 className="w-5 h-5 text-rose-600" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Delete Patient Record?
-                </h3>
-                <p className="text-xs text-slate-500">
-                  This action cannot be undone
-                </p>
-              </div>
-            </div>
+        <DeleteReceptionistPatientConfirmModal
+          patient={patientToDelete}
+          onClose={() => setPatientToDelete(null)}
+          onConfirm={() => {
+            if (onDeletePatient) {
+              onDeletePatient(patientToDelete.id);
+            }
+            setPatientToDelete(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
-            <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-3.5 text-xs text-rose-900 space-y-1">
-              <p className="font-semibold capitalize text-sm text-slate-900">
-                {patientToDelete.fullName}
-              </p>
-              <p className="text-[11px] text-slate-600">
-                ID:{" "}
-                <span className="font-mono font-bold">
-                  {patientToDelete.id}
-                </span>{" "}
-                | Mobile:{" "}
-                <span className="font-mono">{patientToDelete.mobile}</span>
-              </p>
-              <p className="text-[11px] text-rose-700 pt-1">
-                ⚠️ This will permanently delete this patient from the database
-                and automatically cascade to remove all associated visits,
-                consultations, and queue tokens.
-              </p>
-            </div>
+interface DeleteReceptionistPatientConfirmModalProps {
+  patient: Patient;
+  onClose: () => void;
+  onConfirm: () => void;
+}
 
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setPatientToDelete(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onDeletePatient) {
-                    onDeletePatient(patientToDelete.id);
-                  }
-                  setPatientToDelete(null);
-                }}
-                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-sm flex items-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Yes, Delete Patient</span>
-              </button>
-            </div>
+const DeleteReceptionistPatientConfirmModal: React.FC<
+  DeleteReceptionistPatientConfirmModalProps
+> = ({ patient, onClose, onConfirm }) => {
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen: true, onClose });
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-rec-patient-title"
+        className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4 animate-in fade-in zoom-in-95 duration-200"
+      >
+        <div className="flex items-center gap-3 text-rose-600">
+          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+            <Trash2 className="w-5 h-5 text-rose-600" />
+          </div>
+          <div>
+            <h3
+              id="delete-rec-patient-title"
+              className="text-base font-bold text-slate-900"
+            >
+              Delete Patient Record?
+            </h3>
+            <p className="text-xs text-slate-500">
+              This action cannot be undone
+            </p>
           </div>
         </div>
-      )}
+
+        <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-3.5 text-xs text-rose-900 space-y-1">
+          <p className="font-semibold capitalize text-sm text-slate-900">
+            {patient.fullName}
+          </p>
+          <p className="text-[11px] text-slate-600">
+            ID: <span className="font-mono font-bold">{patient.id}</span> |
+            Mobile: <span className="font-mono">{patient.mobile}</span>
+          </p>
+          <p className="text-[11px] text-rose-700 pt-1">
+            ⚠️ This will permanently delete this patient from the database and
+            automatically cascade to remove all associated visits,
+            consultations, and queue tokens.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-sm flex items-center gap-1.5"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Yes, Delete Patient</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

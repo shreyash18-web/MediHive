@@ -20,6 +20,7 @@ import {
   UserAccount,
 } from "../../types";
 import { useToast } from "../common/Toast";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface PatientVisitFormProps {
   patient: Patient;
@@ -430,68 +431,95 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
 
       {/* Confirmation Modal */}
       {confirmationData && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-4 sm:p-6 text-center space-y-4 max-h-[96dvh] overflow-y-auto touch-scroll animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
+        <VisitConfirmationModal
+          confirmationData={confirmationData}
+          onClose={() => {
+            const data = confirmationData;
+            setConfirmationData(null);
+            onQueueSuccess(data);
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">
-                Patient Added to Queue!
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                The patient is now registered in the doctor's live waiting
-                queue.
-              </p>
-            </div>
+interface VisitConfirmationModalProps {
+  confirmationData: QueueItem;
+  onClose: () => void;
+}
 
-            {/* Ticket Card */}
-            <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2 text-left text-xs">
-              <div className="flex items-center justify-between border-b border-sky-200/60 pb-2">
-                <span className="text-sky-800 font-semibold uppercase tracking-wider text-[11px]">
-                  Queue Number
-                </span>
-                <span className="text-xl font-extrabold text-[#1e536e] font-mono">
-                  {confirmationData.queueNumber}
-                </span>
-              </div>
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-slate-500">Patient:</span>
-                <span className="font-bold text-slate-800">
-                  {confirmationData.patientName}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Status:</span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
-                  {confirmationData.status}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Arrival Time:</span>
-                <span className="font-mono text-slate-700">
-                  {confirmationData.arrivalTime}
-                </span>
-              </div>
-            </div>
+const VisitConfirmationModal: React.FC<VisitConfirmationModalProps> = ({
+  confirmationData,
+  onClose,
+}) => {
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen: true, onClose });
 
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const data = confirmationData;
-                  setConfirmationData(null);
-                  onQueueSuccess(data);
-                }}
-                className="w-full py-2.5 bg-[#1e536e] hover:bg-[#18445a] text-white font-bold text-xs rounded-lg transition shadow-sm"
-              >
-                View Live Queue
-              </button>
-            </div>
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="visit-confirmation-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-4 sm:p-6 text-center space-y-4 max-h-[96dvh] overflow-y-auto touch-scroll animate-in fade-in zoom-in-95 duration-150"
+      >
+        <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+          <CheckCircle2 className="w-8 h-8" />
+        </div>
+
+        <div>
+          <h3
+            id="visit-confirmation-title"
+            className="text-lg font-bold text-slate-900"
+          >
+            Patient Added to Queue!
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            The patient is now registered in the doctor's live waiting queue.
+          </p>
+        </div>
+
+        {/* Ticket Card */}
+        <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2 text-left text-xs">
+          <div className="flex items-center justify-between border-b border-sky-200/60 pb-2">
+            <span className="text-sky-800 font-semibold uppercase tracking-wider text-[11px]">
+              Queue Number
+            </span>
+            <span className="text-xl font-extrabold text-[#1e536e] font-mono">
+              {confirmationData.queueNumber}
+            </span>
+          </div>
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-slate-500">Patient:</span>
+            <span className="font-bold text-slate-800">
+              {confirmationData.patientName}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Status:</span>
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
+              {confirmationData.status}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">Arrival Time:</span>
+            <span className="font-mono text-slate-700">
+              {confirmationData.arrivalTime}
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2.5 bg-[#1e536e] hover:bg-[#18445a] text-white font-bold text-xs rounded-lg transition shadow-sm"
+          >
+            View Live Queue
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

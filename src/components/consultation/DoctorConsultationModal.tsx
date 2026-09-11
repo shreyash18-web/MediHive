@@ -29,6 +29,7 @@ import {
 } from "../../types";
 import { generateNextOpdId } from "../../services/storage";
 import { useToast } from "../common/Toast";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface DoctorConsultationModalProps {
   isOpen: boolean;
@@ -96,6 +97,7 @@ export const DoctorConsultationModal: React.FC<
   onPreviewPrescription,
 }) => {
   const { showToast } = useToast();
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
 
   const [diagnosis, setDiagnosis] = useState("");
   const [clinicalNotes, setClinicalNotes] = useState("");
@@ -209,7 +211,13 @@ export const DoctorConsultationModal: React.FC<
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-5">
-      <div className="bg-white w-full max-w-5xl rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[96dvh] sm:max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="consultation-modal-title"
+        className="bg-white w-full max-w-5xl rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[96dvh] sm:max-h-[92vh] animate-in fade-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="bg-[#194358] text-white px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3 overflow-hidden">
@@ -221,7 +229,10 @@ export const DoctorConsultationModal: React.FC<
                 <span className="px-2 py-0.5 rounded-full bg-emerald-400 text-slate-900 text-xs font-bold font-mono">
                   {queueItem.queueNumber}
                 </span>
-                <h2 className="text-sm sm:text-lg font-bold text-white truncate">
+                <h2
+                  id="consultation-modal-title"
+                  className="text-sm sm:text-lg font-bold text-white truncate"
+                >
                   Active Consultation
                 </h2>
               </div>

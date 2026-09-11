@@ -1,6 +1,21 @@
-import React from 'react';
-import { X, Calendar, Clock, Activity, FileText, Pill, AlertCircle, Shield, User, Phone, MapPin, Edit2, Trash2 } from 'lucide-react';
-import { Patient, OPDRecord, PatientVisit } from '../../types';
+import React from "react";
+import {
+  X,
+  Calendar,
+  Clock,
+  Activity,
+  FileText,
+  Pill,
+  AlertCircle,
+  Shield,
+  User,
+  Phone,
+  MapPin,
+  Edit2,
+  Trash2,
+} from "lucide-react";
+import { Patient, OPDRecord, PatientVisit } from "../../types";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface PatientHistoryModalProps {
   patient: Patient | null;
@@ -23,17 +38,30 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
   onDeletePatient,
   onDeleteVisit,
 }) => {
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: Boolean(isOpen && patient),
+    onClose,
+  });
+
   if (!isOpen || !patient) return null;
 
   const records = [...(patient.records || [])].sort(
-    (a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime()
+    (a, b) => new Date(b.visitDate).getTime() - new Date(a.visitDate).getTime(),
   );
 
-  const patientVisits = (visits || []).filter((v) => v.patientId === patient.id);
+  const patientVisits = (visits || []).filter(
+    (v) => v.patientId === patient.id,
+  );
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[96dvh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="patient-history-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full max-h-[96dvh] sm:max-h-[90vh] flex flex-col overflow-hidden"
+      >
         {/* Header */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 bg-linear-to-r from-[#1e536e] to-[#256382] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -42,13 +70,18 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white capitalize">{patient.fullName}</h2>
+                <h2
+                  id="patient-history-title"
+                  className="text-lg font-bold text-white capitalize"
+                >
+                  {patient.fullName}
+                </h2>
                 <span className="text-xs bg-sky-900/60 border border-sky-400/30 px-2 py-0.5 rounded-full font-mono text-sky-200">
                   {patient.id}
                 </span>
               </div>
               <p className="text-xs text-sky-100/80">
-                {patient.gender}  {patient.age} yrs  Mobile: {patient.mobile}
+                {patient.gender} {patient.age} yrs Mobile: {patient.mobile}
               </p>
             </div>
           </div>
@@ -89,7 +122,10 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               </span>
             )}
             <span className="text-slate-500">
-              Total Visits: <strong className="text-slate-800">{records.length || patient.totalVisits || 0}</strong>
+              Total Visits:{" "}
+              <strong className="text-slate-800">
+                {records.length || patient.totalVisits || 0}
+              </strong>
             </span>
           </div>
 
@@ -104,8 +140,12 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
           {records.length === 0 && patientVisits.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <FileText className="w-12 h-12 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-semibold text-slate-600">No previous visit records found</p>
-              <p className="text-xs text-slate-400 mt-1">This is a newly registered patient.</p>
+              <p className="text-sm font-semibold text-slate-600">
+                No previous visit records found
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                This is a newly registered patient.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -117,12 +157,16 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                     <div className="flex items-center gap-2 text-xs">
                       <Calendar className="w-4 h-4 text-sky-700" />
-                      <span className="font-bold text-slate-800 font-mono">{rec.visitDate}</span>
+                      <span className="font-bold text-slate-800 font-mono">
+                        {rec.visitDate}
+                      </span>
                       <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-semibold">
-                        {rec.opdType || 'Consultation'}
+                        {rec.opdType || "Consultation"}
                       </span>
                     </div>
-                    <span className="text-xs text-slate-400 font-mono">{rec.id}</span>
+                    <span className="text-xs text-slate-400 font-mono">
+                      {rec.id}
+                    </span>
                   </div>
 
                   {/* Diagnosis & Symptoms */}
@@ -130,11 +174,16 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                     <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       Diagnosis & Complaint
                     </h4>
-                    <p className="text-sm font-bold text-slate-800 mt-0.5">{rec.diagnosis || 'General Consultation'}</p>
+                    <p className="text-sm font-bold text-slate-800 mt-0.5">
+                      {rec.diagnosis || "General Consultation"}
+                    </p>
                     {rec.symptoms && rec.symptoms.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {rec.symptoms.map((s, i) => (
-                          <span key={i} className="text-[11px] px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600">
+                          <span
+                            key={i}
+                            className="text-[11px] px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-600"
+                          >
                             {s}
                           </span>
                         ))}
@@ -145,7 +194,9 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                   {/* Doctor Notes */}
                   {rec.clinicalNotes && (
                     <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 text-xs text-slate-700">
-                      <span className="font-semibold text-slate-900 block mb-0.5">Doctor Notes:</span>
+                      <span className="font-semibold text-slate-900 block mb-0.5">
+                        Doctor Notes:
+                      </span>
                       {rec.clinicalNotes}
                     </div>
                   )}
@@ -159,12 +210,21 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       </h5>
                       <div className="divide-y divide-slate-100 bg-white rounded-lg border border-slate-200 overflow-hidden text-xs">
                         {rec.medicines.map((m, mi) => (
-                          <div key={mi} className="p-2 flex items-center justify-between gap-2">
+                          <div
+                            key={mi}
+                            className="p-2 flex items-center justify-between gap-2"
+                          >
                             <div>
-                              <span className="font-bold text-slate-800">{m.name}</span>
-                              <span className="text-slate-500 ml-2">({m.dosage}  {m.frequency})</span>
+                              <span className="font-bold text-slate-800">
+                                {m.name}
+                              </span>
+                              <span className="text-slate-500 ml-2">
+                                ({m.dosage} {m.frequency})
+                              </span>
                             </div>
-                            <span className="text-slate-500 text-[11px]">{m.timing}  {m.duration}</span>
+                            <span className="text-slate-500 text-[11px]">
+                              {m.timing} {m.duration}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -175,7 +235,10 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                   {rec.nextVisitDate && (
                     <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
                       <Clock className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Follow-up Scheduled: <strong>{rec.nextVisitDate}</strong></span>
+                      <span>
+                        Follow-up Scheduled:{" "}
+                        <strong>{rec.nextVisitDate}</strong>
+                      </span>
                     </div>
                   )}
                 </div>
@@ -197,22 +260,29 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-800">{v.visitDate} {v.visitTime}</span>
+                        <span className="font-mono font-bold text-slate-800">
+                          {v.visitDate} {v.visitTime}
+                        </span>
                         {v.queueNumber && (
                           <span className="font-mono font-extrabold bg-white text-slate-800 px-1.5 py-0.5 rounded border border-slate-200 text-[11px]">
                             {v.queueNumber}
                           </span>
                         )}
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                          v.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                          v.status === 'Cancelled' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                          'bg-amber-50 text-amber-800 border border-amber-200'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            v.status === "Completed"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : v.status === "Cancelled"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-amber-50 text-amber-800 border border-amber-200"
+                          }`}
+                        >
                           {v.status}
                         </span>
                       </div>
                       <p className="text-slate-600 mt-1">
-                        <strong>Complaint:</strong> {v.complaint || 'General Checkup'}
+                        <strong>Complaint:</strong>{" "}
+                        {v.complaint || "General Checkup"}
                       </p>
                     </div>
 
@@ -220,7 +290,11 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          if (window.confirm(`Delete visit record from ${v.visitDate} (${v.queueNumber || v.id})?`)) {
+                          if (
+                            window.confirm(
+                              `Delete visit record from ${v.visitDate} (${v.queueNumber || v.id})?`,
+                            )
+                          ) {
                             onDeleteVisit(v.id);
                           }
                         }}
@@ -266,7 +340,11 @@ export const PatientHistoryModal: React.FC<PatientHistoryModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm(`Are you sure you want to permanently delete patient ${patient.fullName} (${patient.id})? This will also remove all their visits and queue records.`)) {
+                  if (
+                    window.confirm(
+                      `Are you sure you want to permanently delete patient ${patient.fullName} (${patient.id})? This will also remove all their visits and queue records.`,
+                    )
+                  ) {
                     onClose();
                     onDeletePatient(patient.id);
                   }

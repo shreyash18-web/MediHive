@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   ArrowLeft,
   Search,
@@ -23,20 +23,20 @@ import {
   DiscountType,
   Gender,
 } from "../../types";
-import { commonSymptomsList, medicineCatalog } from "../../services/mockData";
 import {
   generateNextPatientId,
   generateNextOpdId,
 } from "../../services/storage";
 import { format, differenceInYears, parseISO } from "date-fns";
 import { useToast } from "../common/Toast";
+import { commonSymptomsList, medicineCatalog } from "../../services/mockData";
 
 interface OpdRegistrationProps {
   patients: Patient[];
   preselectedPatientId?: string;
   onBack: () => void;
-  onSaveOpdRecord: (patient: Patient, opdRecord: OPDRecord) => void;
-  onGeneratePrescription: (patient: Patient, opdRecord: OPDRecord) => void;
+  onSaveOpdRecord: (patient: Patient, record: OPDRecord) => void;
+  onGeneratePrescription: (patient: Patient, record: OPDRecord) => void;
 }
 
 export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
@@ -54,6 +54,10 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
   );
   const [patientSearchInput, setPatientSearchInput] = useState("");
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const patientInputRef = useRef<HTMLInputElement>(null);
+  const patientDropdownRef = useRef<HTMLDivElement>(null);
+  const symptomInputRef = useRef<HTMLInputElement>(null);
+  const symptomSuggestionsRef = useRef<HTMLDivElement>(null);
 
   // Form Fields
   const [fullName, setFullName] = useState("");
@@ -344,6 +348,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             </label>
             <div className="relative">
               <input
+                ref={patientInputRef}
                 type="text"
                 value={patientSearchInput || selectedPatientId}
                 onChange={(e) => {
@@ -351,6 +356,23 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                   setShowPatientDropdown(true);
                 }}
                 onFocus={() => setShowPatientDropdown(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setShowPatientDropdown(false);
+                  } else if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    if (!showPatientDropdown) {
+                      setShowPatientDropdown(true);
+                    }
+                    setTimeout(() => {
+                      const firstBtn =
+                        patientDropdownRef.current?.querySelector<HTMLButtonElement>(
+                          "button",
+                        );
+                      firstBtn?.focus();
+                    }, 10);
+                  }
+                }}
                 placeholder="Type patient name or ID..."
                 className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               />
@@ -358,6 +380,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
               {selectedPatientId && (
                 <button
                   type="button"
+                  aria-label="Clear selected patient"
                   onClick={() => {
                     setSelectedPatientId("");
                     setPatientSearchInput("");
@@ -376,15 +399,49 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
             {/* Dropdown Suggestions */}
             {showPatientDropdown && (
-              <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+              <div
+                ref={patientDropdownRef}
+                role="listbox"
+                aria-label="Patient suggestions"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setShowPatientDropdown(false);
+                    patientInputRef.current?.focus();
+                  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const buttons = Array.from(
+                      patientDropdownRef.current?.querySelectorAll<HTMLButtonElement>(
+                        "button",
+                      ) || [],
+                    );
+                    const currentIndex = buttons.indexOf(
+                      document.activeElement as HTMLButtonElement,
+                    );
+                    if (e.key === "ArrowDown") {
+                      const nextIndex = (currentIndex + 1) % buttons.length;
+                      buttons[nextIndex]?.focus();
+                    } else {
+                      if (currentIndex <= 0) {
+                        patientInputRef.current?.focus();
+                      } else {
+                        buttons[currentIndex - 1]?.focus();
+                      }
+                    }
+                  }
+                }}
+                className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto"
+              >
                 <button
                   type="button"
+                  role="option"
+                  aria-selected="false"
                   onClick={() => {
                     setSelectedPatientId("");
                     setPatientSearchInput("");
                     setShowPatientDropdown(false);
+                    patientInputRef.current?.focus();
                   }}
-                  className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 border-b border-slate-100"
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 border-b border-slate-100 focus:bg-emerald-50 focus:outline-none"
                 >
                   + Register as New Patient
                 </button>
@@ -403,12 +460,15 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                     <button
                       key={p.id}
                       type="button"
+                      role="option"
+                      aria-selected={selectedPatientId === p.id}
                       onClick={() => {
                         setSelectedPatientId(p.id);
                         setPatientSearchInput(`${p.fullName} (${p.id})`);
                         setShowPatientDropdown(false);
+                        patientInputRef.current?.focus();
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between text-xs transition"
+                      className="w-full text-left px-4 py-2 hover:bg-slate-50 focus:bg-sky-50 focus:outline-none flex items-center justify-between text-xs transition"
                     >
                       <span className="font-medium text-slate-800">
                         {p.fullName} ({p.gender}, {p.age}y)
@@ -592,6 +652,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
               <div className="relative">
                 <input
+                  ref={symptomInputRef}
                   type="text"
                   value={symptomInput}
                   onChange={(e) => {
@@ -599,6 +660,28 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                     setShowSymptomSuggestions(true);
                   }}
                   onFocus={() => setShowSymptomSuggestions(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (symptomInput.trim()) {
+                        addSymptom(symptomInput.trim());
+                      }
+                    } else if (e.key === "Escape") {
+                      setShowSymptomSuggestions(false);
+                    } else if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      if (filteredSymptoms.length > 0) {
+                        setShowSymptomSuggestions(true);
+                        setTimeout(() => {
+                          const firstBtn =
+                            symptomSuggestionsRef.current?.querySelector<HTMLButtonElement>(
+                              "button",
+                            );
+                          firstBtn?.focus();
+                        }, 10);
+                      }
+                    }
+                  }}
                   placeholder="Start typing symptoms (e.g. Fever, Cough, Headache)..."
                   className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
                 />
@@ -606,13 +689,59 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
               {/* Suggestions Popup */}
               {showSymptomSuggestions && filteredSymptoms.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-40 overflow-y-auto p-1.5 flex flex-wrap gap-1.5">
+                <div
+                  ref={symptomSuggestionsRef}
+                  role="listbox"
+                  aria-label="Symptom suggestions"
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setShowSymptomSuggestions(false);
+                      symptomInputRef.current?.focus();
+                    } else if (
+                      e.key === "ArrowRight" ||
+                      e.key === "ArrowDown"
+                    ) {
+                      e.preventDefault();
+                      const buttons = Array.from(
+                        symptomSuggestionsRef.current?.querySelectorAll<HTMLButtonElement>(
+                          "button",
+                        ) || [],
+                      );
+                      const currentIndex = buttons.indexOf(
+                        document.activeElement as HTMLButtonElement,
+                      );
+                      const nextIndex = (currentIndex + 1) % buttons.length;
+                      buttons[nextIndex]?.focus();
+                    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                      e.preventDefault();
+                      const buttons = Array.from(
+                        symptomSuggestionsRef.current?.querySelectorAll<HTMLButtonElement>(
+                          "button",
+                        ) || [],
+                      );
+                      const currentIndex = buttons.indexOf(
+                        document.activeElement as HTMLButtonElement,
+                      );
+                      if (currentIndex <= 0) {
+                        symptomInputRef.current?.focus();
+                      } else {
+                        buttons[currentIndex - 1]?.focus();
+                      }
+                    }
+                  }}
+                  className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-40 overflow-y-auto p-1.5 flex flex-wrap gap-1.5"
+                >
                   {filteredSymptoms.map((sym) => (
                     <button
                       key={sym}
                       type="button"
-                      onClick={() => addSymptom(sym)}
-                      className="px-2.5 py-1 text-xs bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-full font-medium transition flex items-center gap-1"
+                      role="option"
+                      aria-selected="false"
+                      onClick={() => {
+                        addSymptom(sym);
+                        symptomInputRef.current?.focus();
+                      }}
+                      className="px-2.5 py-1 text-xs bg-sky-50 hover:bg-sky-100 focus:bg-sky-100 focus:outline-none text-sky-800 rounded-full font-medium transition flex items-center gap-1"
                     >
                       <span>+ {sym}</span>
                     </button>
@@ -631,8 +760,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                       {s}
                       <button
                         type="button"
+                        aria-label={`Remove symptom ${s}`}
                         onClick={() => removeSymptom(s)}
-                        className="text-medihive-500 hover:text-medihive-800 rounded-full"
+                        className="text-medihive-500 hover:text-medihive-800 rounded-full focus:outline-none"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -652,7 +782,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
               </span>
             </label>
             <div className="flex flex-wrap items-center gap-3">
-              <label className="cursor-pointer border-2 border-dashed border-slate-300 hover:border-medihive-500 bg-slate-50 hover:bg-slate-100/80 px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs font-medium text-slate-700 transition">
+              <label className="cursor-pointer border-2 border-dashed border-slate-300 hover:border-medihive-500 focus-within:ring-2 focus-within:ring-medihive-500 focus-within:border-medihive-500 bg-slate-50 hover:bg-slate-100/80 px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs font-medium text-slate-700 transition">
                 <Upload className="w-4 h-4 text-medihive-600" />
                 <span>Choose Image Files</span>
                 <input
@@ -660,7 +790,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                   multiple
                   accept="image/*"
                   onChange={handleImageUpload}
-                  className="hidden"
+                  className="sr-only"
                 />
               </label>
 
@@ -677,12 +807,13 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                   />
                   <button
                     type="button"
+                    aria-label={`Delete uploaded image ${idx + 1}`}
                     onClick={() =>
                       setUploadedImages(
                         uploadedImages.filter((_, i) => i !== idx),
                       )
                     }
-                    className="absolute inset-0 bg-rose-900/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                    className="absolute inset-0 bg-rose-900/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

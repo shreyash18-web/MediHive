@@ -546,9 +546,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Overdue followups */}
-        <div
+        <button
+          type="button"
           onClick={() => onNavigateToCalendar()}
-          className="bg-white p-5 rounded-xl border border-sky-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
+          className="w-full text-left bg-white p-5 rounded-xl border border-sky-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -564,12 +565,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-sky-600 transition-colors" />
-        </div>
+        </button>
 
         {/* Card 2: Today's OPD */}
-        <div
+        <button
+          type="button"
           onClick={() => onNavigateToOpd()}
-          className="bg-white p-5 rounded-xl border border-amber-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
+          className="w-full text-left bg-white p-5 rounded-xl border border-amber-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -585,7 +587,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-amber-600 transition-colors" />
-        </div>
+        </button>
 
         {/* Card 3: Revenue (with switcher) */}
         <div className="bg-white p-5 rounded-xl border border-purple-100 shadow-sm hover:shadow-md transition group flex flex-col justify-between relative overflow-hidden">
@@ -616,9 +618,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Card 4: Follow-ups Due */}
-        <div
+        <button
+          type="button"
           onClick={() => onNavigateToCalendar()}
-          className="bg-white p-5 rounded-xl border border-emerald-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
+          className="w-full text-left bg-white p-5 rounded-xl border border-emerald-100 shadow-sm hover:shadow-md transition cursor-pointer group flex items-center justify-between relative overflow-hidden"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -634,7 +637,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-600 transition-colors" />
-        </div>
+        </button>
       </div>
 
       {/* Recent Patients Table */}
@@ -684,7 +687,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 filteredPatients.map((patient) => (
                   <tr
                     key={patient.id}
-                    className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`View records for ${patient.fullName}`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onViewPatient(patient);
+                      }
+                    }}
+                    className="hover:bg-slate-50/80 transition-colors cursor-pointer focus:bg-sky-50/60 focus:outline-none"
                     onClick={() => onViewPatient(patient)}
                   >
                     <td className="px-5 py-3.5 font-bold text-slate-900">

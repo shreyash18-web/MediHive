@@ -14,6 +14,7 @@ import {
 } from "../types";
 import { initialDoctor, initialClinic, initialEmailConfig } from "./mockData";
 import { defaultAccounts } from "./storage";
+import { syncOpdRecordToGoogle } from "./googleSyncService";
 
 // ==============================================================================
 // SANITIZATION HELPERS
@@ -516,6 +517,33 @@ export const saveOpdRecordInSupabase = async (
     console.log(
       `[Supabase] OPD Record ${opdRecord.id} saved for patient ${patient.fullName}.`,
     );
+
+    // 3. Register and trigger background Google Drive & Sheets synchronization
+    try {
+      (async () => {
+        try {
+          await supabase.from("google_sync_records").upsert({
+            opd_id: opdRecord.id,
+            patient_id: patient.id,
+            status: "pending",
+            drive_synced: false,
+            sheet_synced: false,
+            updated_at: new Date().toISOString(),
+          });
+          syncOpdRecordToGoogle(opdRecord.id).catch((syncErr) => {
+            console.warn(
+              `[Google Sync Notice] Background sync for ${opdRecord.id}:`,
+              syncErr?.message || syncErr,
+            );
+          });
+        } catch {
+          // Non-blocking: table might not be migrated yet
+        }
+      })();
+    } catch {
+      // Non-blocking
+    }
+
     return true;
   } catch (err) {
     console.error("Supabase saveOpdRecord error:", err);

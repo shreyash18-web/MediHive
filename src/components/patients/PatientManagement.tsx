@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Patient, OPDRecord } from "../../types";
 import { useToast } from "../common/Toast";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface PatientManagementProps {
   patients: Patient[];
@@ -112,6 +113,7 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
             <Search className="w-4 h-4" />
           </div>
           <input
+            id="patient-search-input"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -264,70 +266,100 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
 
       {/* Delete Patient Confirmation Modal */}
       {patientToDelete && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-rose-100 text-rose-600 rounded-xl">
-                <Trash2 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Delete Patient Record
-                </h3>
-                <p className="text-xs text-slate-500">Permanent data removal</p>
-              </div>
-            </div>
+        <DeletePatientConfirmModal
+          patient={patientToDelete}
+          onClose={() => setPatientToDelete(null)}
+          onConfirm={() => {
+            if (onDeletePatient && patientToDelete) {
+              onDeletePatient(patientToDelete.id);
+              setPatientToDelete(null);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-1.5 text-xs text-slate-700">
-              <p>
-                <strong className="text-slate-900">Patient:</strong>{" "}
-                {patientToDelete.fullName}
-              </p>
-              <p>
-                <strong className="text-slate-900">Patient ID:</strong>{" "}
-                <span className="font-mono">{patientToDelete.id}</span>
-              </p>
-              <p>
-                <strong className="text-slate-900">Mobile:</strong>{" "}
-                {patientToDelete.mobile}
-              </p>
-              <p>
-                <strong className="text-slate-900">Total Visits:</strong>{" "}
-                {patientToDelete.records ? patientToDelete.records.length : 0}
-              </p>
-            </div>
+interface DeletePatientConfirmModalProps {
+  patient: Patient;
+  onClose: () => void;
+  onConfirm: () => void;
+}
 
-            <p className="text-xs text-rose-600 leading-relaxed bg-rose-50 p-3 rounded-lg border border-rose-200">
-              Warning: Deleting this patient will permanently remove their
-              records, OPD visits, prescriptions, and queue entries from both
-              the database and local storage. This action cannot be undone.
-            </p>
+const DeletePatientConfirmModal: React.FC<DeletePatientConfirmModalProps> = ({
+  patient,
+  onClose,
+  onConfirm,
+}) => {
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen: true, onClose });
 
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setPatientToDelete(null)}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onDeletePatient && patientToDelete) {
-                    onDeletePatient(patientToDelete.id);
-                    setPatientToDelete(null);
-                  }
-                }}
-                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Yes, Delete Patient</span>
-              </button>
-            </div>
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-patient-dialog-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-rose-100 text-rose-600 rounded-xl">
+            <Trash2 className="w-6 h-6" />
+          </div>
+          <div>
+            <h3
+              id="delete-patient-dialog-title"
+              className="text-lg font-bold text-slate-900"
+            >
+              Delete Patient Record
+            </h3>
+            <p className="text-xs text-slate-500">Permanent data removal</p>
           </div>
         </div>
-      )}
+
+        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-1.5 text-xs text-slate-700">
+          <p>
+            <strong className="text-slate-900">Patient:</strong>{" "}
+            {patient.fullName}
+          </p>
+          <p>
+            <strong className="text-slate-900">Patient ID:</strong>{" "}
+            <span className="font-mono">{patient.id}</span>
+          </p>
+          <p>
+            <strong className="text-slate-900">Mobile:</strong> {patient.mobile}
+          </p>
+          <p>
+            <strong className="text-slate-900">Total Visits:</strong>{" "}
+            {patient.records ? patient.records.length : 0}
+          </p>
+        </div>
+
+        <p className="text-xs text-rose-600 leading-relaxed bg-rose-50 p-3 rounded-lg border border-rose-200">
+          Warning: Deleting this patient will permanently remove their records,
+          OPD visits, prescriptions, and queue entries from both the database
+          and local storage. This action cannot be undone.
+        </p>
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Yes, Delete Patient</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

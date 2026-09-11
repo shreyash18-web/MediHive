@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Search,
@@ -82,6 +82,82 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   const currentInCabin = (appState.queue || []).find(
     (q) => q.visitDate === today && q.status === "With Doctor",
   );
+
+  // Global Keyboard Navigation Shortcuts for Receptionist Portal (Alt + 1..4, '/', and Escape)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInputActive =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      // Escape closes mobile menu if open
+      if (e.key === "Escape" && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+        return;
+      }
+
+      // Alt + 1..4 tab switching
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        switch (e.key) {
+          case "1":
+            e.preventDefault();
+            setActiveVisitPatient(null);
+            setCurrentTab("dashboard");
+            break;
+          case "2":
+            e.preventDefault();
+            setActiveVisitPatient(null);
+            setCurrentTab("search");
+            break;
+          case "3":
+            e.preventDefault();
+            setActiveVisitPatient(null);
+            setCurrentTab("new-patient");
+            break;
+          case "4":
+            e.preventDefault();
+            setActiveVisitPatient(null);
+            setCurrentTab("queue");
+            break;
+          default:
+            break;
+        }
+        return;
+      }
+
+      // '/' to focus patient search
+      if (
+        e.key === "/" &&
+        !isInputActive &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        e.preventDefault();
+        if (currentTab !== "search" && currentTab !== "dashboard") {
+          setCurrentTab("search");
+          setActiveVisitPatient(null);
+        }
+        setTimeout(() => {
+          const searchInput = (document.getElementById(
+            "receptionist-search-input",
+          ) ||
+            document.getElementById(
+              "receptionist-quick-search",
+            )) as HTMLInputElement | null;
+          searchInput?.focus();
+          searchInput?.select();
+        }, 50);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentTab, mobileMenuOpen]);
 
   // Handle saving new patient
   const handlePatientRegistered = (newPatient: Patient) => {
@@ -297,6 +373,11 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
 
   return (
     <div className="flex h-dvh min-h-dvh bg-[#f4f7f9] overflow-hidden">
+      {/* Skip to main content link for keyboard / screen reader users */}
+      <a href="#receptionist-main-content" className="skip-to-main">
+        Skip to main content
+      </a>
+
       {/* Mobile Drawer Backdrop Overlay */}
       {mobileMenuOpen && (
         <div
@@ -341,6 +422,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
               return (
                 <button
                   key={item.id}
+                  aria-current={isActive ? "page" : undefined}
                   onClick={() => {
                     setActiveVisitPatient(null);
                     setCurrentTab(item.id);
@@ -507,7 +589,11 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
         </header>
 
         {/* Scrollable View Area */}
-        <main className="flex-1 overflow-y-auto">
+        <main
+          id="receptionist-main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto focus:outline-none"
+        >
           {/* Active Visit Flow */}
           {activeVisitPatient ? (
             <PatientVisitForm

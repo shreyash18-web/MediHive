@@ -286,7 +286,7 @@ VALUES (
     'B.A.M.S | Ayurveda & Panchakarma Consultant',
     'Ayurveda & Panchakarma Specialist',
     'I-107200-A',
-    'vaidyashwetaayurveda@gmail.com',
+    'shreyashshigwan10@gmail.com',
     '9067251670',
     500
 )
@@ -299,7 +299,7 @@ VALUES (
     'Dr. Shweta''s Ayurveda Clinic',
     'Nemani bhavan, near Milagris school, office no 4, Salaiwada, Sawantwadi',
     '9067251670',
-    'vaidyashwetaayurveda@gmail.com',
+    'shreyashshigwan10@gmail.com',
     'www.shwetaayurveda.com',
     'Morning 10 am to 1 pm & Evening 5 pm to 8 pm',
     '₹'
@@ -310,10 +310,148 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO email_config (id, smtp_email, smtp_app_password, smtp_server, smtp_port, enable_notifications)
 VALUES (
     1,
-    'vaidyashwetaayurveda@gmail.com',
+    'shreyashshigwan10@gmail.com',
     '••••••••••••••••',
     'smtp.gmail.com',
     587,
     true
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- ==============================================================================
+-- GOOGLE SHEETS & GOOGLE DRIVE SYNCHRONIZATION TABLES
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS google_sync_config (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    sheet_id TEXT,
+    drive_root_folder_id TEXT,
+    doctor_email TEXT DEFAULT 'shreyashshigwan10@gmail.com',
+    auto_sync_enabled BOOLEAN NOT NULL DEFAULT true,
+    last_sync_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO google_sync_config (id, sheet_id, drive_root_folder_id, doctor_email, auto_sync_enabled)
+VALUES (1, NULL, NULL, 'shreyashshigwan10@gmail.com', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS google_sync_auth (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    refresh_token TEXT NOT NULL,
+    access_token TEXT,
+    expires_at BIGINT,
+    token_type TEXT DEFAULT 'Bearer',
+    scope TEXT,
+    connected_email TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS google_sync_records (
+    opd_id TEXT PRIMARY KEY REFERENCES opd_records(id) ON DELETE CASCADE,
+    patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'syncing', 'synced', 'failed', 'retrying')),
+    drive_synced BOOLEAN NOT NULL DEFAULT false,
+    sheet_synced BOOLEAN NOT NULL DEFAULT false,
+    sheet_row_index INTEGER,
+    drive_folder_id TEXT,
+    drive_links JSONB NOT NULL DEFAULT '[]'::jsonb,
+    last_error TEXT,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    synced_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_status ON google_sync_records(status);
+CREATE INDEX IF NOT EXISTS idx_sync_patient ON google_sync_records(patient_id);
+
+CREATE TABLE IF NOT EXISTS google_sync_files (
+    id TEXT PRIMARY KEY DEFAULT ('gsf-' || substr(md5(random()::text), 1, 10)),
+    opd_id TEXT NOT NULL REFERENCES opd_records(id) ON DELETE CASCADE,
+    image_index INTEGER NOT NULL,
+    drive_file_id TEXT NOT NULL,
+    drive_web_link TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_size BIGINT,
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (opd_id, image_index)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_files_opd ON google_sync_files(opd_id);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'google_sync_records') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE google_sync_records;
+    END IF;
+END $$;
+
+ALTER TABLE google_sync_records REPLICA IDENTITY FULL;
+
+ALTER TABLE google_sync_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE google_sync_auth ENABLE ROW LEVEL SECURITY;
+ALTER TABLE google_sync_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE google_sync_files ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "allow_all_google_sync_config" ON google_sync_config;
+CREATE POLICY "allow_all_google_sync_config" ON google_sync_config FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_all_google_sync_records" ON google_sync_records;
+CREATE POLICY "allow_all_google_sync_records" ON google_sync_records FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_all_google_sync_files" ON google_sync_files;
+CREATE POLICY "allow_all_google_sync_files" ON google_sync_files FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "service_role_only_google_sync_auth" ON google_sync_auth;
+CREATE POLICY "service_role_only_google_sync_auth" ON google_sync_auth FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_safe_view_google_sync_auth" ON google_sync_auth;
+CREATE POLICY "allow_safe_view_google_sync_auth" ON google_sync_auth FOR SELECT TO anon, authenticated USING (true);
+
+CREATE OR REPLACE FUNCTION get_google_sync_overview()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    is_connected BOOLEAN := false;
+    auth_email TEXT := NULL;
+    cfg RECORD;
+    pending_cnt INTEGER := 0;
+    synced_cnt INTEGER := 0;
+    failed_cnt INTEGER := 0;
+BEGIN
+    SELECT (refresh_token IS NOT NULL AND length(refresh_token) > 0), connected_email
+    INTO is_connected, auth_email
+    FROM google_sync_auth
+    WHERE id = 1;
+
+    IF is_connected IS NULL THEN
+        is_connected := false;
+    END IF;
+
+    SELECT sheet_id, drive_root_folder_id, doctor_email, auto_sync_enabled, last_sync_at
+    INTO cfg
+    FROM google_sync_config
+    WHERE id = 1;
+
+    SELECT count(*) FILTER (WHERE status = 'pending' OR status = 'retrying'),
+           count(*) FILTER (WHERE status = 'synced'),
+           count(*) FILTER (WHERE status = 'failed')
+    INTO pending_cnt, synced_cnt, failed_cnt
+    FROM google_sync_records;
+
+    RETURN jsonb_build_object(
+        'isConnected', is_connected,
+        'connectedEmail', COALESCE(auth_email, cfg.doctor_email),
+        'sheetId', cfg.sheet_id,
+        'driveRootFolderId', cfg.drive_root_folder_id,
+        'autoSyncEnabled', COALESCE(cfg.auto_sync_enabled, true),
+        'lastSyncAt', cfg.last_sync_at,
+        'pendingCount', pending_cnt,
+        'syncedCount', synced_cnt,
+        'failedCount', failed_cnt
+    );
+END;
+$$;

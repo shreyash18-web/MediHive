@@ -48,6 +48,7 @@ import {
   mapVisitFromDb,
   mapAppointmentFromDb,
 } from "./services/supabaseService";
+import { exchangeOAuthCode } from "./services/googleSyncService";
 import { isSupabaseConfigured } from "./lib/supabase";
 import { QueueItem } from "./types";
 import { ToastProvider, useToast } from "./components/common/Toast";
@@ -96,6 +97,132 @@ const MainAppContent: React.FC = () => {
   useEffect(() => {
     saveAppState(appState);
   }, [appState]);
+
+  // Google OAuth callback redirect handling
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    const error = params.get("error");
+
+    if (error) {
+      showToast(`Google authorization canceled or denied: ${error}`, "info");
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    if (
+      code &&
+      (state === "medihive_google_oauth" || state?.startsWith("medihive"))
+    ) {
+      // Clear URL params immediately so refreshed tab doesn't re-attempt exchange with stale code
+      window.history.replaceState({}, document.title, window.location.pathname);
+      showToast("Connecting authorized Google account...", "info");
+
+      exchangeOAuthCode(code)
+        .then((res) => {
+          if (res.success) {
+            showToast(
+              `Google account successfully connected! (${res.email || "Drive & Sheets ready"})`,
+              "success",
+            );
+            setCurrentTab("settings");
+          } else {
+            showToast(
+              `Google authorization failed: ${res.error || "Unknown error"}`,
+              "error",
+            );
+          }
+        })
+        .catch((err: any) => {
+          showToast(
+            `Google OAuth error: ${err.message || "Failed to exchange authorization code"}`,
+            "error",
+          );
+        });
+    }
+  }, []);
+
+  // Global Keyboard Navigation Shortcuts (Alt + 1..7, '/', and Escape)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInputActive =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      // Escape closes mobile sidebar if open
+      if (e.key === "Escape" && mobileSidebarOpen) {
+        setMobileSidebarOpen(false);
+        return;
+      }
+
+      // Alt + 1..7 tab switching
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        switch (e.key) {
+          case "1":
+            e.preventDefault();
+            setCurrentTab("dashboard");
+            break;
+          case "2":
+            e.preventDefault();
+            setCurrentTab("queue");
+            break;
+          case "3":
+            e.preventDefault();
+            setPreselectedOpdPatientId(undefined);
+            setCurrentTab("opd");
+            break;
+          case "4":
+            e.preventDefault();
+            setCurrentTab("patients");
+            break;
+          case "5":
+            e.preventDefault();
+            setCurrentTab("calendar");
+            break;
+          case "6":
+            e.preventDefault();
+            setCurrentTab("settings");
+            break;
+          case "7":
+            e.preventDefault();
+            setCurrentTab("help");
+            break;
+          default:
+            break;
+        }
+        return;
+      }
+
+      // '/' to focus patient search
+      if (
+        e.key === "/" &&
+        !isInputActive &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        e.preventDefault();
+        if (currentTab !== "patients") {
+          setCurrentTab("patients");
+        }
+        setTimeout(() => {
+          const searchInput = document.getElementById(
+            "patient-search-input",
+          ) as HTMLInputElement | null;
+          searchInput?.focus();
+          searchInput?.select();
+        }, 50);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentTab, mobileSidebarOpen]);
 
   // Initial load from Supabase & Real-time multi-device sync
   useEffect(() => {
@@ -872,6 +999,11 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="flex h-dvh min-h-dvh bg-[#f4f7f9] overflow-hidden">
+      {/* Skip to main content link for keyboard / screen reader users */}
+      <a href="#main-content" className="skip-to-main">
+        Skip to main content
+      </a>
+
       {/* Left Sidebar (Desktop fixed + Mobile/Tablet slide-in drawer) */}
       <Sidebar
         currentTab={currentTab}
@@ -906,7 +1038,11 @@ const MainAppContent: React.FC = () => {
         />
 
         {/* Scrollable View Container */}
-        <main className="flex-1 overflow-y-auto">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto focus:outline-none"
+        >
           {currentTab === "dashboard" && (
             <Dashboard
               patients={appState.patients}

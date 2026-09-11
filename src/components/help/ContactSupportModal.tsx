@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
-import { X, Send, MessageSquare, CheckCircle } from 'lucide-react';
-import { useToast } from '../common/Toast';
+import React, { useState } from "react";
+import { X, Send, MessageSquare, CheckCircle } from "lucide-react";
+import { useToast } from "../common/Toast";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface ContactSupportModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen, onClose }) => {
+export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const { showToast } = useToast();
-  const [topic, setTopic] = useState('General Query');
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
+  const [topic, setTopic] = useState("General Query");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   if (!isOpen) return null;
@@ -19,7 +24,10 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
-    showToast('Support request submitted! MediHive support team responds within 24 hours.', 'success');
+    showToast(
+      "Support request submitted! MediHive support team responds within 24 hours.",
+      "success",
+    );
     setTimeout(() => {
       setSubmitted(false);
       onClose();
@@ -28,11 +36,22 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 no-print">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full max-h-[96dvh] flex flex-col overflow-hidden">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contact-support-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full max-h-[96dvh] flex flex-col overflow-hidden"
+      >
         <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-[#1e536e]" />
-            <h3 className="font-bold text-slate-800 text-base">Contact MediHive Support</h3>
+            <h3
+              id="contact-support-title"
+              className="font-bold text-slate-800 text-base"
+            >
+              Contact MediHive Support
+            </h3>
           </div>
           <button
             onClick={onClose}
@@ -45,22 +64,33 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
         {submitted ? (
           <div className="p-8 text-center space-y-3">
             <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
-            <h4 className="text-base font-bold text-slate-800">Support Ticket Created!</h4>
+            <h4 className="text-base font-bold text-slate-800">
+              Support Ticket Created!
+            </h4>
             <p className="text-xs text-slate-500">
-              Ticket #MH-{Math.floor(10000 + Math.random() * 90000)} has been logged. Our technical team will reach out to your registered email.
+              Ticket #MH-{Math.floor(10000 + Math.random() * 90000)} has been
+              logged. Our technical team will reach out to your registered
+              email.
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto touch-scroll">
+          <form
+            onSubmit={handleSubmit}
+            className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto touch-scroll"
+          >
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Topic</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Topic
+              </label>
               <select
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               >
                 <option value="General Query">General Query</option>
-                <option value="Prescription Printing">Prescription Printing & Format</option>
+                <option value="Prescription Printing">
+                  Prescription Printing & Format
+                </option>
                 <option value="Patient Records">Patient Data & History</option>
                 <option value="Backup & Restore">Data Backup & Export</option>
                 <option value="Feature Request">Request New Feature</option>
@@ -68,7 +98,9 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Subject *</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Subject *
+              </label>
               <input
                 type="text"
                 required
@@ -80,7 +112,9 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Message Description *</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Message Description *
+              </label>
               <textarea
                 rows={4}
                 required
@@ -113,4 +147,3 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
     </div>
   );
 };
-

@@ -3,6 +3,7 @@ import { MediHiveLogo } from "../common/MediHiveLogo";
 import { UserAccount } from "../../types";
 import { useToast } from "../common/Toast";
 import { authenticateUser } from "../../services/storage";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import {
   KeyRound,
   User,
@@ -244,53 +245,75 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
       {/* Forgot Password Modal */}
       {showForgotModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center gap-3 text-[#1e536e]">
-              <div className="p-2 bg-sky-100 rounded-lg">
-                <KeyRound className="w-6 h-6 text-sky-700" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">Reset Password</h3>
-                <p className="text-xs text-slate-500">
-                  MediHive Security Assistance
-                </p>
-              </div>
-            </div>
+        <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />
+      )}
+    </div>
+  );
+};
 
-            <p className="text-sm text-slate-600 leading-relaxed">
-              MediHive stores all records locally on your device for absolute
-              patient privacy. To reset your master password:
+interface ForgotPasswordModalProps {
+  onClose: () => void;
+}
+
+const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
+  onClose,
+}) => {
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen: true, onClose });
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forgot-password-title"
+        className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4"
+      >
+        <div className="flex items-center gap-3 text-[#1e536e]">
+          <div className="p-2 bg-sky-100 rounded-lg">
+            <KeyRound className="w-6 h-6 text-sky-700" />
+          </div>
+          <div>
+            <h3 id="forgot-password-title" className="text-lg font-bold">
+              Reset Password
+            </h3>
+            <p className="text-xs text-slate-500">
+              MediHive Security Assistance
             </p>
-
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
-              <p>
-                • <strong>Doctor Login:</strong> <code>doctor</code> /{" "}
-                <code>doctor123</code> (or <code>admin</code> /{" "}
-                <code>admin123</code>)
-              </p>
-              <p>
-                • <strong>Receptionist Login:</strong> <code>receptionist</code>{" "}
-                / <code>reception123</code>
-              </p>
-              <p>
-                • Passwords can be changed under{" "}
-                <strong>Settings &gt; Authentication</strong> after logging in.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowForgotModal(false)}
-                className="px-4 py-2 text-sm bg-medihive-700 text-white font-medium rounded-lg hover:bg-medihive-800 transition"
-              >
-                Got it
-              </button>
-            </div>
           </div>
         </div>
-      )}
+
+        <p className="text-sm text-slate-600 leading-relaxed">
+          MediHive stores all records locally on your device for absolute
+          patient privacy. To reset your master password:
+        </p>
+
+        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
+          <p>
+            • <strong>Doctor Login:</strong> <code>doctor</code> /{" "}
+            <code>doctor123</code> (or <code>admin</code> /{" "}
+            <code>admin123</code>)
+          </p>
+          <p>
+            • <strong>Receptionist Login:</strong> <code>receptionist</code> /{" "}
+            <code>reception123</code>
+          </p>
+          <p>
+            • Passwords can be changed under{" "}
+            <strong>Settings &gt; Authentication</strong> after logging in.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm bg-medihive-700 text-white font-medium rounded-lg hover:bg-medihive-800 transition"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

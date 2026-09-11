@@ -1,20 +1,22 @@
-import React from 'react';
-import { 
-  X, 
-  Calendar, 
-  Clock, 
-  Phone, 
-  User, 
-  FileText, 
-  Printer, 
-  Eye, 
-  IndianRupee, 
+import React from "react";
+import {
+  X,
+  Calendar,
+  Clock,
+  Phone,
+  User,
+  FileText,
+  Printer,
+  Eye,
+  IndianRupee,
   Sparkles,
   Plus,
-  Trash2
-} from 'lucide-react';
-import { Patient, OPDRecord } from '../../types';
-import { format } from 'date-fns';
+  Trash2,
+  Image as ImageIcon,
+} from "lucide-react";
+import { Patient, OPDRecord } from "../../types";
+import { format } from "date-fns";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface PatientDetailsModalProps {
   patient: Patient | null;
@@ -35,20 +37,34 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
   onAddNewOpd,
   onDeleteOpdRecord,
 }) => {
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: Boolean(isOpen && patient),
+    onClose,
+  });
+
   if (!isOpen || !patient) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6 no-print">
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full flex flex-col max-h-[96dvh] sm:max-h-[90vh] overflow-hidden">
-        
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="patient-details-title"
+        className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full flex flex-col max-h-[96dvh] sm:max-h-[90vh] overflow-hidden"
+      >
         {/* Modal Header matching Page 8 */}
         <div className="px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div className="overflow-hidden">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 capitalize truncate">
+            <h2
+              id="patient-details-title"
+              className="text-base sm:text-lg font-bold text-slate-900 capitalize truncate"
+            >
               {patient.fullName}
             </h2>
             <p className="text-[11px] sm:text-xs text-slate-500 font-mono truncate">
-              {patient.id} • {patient.mobile} • {patient.gender}, {patient.age} yrs
+              {patient.id} • {patient.mobile} • {patient.gender}, {patient.age}{" "}
+              yrs
               {patient.bloodGroup && ` • ${patient.bloodGroup}`}
               {patient.weight && ` • Wt: ${patient.weight}kg`}
               {patient.height && ` • Ht: ${patient.height}`}
@@ -94,10 +110,12 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                     <span className="text-sm font-bold text-slate-800">
                       {record.visitDate}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">({record.id})</span>
+                    <span className="text-xs text-slate-400 font-mono">
+                      ({record.id})
+                    </span>
                   </div>
                   <span className="text-xs bg-sky-50 text-sky-700 font-semibold px-2.5 py-0.5 rounded-full border border-sky-100">
-                    {record.chargeType || 'First Visit'}
+                    {record.chargeType || "First Visit"}
                   </span>
                 </div>
 
@@ -110,7 +128,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                   )}
                   {record.symptoms && record.symptoms.length > 0 && (
                     <p>
-                      <strong>Symptoms:</strong> {record.symptoms.join(', ')}
+                      <strong>Symptoms:</strong> {record.symptoms.join(", ")}
                     </p>
                   )}
                 </div>
@@ -118,11 +136,14 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                 {/* Medicines List */}
                 {record.medicines && record.medicines.length > 0 && (
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-xs">
-                    <span className="font-bold text-slate-800 block mb-1">Medicines:</span>
+                    <span className="font-bold text-slate-800 block mb-1">
+                      Medicines:
+                    </span>
                     <ol className="list-decimal list-inside space-y-0.5 text-slate-700">
                       {record.medicines.map((m, mIdx) => (
                         <li key={mIdx}>
-                          <span className="font-semibold">{m.name}</span> — {m.dosage} ({m.frequency}, {m.timing})
+                          <span className="font-semibold">{m.name}</span> —{" "}
+                          {m.dosage} ({m.frequency}, {m.timing})
                         </li>
                       ))}
                     </ol>
@@ -138,21 +159,63 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                   )}
                   {record.panchakarmaNotes && (
                     <p>
-                      <strong className="text-emerald-800">Panchakarma Notes:</strong> {record.panchakarmaNotes}
+                      <strong className="text-emerald-800">
+                        Panchakarma Notes:
+                      </strong>{" "}
+                      {record.panchakarmaNotes}
                     </p>
                   )}
                   {record.nextVisitDate && (
                     <p className="flex items-center gap-1.5 text-sky-800 font-medium">
                       <Calendar className="w-3.5 h-3.5" />
-                      <span>Next Visit: <strong>{record.nextVisitDate}</strong></span>
+                      <span>
+                        Next Visit: <strong>{record.nextVisitDate}</strong>
+                      </span>
                     </p>
                   )}
                 </div>
 
+                {/* Uploaded Clinical / Prescription Photos */}
+                {record.uploadedImages && record.uploadedImages.length > 0 && (
+                  <div className="pt-2">
+                    <span className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-teal-600" />
+                      <span>
+                        Clinical / Prescription Photos (
+                        {record.uploadedImages.length}):
+                      </span>
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {record.uploadedImages.map((img, imgIdx) => (
+                        <a
+                          key={imgIdx}
+                          href={img}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="relative group block w-14 h-14 rounded-lg overflow-hidden border border-slate-200 hover:border-teal-500 shadow-xs transition"
+                          title="Click to view full image in new tab"
+                        >
+                          <img
+                            src={img}
+                            alt={`Photo ${imgIdx + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-semibold transition">
+                            View
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Card Footer: Total & Actions (Preview / Print) */}
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                   <div className="text-sm font-bold text-slate-900">
-                    Total: <span className="font-black text-medihive-800">₹{record.totalFee}</span>
+                    Total:{" "}
+                    <span className="font-black text-medihive-800">
+                      ₹{record.totalFee}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -173,7 +236,11 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                     {onDeleteOpdRecord && (
                       <button
                         onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete consultation record from ${record.visitDate}? This will remove it from database history.`)) {
+                          if (
+                            window.confirm(
+                              `Are you sure you want to delete consultation record from ${record.visitDate}? This will remove it from database history.`,
+                            )
+                          ) {
                             onDeleteOpdRecord(patient.id, record.id);
                           }
                         }}
@@ -189,9 +256,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
             ))
           )}
         </div>
-
       </div>
     </div>
   );
 };
-

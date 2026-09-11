@@ -15,6 +15,7 @@ import {
 import { Patient, OPDRecord, DoctorProfile, ClinicSettings } from "../../types";
 import { format } from "date-fns";
 import { useToast } from "../common/Toast";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -41,6 +42,7 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 }) => {
   const prescriptionRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
 
   if (!isOpen) return null;
 
@@ -86,12 +88,21 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6">
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full flex flex-col max-h-[96dvh] sm:max-h-[92vh] overflow-hidden">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prescription-modal-title"
+        className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full flex flex-col max-h-[96dvh] sm:max-h-[92vh] overflow-hidden"
+      >
         {/* Modal Top Bar */}
         <div className="px-3 sm:px-6 py-2.5 sm:py-3.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between no-print">
           <div className="flex items-center gap-2 overflow-hidden">
             <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-[#1e536e] shrink-0" />
-            <h3 className="font-bold text-slate-800 text-xs sm:text-base truncate">
+            <h3
+              id="prescription-modal-title"
+              className="font-bold text-slate-800 text-xs sm:text-base truncate"
+            >
               Prescription Preview — {patient.fullName} ({patient.id})
             </h3>
           </div>

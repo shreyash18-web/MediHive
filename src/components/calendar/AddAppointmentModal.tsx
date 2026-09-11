@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
-import { X, Calendar as CalendarIcon, Clock, User, Phone, Check } from 'lucide-react';
-import { Patient, Appointment } from '../../types';
-import { useToast } from '../common/Toast';
+import React, { useState } from "react";
+import {
+  X,
+  Calendar as CalendarIcon,
+  Clock,
+  User,
+  Phone,
+  Check,
+} from "lucide-react";
+import { Patient, Appointment } from "../../types";
+import { useToast } from "../common/Toast";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface AddAppointmentModalProps {
   patients: Patient[];
@@ -19,13 +27,18 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
   onSaveAppointment,
 }) => {
   const { showToast } = useToast();
-  const [patientId, setPatientId] = useState('');
-  const [patientName, setPatientName] = useState('');
-  const [patientMobile, setPatientMobile] = useState('');
-  const [date, setDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
-  const [time, setTime] = useState('11:00');
-  const [reason, setReason] = useState('');
-  const [type, setType] = useState<'Appointment' | 'Follow-up Reminder'>('Follow-up Reminder');
+  const modalRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
+  const [patientId, setPatientId] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [patientMobile, setPatientMobile] = useState("");
+  const [date, setDate] = useState(
+    defaultDate || new Date().toISOString().slice(0, 10),
+  );
+  const [time, setTime] = useState("11:00");
+  const [reason, setReason] = useState("");
+  const [type, setType] = useState<"Appointment" | "Follow-up Reminder">(
+    "Follow-up Reminder",
+  );
 
   if (!isOpen) return null;
 
@@ -41,34 +54,50 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!patientName.trim()) {
-      showToast('Please specify patient name', 'error');
+      showToast("Please specify patient name", "error");
       return;
     }
 
     const newApt: Appointment = {
       id: `APT-${Date.now()}`,
-      patientId: patientId || 'NEW',
+      patientId: patientId || "NEW",
       patientName: patientName.trim(),
       patientMobile: patientMobile.trim(),
       date,
       time,
-      reason: reason.trim() || 'General Follow-up / Consultation',
+      reason: reason.trim() || "General Follow-up / Consultation",
       type,
-      status: 'Scheduled',
+      status: "Scheduled",
     };
 
     onSaveAppointment(newApt);
-    showToast(`Appointment booked for ${newApt.patientName} on ${date}`, 'success');
+    showToast(
+      `Appointment booked for ${newApt.patientName} on ${date}`,
+      "success",
+    );
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 no-print">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full max-h-[96dvh] flex flex-col overflow-hidden">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="appointment-modal-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full max-h-[96dvh] flex flex-col overflow-hidden"
+      >
         <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-base font-bold text-slate-800">Schedule Appointment / Reminder</h2>
-            <p className="text-xs text-slate-500">Book visit or set a patient follow-up</p>
+            <h2
+              id="appointment-modal-title"
+              className="text-base font-bold text-slate-800"
+            >
+              Schedule Appointment / Reminder
+            </h2>
+            <p className="text-xs text-slate-500">
+              Book visit or set a patient follow-up
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -78,15 +107,22 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto touch-scroll">
+        <form
+          onSubmit={handleSubmit}
+          className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto touch-scroll"
+        >
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Select Existing Patient</label>
+            <label className="block font-semibold text-slate-700 mb-1">
+              Select Existing Patient
+            </label>
             <select
               value={patientId}
               onChange={(e) => handlePatientSelect(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
             >
-              <option value="">-- Choose Existing Patient or Type Below --</option>
+              <option value="">
+                -- Choose Existing Patient or Type Below --
+              </option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.fullName} ({p.id}) - {p.mobile}
@@ -96,7 +132,9 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Patient Name *</label>
+            <label className="block font-semibold text-slate-700 mb-1">
+              Patient Name *
+            </label>
             <input
               type="text"
               required
@@ -108,7 +146,9 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Mobile Number</label>
+            <label className="block font-semibold text-slate-700 mb-1">
+              Mobile Number
+            </label>
             <input
               type="tel"
               value={patientMobile}
@@ -120,7 +160,9 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Date *</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Date *
+              </label>
               <input
                 type="date"
                 required
@@ -130,7 +172,9 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
               />
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Time</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Time
+              </label>
               <input
                 type="time"
                 value={time}
@@ -142,7 +186,9 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Entry Type</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Entry Type
+              </label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as any)}
@@ -153,7 +199,9 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Reason / Notes</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Reason / Notes
+              </label>
               <input
                 type="text"
                 value={reason}
@@ -185,4 +233,3 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
     </div>
   );
 };
-

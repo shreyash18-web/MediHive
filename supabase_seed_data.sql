@@ -15,7 +15,7 @@ VALUES (
     'B.A.M.S | Ayurveda & Panchakarma Consultant',
     'Ayurveda & Panchakarma Specialist',
     'I-107200-A',
-    'vaidyashwetaayurveda@gmail.com',
+    'shreyashshigwan10@gmail.com',
     '9067251670',
     500
 )
@@ -35,7 +35,7 @@ VALUES (
     'Dr. Shweta''s Ayurveda Clinic',
     'Nemani bhavan, near Milagris school, office no 4, Salaiwada, Sawantwadi',
     '9067251670',
-    'vaidyashwetaayurveda@gmail.com',
+    'shreyashshigwan10@gmail.com',
     'www.shwetaayurveda.com',
     'Morning 10 am to 1 pm & Evening 5 pm to 8 pm',
     '₹'
@@ -53,7 +53,7 @@ ON CONFLICT (id) DO UPDATE SET
 INSERT INTO email_config (id, smtp_email, smtp_app_password, smtp_server, smtp_port, enable_notifications)
 VALUES (
     1,
-    'vaidyashwetaayurveda@gmail.com',
+    'shreyashshigwan10@gmail.com',
     '••••••••••••••••',
     'smtp.gmail.com',
     587,
