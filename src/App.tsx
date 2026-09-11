@@ -268,30 +268,33 @@ const MainAppContent: React.FC = () => {
         let updatedClinic = prev.clinic;
 
         if (table === "queue_items") {
-          if (eventType === "INSERT" && payload.new) {
-            const newItem = mapQueueItemFromDb(payload.new);
-            if (!updatedQueue.some((q) => q.id === newItem.id)) {
-              updatedQueue.push(newItem);
-            }
-          } else if (eventType === "UPDATE" && payload.new) {
-            const updatedItem = mapQueueItemFromDb(payload.new);
-            const prevItem = updatedQueue.find((q) => q.id === updatedItem.id);
+          if (
+            (eventType === "INSERT" || eventType === "UPDATE") &&
+            payload.new
+          ) {
+            const item = mapQueueItemFromDb(payload.new);
+            const exists = updatedQueue.some((q) => q.id === item.id);
+            if (exists) {
+              const prevItem = updatedQueue.find((q) => q.id === item.id);
 
-            // Live toast alert for receptionist when doctor calls a patient into cabin
-            if (
-              prev.currentUser?.role === "receptionist" &&
-              updatedItem.status === "With Doctor" &&
-              prevItem?.status !== "With Doctor"
-            ) {
-              showToast(
-                `📢 Doctor called Token ${updatedItem.queueNumber} (${updatedItem.patientName}) into the Cabin!`,
-                "info",
+              // Live toast alert for receptionist when doctor calls a patient into cabin
+              if (
+                prev.currentUser?.role === "receptionist" &&
+                item.status === "With Doctor" &&
+                prevItem?.status !== "With Doctor"
+              ) {
+                showToast(
+                  `📢 Doctor called Token ${item.queueNumber} (${item.patientName}) into the Cabin!`,
+                  "info",
+                );
+              }
+
+              updatedQueue = updatedQueue.map((q) =>
+                q.id === item.id ? item : q,
               );
+            } else {
+              updatedQueue.push(item);
             }
-
-            updatedQueue = updatedQueue.map((q) =>
-              q.id === updatedItem.id ? updatedItem : q,
-            );
           } else if (eventType === "DELETE" && payload.old) {
             updatedQueue = updatedQueue.filter((q) => q.id !== payload.old.id);
           }
@@ -304,18 +307,23 @@ const MainAppContent: React.FC = () => {
             return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
           });
         } else if (table === "patients") {
-          if (eventType === "INSERT" && payload.new) {
-            const newPatient = mapPatientFromDb(payload.new, []);
-            if (!updatedPatients.some((p) => p.id === newPatient.id)) {
-              updatedPatients = [newPatient, ...updatedPatients];
-            }
-          } else if (eventType === "UPDATE" && payload.new) {
-            const updatedPatient = mapPatientFromDb(payload.new);
-            updatedPatients = updatedPatients.map((p) =>
-              p.id === updatedPatient.id
-                ? { ...updatedPatient, records: p.records || [] }
-                : p,
+          if (
+            (eventType === "INSERT" || eventType === "UPDATE") &&
+            payload.new
+          ) {
+            const incomingPatient = mapPatientFromDb(payload.new, []);
+            const patientExists = updatedPatients.some(
+              (p) => p.id === incomingPatient.id,
             );
+            if (patientExists) {
+              updatedPatients = updatedPatients.map((p) =>
+                p.id === incomingPatient.id
+                  ? { ...incomingPatient, records: p.records || [] }
+                  : p,
+              );
+            } else {
+              updatedPatients = [incomingPatient, ...updatedPatients];
+            }
           } else if (eventType === "DELETE" && payload.old) {
             updatedPatients = updatedPatients.filter(
               (p) => p.id !== payload.old.id,
@@ -568,7 +576,10 @@ const MainAppContent: React.FC = () => {
   useEffect(() => {
     const unsubscribe = subscribeQueueEvents((event) => {
       const fresh = loadAppState();
-      setAppState(fresh);
+      setAppState((prev) => ({
+        ...fresh,
+        currentUser: prev.currentUser || getStoredAuthUser(),
+      }));
 
       if (event?.type === "PATIENT_CALLED" && event.payload?.activePatient) {
         const called = event.payload.activePatient;
@@ -654,7 +665,14 @@ const MainAppContent: React.FC = () => {
           q.visitDate === todayStr &&
           (q.status === "Waiting" || q.status === "Next"),
       )
-      .sort((a, b) => a.sequenceNumber - b.sequenceNumber)[0];
+      .sort((a, b) => {
+        if (a.status === "Next" && b.status !== "Next") return -1;
+        if (b.status === "Next" && a.status !== "Next") return 1;
+        const seqA = Number(a.sequenceNumber) || 0;
+        const seqB = Number(b.sequenceNumber) || 0;
+        if (seqA !== seqB) return seqA - seqB;
+        return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+      })[0];
   }, [appState.queue, todayStr]);
 
   const currentPatientInCabin = useMemo(() => {
@@ -677,6 +695,9 @@ const MainAppContent: React.FC = () => {
 
   // State update actions (Optimistic UI + Supabase Persistence)
   const handleSaveOpdRecord = (patient: Patient, opdRecord: OPDRecord) => {
+    let completedQueueItemId: string | null = null;
+    const completedTime = new Date().toISOString();
+
     setAppState((prev) => {
       const existingIdx = prev.patients.findIndex((p) => p.id === patient.id);
       let updatedPatients = [...prev.patients];
@@ -687,16 +708,63 @@ const MainAppContent: React.FC = () => {
         updatedPatients = [patient, ...updatedPatients];
       }
 
+      // Check if this patient has an active queue item today
+      const activeQueueItem = (prev.queue || []).find(
+        (q) =>
+          (q.patientId === patient.id ||
+            q.patientName.trim().toLowerCase() ===
+              patient.fullName.trim().toLowerCase()) &&
+          q.visitDate === opdRecord.visitDate &&
+          (q.status === "Waiting" ||
+            q.status === "Next" ||
+            q.status === "With Doctor"),
+      );
+
+      let updatedQueue = prev.queue || [];
+      let updatedVisits = prev.visits || [];
+
+      if (activeQueueItem) {
+        completedQueueItemId = activeQueueItem.id;
+        updatedQueue = updatedQueue.map((q) =>
+          q.id === activeQueueItem.id
+            ? {
+                ...q,
+                status: "Completed" as const,
+                completedAt: completedTime,
+              }
+            : q,
+        );
+        updatedVisits = updatedVisits.map((v) =>
+          v.queueId === activeQueueItem.id || v.patientId === patient.id
+            ? { ...v, status: "Completed" as const }
+            : v,
+        );
+      }
+
       return {
         ...prev,
         patients: updatedPatients,
+        queue: updatedQueue,
+        visits: updatedVisits,
       };
     });
+
+    if (activeConsultationQueueItem?.patientId === patient.id) {
+      setActiveConsultationQueueItem(null);
+    }
 
     // Write to Supabase
     saveOpdRecordInSupabase(patient, opdRecord).catch((err) => {
       console.warn("Supabase saveOpdRecord error:", err);
     });
+
+    if (completedQueueItemId) {
+      updateQueueItemStatusInSupabase(completedQueueItemId, "Completed", {
+        completedAt: completedTime,
+      }).catch((err) => {
+        console.warn("Supabase updateQueueItemStatus error:", err);
+      });
+    }
   };
 
   const handleSavePatient = (updatedPatient: Patient) => {
@@ -1092,6 +1160,8 @@ const MainAppContent: React.FC = () => {
             <OpdRegistration
               patients={appState.patients}
               preselectedPatientId={preselectedOpdPatientId}
+              doctor={appState.doctor}
+              clinic={appState.clinic}
               onBack={() => setCurrentTab("dashboard")}
               onSaveOpdRecord={handleSaveOpdRecord}
               onGeneratePrescription={(patient, record) => {

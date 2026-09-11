@@ -1,39 +1,22 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import {
-  ArrowLeft,
-  Search,
-  Plus,
-  Trash2,
-  Upload,
-  Calendar,
-  Check,
-  Sparkles,
-  FileText,
-  IndianRupee,
-  X,
-  Image as ImageIcon,
-} from "lucide-react";
+import { ArrowLeft, Search, X, UserCheck, UserPlus } from "lucide-react";
 import {
   Patient,
   OPDRecord,
-  PrescribedMedicine,
-  OpdType,
-  ChargeType,
-  PaymentMode,
-  DiscountType,
   Gender,
+  DoctorProfile,
+  ClinicSettings,
 } from "../../types";
-import {
-  generateNextPatientId,
-  generateNextOpdId,
-} from "../../services/storage";
+import { generateNextPatientId } from "../../services/storage";
 import { format, differenceInYears, parseISO } from "date-fns";
 import { useToast } from "../common/Toast";
-import { commonSymptomsList, medicineCatalog } from "../../services/mockData";
+import { ConsultationForm } from "../consultation/ConsultationForm";
 
 interface OpdRegistrationProps {
   patients: Patient[];
   preselectedPatientId?: string;
+  doctor?: DoctorProfile;
+  clinic?: ClinicSettings;
   onBack: () => void;
   onSaveOpdRecord: (patient: Patient, record: OPDRecord) => void;
   onGeneratePrescription: (patient: Patient, record: OPDRecord) => void;
@@ -42,6 +25,8 @@ interface OpdRegistrationProps {
 export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
   patients,
   preselectedPatientId,
+  doctor,
+  clinic,
   onBack,
   onSaveOpdRecord,
   onGeneratePrescription,
@@ -56,10 +41,8 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   const patientInputRef = useRef<HTMLInputElement>(null);
   const patientDropdownRef = useRef<HTMLDivElement>(null);
-  const symptomInputRef = useRef<HTMLInputElement>(null);
-  const symptomSuggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Form Fields
+  // Demographics Form Fields
   const [fullName, setFullName] = useState("");
   const [dob, setDob] = useState("");
   const [age, setAge] = useState<number | "">("");
@@ -68,35 +51,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
   const [address, setAddress] = useState("");
   const [bloodGroup, setBloodGroup] = useState("A+");
 
-  // Clinical Fields
-  const [opdType, setOpdType] = useState<OpdType>("Consultation");
-  const [chargeType, setChargeType] = useState<ChargeType>("First Visit");
-  const [diagnosis, setDiagnosis] = useState("");
-  const [symptoms, setSymptoms] = useState<string[]>([]);
-  const [symptomInput, setSymptomInput] = useState("");
-  const [showSymptomSuggestions, setShowSymptomSuggestions] = useState(false);
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-
-  // Medicines List
-  const [medicines, setMedicines] = useState<PrescribedMedicine[]>([]);
-
-  // Notes & Follow up
-  const [panchakarmaNotes, setPanchakarmaNotes] = useState("");
-  const [clinicalNotes, setClinicalNotes] = useState("");
-  const [dietaryAdvice, setDietaryAdvice] = useState("");
-  const [nextVisitDate, setNextVisitDate] = useState(
-    format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
-  );
-
-  // Billing Fields
-  const [consultationFee, setConsultationFee] = useState<string>("");
-  const [medicineFee, setMedicineFee] = useState<string>("");
-  const [panchakarmaFee, setPanchakarmaFee] = useState<string>("");
-  const [discountType, setDiscountType] = useState<DiscountType>("amount");
-  const [discountValue, setDiscountValue] = useState<string>("");
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>("Cash");
-
-  // Load existing patient if selected
+  // Load existing patient if selected or preselected
   useEffect(() => {
     if (selectedPatientId) {
       const p = patients.find((pat) => pat.id === selectedPatientId);
@@ -108,8 +63,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
         setMobile(p.mobile);
         setAddress(p.address || "");
         setBloodGroup(p.bloodGroup || "A+");
-        setChargeType(p.records.length > 0 ? "Follow-up" : "First Visit");
-        setOpdType(p.records.length > 0 ? "Follow-up" : "Consultation");
+        setPatientSearchInput(`${p.fullName} (${p.id})`);
       }
     }
   }, [selectedPatientId, patients]);
@@ -122,116 +76,59 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
         const calculatedAge = differenceInYears(new Date(), parseISO(val));
         if (calculatedAge >= 0) setAge(calculatedAge);
       } catch (e) {
-        // ignore
+        // ignore invalid date
       }
     }
   };
 
-  // Filter symptom suggestions
-  const filteredSymptoms = useMemo(() => {
-    if (!symptomInput.trim()) return commonSymptomsList.slice(0, 8);
-    const q = symptomInput.toLowerCase().trim();
-    return commonSymptomsList.filter(
-      (s) => s.toLowerCase().includes(q) && !symptoms.includes(s),
-    );
-  }, [symptomInput, symptoms]);
+  // Build the patient object passed into ConsultationForm
+  const activePatient: Patient = useMemo(() => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    const existing = selectedPatientId
+      ? patients.find((p) => p.id === selectedPatientId)
+      : undefined;
 
-  const addSymptom = (sym: string) => {
-    if (!symptoms.includes(sym)) {
-      setSymptoms([...symptoms, sym]);
-    }
-    setSymptomInput("");
-    setShowSymptomSuggestions(false);
-  };
+    const patientId =
+      selectedPatientId || existing?.id || generateNextPatientId(patients);
 
-  const removeSymptom = (sym: string) => {
-    setSymptoms(symptoms.filter((s) => s !== sym));
-  };
-
-  // Medicine helper: add new row
-  const addMedicineRow = () => {
-    setMedicines([
-      ...medicines,
-      {
-        id: `med-${Date.now()}`,
-        name: "",
-        dosage: "1 tab",
-        frequency: "Twice daily",
-        timing: "After Food",
-        duration: "5 Days",
-        instructions: "With warm water",
-      },
-    ]);
-  };
-
-  const updateMedicine = (
-    index: number,
-    field: keyof PrescribedMedicine,
-    val: string,
-  ) => {
-    const updated = [...medicines];
-    updated[index] = { ...updated[index], [field]: val };
-
-    // Auto populate defaults if user selects a known medicine
-    if (field === "name") {
-      const match = medicineCatalog.find(
-        (m) => m.name.toLowerCase() === val.toLowerCase(),
-      );
-      if (match) {
-        updated[index].dosage = match.defaultDosage;
-        updated[index].frequency = match.defaultFrequency;
-        updated[index].timing = match.defaultTiming;
-        updated[index].instructions = match.instructions;
-      }
-    }
-    setMedicines(updated);
-  };
-
-  const removeMedicine = (index: number) => {
-    setMedicines(medicines.filter((_, i) => i !== index));
-  };
-
-  // Total calculation
-  const calculatedTotal = useMemo(() => {
-    const subtotal =
-      (Number(consultationFee) || 0) +
-      (Number(medicineFee) || 0) +
-      (Number(panchakarmaFee) || 0);
-    let disc = Number(discountValue) || 0;
-    if (discountType === "percentage") {
-      disc = (subtotal * disc) / 100;
-    }
-    return Math.max(0, Math.round(subtotal - disc));
+    return {
+      id: patientId,
+      fullName: fullName.trim() || "New Patient",
+      dob: dob || undefined,
+      age: typeof age === "number" ? age : existing?.age || 25,
+      gender: gender || existing?.gender || "Male",
+      mobile: mobile.trim() || existing?.mobile || "",
+      address: address.trim() || existing?.address || undefined,
+      bloodGroup: bloodGroup || existing?.bloodGroup || "A+",
+      weight: existing?.weight,
+      height: existing?.height,
+      emergencyContact: existing?.emergencyContact,
+      allergies: existing?.allergies,
+      medicalHistory: existing?.medicalHistory,
+      registrationDate: existing ? existing.registrationDate : today,
+      lastVisitDate: today,
+      totalVisits: existing ? existing.records.length : 0,
+      records: existing ? existing.records : [],
+    };
   }, [
-    consultationFee,
-    medicineFee,
-    panchakarmaFee,
-    discountType,
-    discountValue,
+    selectedPatientId,
+    patients,
+    fullName,
+    dob,
+    age,
+    gender,
+    mobile,
+    address,
+    bloodGroup,
   ]);
 
-  // Image Upload handler
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setUploadedImages((prev) => [
-            ...prev,
-            event.target!.result as string,
-          ]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-    showToast("Image uploaded successfully", "info");
-  };
-
-  // Validation and Submission
-  const handleSubmit = (generatePrescription: boolean = true) => {
+  // Form Submission Handler
+  const handleSaveFromForm = (
+    record: OPDRecord,
+    updatedPatientFromForm: Patient,
+    _autoCallNext?: boolean,
+    generatePrescription?: boolean,
+  ) => {
     if (!fullName.trim()) {
       showToast("Please enter patient full name.", "error");
       return;
@@ -241,70 +138,46 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
       return;
     }
 
-    const patientId = selectedPatientId || generateNextPatientId(patients);
-    const existingPatient = patients.find((p) => p.id === patientId);
-
-    const today = format(new Date(), "yyyy-MM-dd");
-    const opdId = generateNextOpdId(patients);
-
-    const newOpdRecord: OPDRecord = {
-      id: opdId,
-      patientId: patientId,
-      visitDate: today,
-      opdType,
-      chargeType,
-      diagnosis: diagnosis || "General Health & Consultation",
-      symptoms: symptoms.length > 0 ? symptoms : ["General Consultation"],
-      uploadedImages,
-      medicines: medicines.filter((m) => m.name.trim() !== ""),
-      panchakarmaNotes,
-      clinicalNotes,
-      dietaryAdvice,
-      nextVisitDate: nextVisitDate || undefined,
-      consultationFee: Number(consultationFee) || 0,
-      medicineFee: Number(medicineFee) || 0,
-      panchakarmaFee: Number(panchakarmaFee) || 0,
-      discountType,
-      discountValue: Number(discountValue) || 0,
-      totalFee: calculatedTotal,
-      paymentMode,
-      paymentStatus: "Paid",
-      createdAt: new Date().toISOString(),
-    };
-
-    const updatedPatient: Patient = {
-      id: patientId,
+    const finalPatient: Patient = {
+      ...updatedPatientFromForm,
+      id: activePatient.id,
       fullName: fullName.trim(),
       dob: dob || undefined,
-      age: Number(age) || 20,
+      age: typeof age === "number" ? age : updatedPatientFromForm.age,
       gender,
       mobile: mobile.trim(),
       address: address.trim() || undefined,
       bloodGroup,
-      weight: existingPatient?.weight,
-      height: existingPatient?.height,
-      emergencyContact: existingPatient?.emergencyContact,
-      allergies: existingPatient?.allergies,
-      medicalHistory: existingPatient?.medicalHistory,
-      registrationDate: existingPatient
-        ? existingPatient.registrationDate
-        : today,
-      lastVisitDate: today,
-      totalVisits: (existingPatient ? existingPatient.records.length : 0) + 1,
-      records: existingPatient
-        ? [newOpdRecord, ...existingPatient.records]
-        : [newOpdRecord],
     };
 
-    onSaveOpdRecord(updatedPatient, newOpdRecord);
+    onSaveOpdRecord(finalPatient, record);
     showToast(
-      `OPD record saved for ${updatedPatient.fullName} (${patientId})`,
+      `Consultation recorded for ${finalPatient.fullName} (${finalPatient.id})`,
       "success",
     );
 
     if (generatePrescription) {
-      onGeneratePrescription(updatedPatient, newOpdRecord);
+      onGeneratePrescription(finalPatient, record);
     }
+  };
+
+  const defaultDoctor: DoctorProfile = doctor || {
+    name: "Dr. Clinic Doctor",
+    qualifications: "BAMS, MD",
+    specialisation: "Ayurveda & General Medicine",
+    medicalLicenseNo: "MED-001",
+    email: "doctor@medihive.com",
+    contact: "+91 9876543210",
+    consultationFee: 500,
+  };
+
+  const defaultClinic: ClinicSettings = clinic || {
+    name: "MediHive Clinic",
+    address: "Clinic Address, City",
+    phone: "+91 9876543210",
+    email: "info@medihive.com",
+    operatingHours: "09:00 AM - 08:00 PM",
+    currency: "₹",
   };
 
   return (
@@ -314,29 +187,39 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-xs"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back</span>
           </button>
           <div>
             <h1 className="text-xl font-bold text-slate-800">
-              OPD Registration
+              OPD Registration & Consultation
             </h1>
             <p className="text-xs text-slate-500">
-              Fill patient details, prescriptions and billing information
+              Unified consultation, clinical findings, prescriptions, and
+              billing
             </p>
           </div>
         </div>
       </div>
 
-      {/* Main OPD Registration Form Container */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200/90 overflow-hidden divide-y divide-slate-100">
-        {/* SECTION 1: Patient Information */}
+      {/* Patient Information & Demographics Card */}
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden divide-y divide-slate-100">
         <div className="p-5 sm:p-6 space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h2 className="text-base font-bold text-[#1e536e] flex items-center gap-2">
-              <span>Patient Information</span>
+              {selectedPatientId ? (
+                <>
+                  <UserCheck className="w-5 h-5 text-emerald-600" />
+                  <span>Existing Patient Selected</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-5 h-5 text-[#1e536e]" />
+                  <span>Patient Demographics & Registration</span>
+                </>
+              )}
             </h2>
             <span className="text-xs text-slate-400">* Required fields</span>
           </div>
@@ -344,13 +227,13 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
           {/* Search by Patient ID Autocomplete */}
           <div className="relative max-w-md">
             <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Search by Patient ID / Existing Patient
+              Search Existing Patient (Name / Mobile / ID)
             </label>
             <div className="relative">
               <input
                 ref={patientInputRef}
                 type="text"
-                value={patientSearchInput || selectedPatientId}
+                value={patientSearchInput}
                 onChange={(e) => {
                   setPatientSearchInput(e.target.value);
                   setShowPatientDropdown(true);
@@ -359,22 +242,10 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 onKeyDown={(e) => {
                   if (e.key === "Escape") {
                     setShowPatientDropdown(false);
-                  } else if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    if (!showPatientDropdown) {
-                      setShowPatientDropdown(true);
-                    }
-                    setTimeout(() => {
-                      const firstBtn =
-                        patientDropdownRef.current?.querySelector<HTMLButtonElement>(
-                          "button",
-                        );
-                      firstBtn?.focus();
-                    }, 10);
                   }
                 }}
-                placeholder="Type patient name or ID..."
-                className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
+                placeholder="Type patient name, phone, or ID..."
+                className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e536e] focus:bg-white transition"
               />
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               {selectedPatientId && (
@@ -402,46 +273,17 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
               <div
                 ref={patientDropdownRef}
                 role="listbox"
-                aria-label="Patient suggestions"
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setShowPatientDropdown(false);
-                    patientInputRef.current?.focus();
-                  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                    e.preventDefault();
-                    const buttons = Array.from(
-                      patientDropdownRef.current?.querySelectorAll<HTMLButtonElement>(
-                        "button",
-                      ) || [],
-                    );
-                    const currentIndex = buttons.indexOf(
-                      document.activeElement as HTMLButtonElement,
-                    );
-                    if (e.key === "ArrowDown") {
-                      const nextIndex = (currentIndex + 1) % buttons.length;
-                      buttons[nextIndex]?.focus();
-                    } else {
-                      if (currentIndex <= 0) {
-                        patientInputRef.current?.focus();
-                      } else {
-                        buttons[currentIndex - 1]?.focus();
-                      }
-                    }
-                  }
-                }}
                 className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto"
               >
                 <button
                   type="button"
-                  role="option"
-                  aria-selected="false"
                   onClick={() => {
                     setSelectedPatientId("");
                     setPatientSearchInput("");
                     setShowPatientDropdown(false);
                     patientInputRef.current?.focus();
                   }}
-                  className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 border-b border-slate-100 focus:bg-emerald-50 focus:outline-none"
+                  className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 border-b border-slate-100 transition"
                 >
                   + Register as New Patient
                 </button>
@@ -460,15 +302,12 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                     <button
                       key={p.id}
                       type="button"
-                      role="option"
-                      aria-selected={selectedPatientId === p.id}
                       onClick={() => {
                         setSelectedPatientId(p.id);
                         setPatientSearchInput(`${p.fullName} (${p.id})`);
                         setShowPatientDropdown(false);
-                        patientInputRef.current?.focus();
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-slate-50 focus:bg-sky-50 focus:outline-none flex items-center justify-between text-xs transition"
+                      className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between text-xs transition"
                     >
                       <span className="font-medium text-slate-800">
                         {p.fullName} ({p.gender}, {p.age}y)
@@ -494,7 +333,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Enter patient full name"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e536e] focus:bg-white transition"
               />
             </div>
 
@@ -506,35 +345,36 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 type="date"
                 value={dob}
                 onChange={(e) => handleDobChange(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e536e] focus:bg-white transition"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Age
+                Age <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
                 min="0"
                 max="125"
+                required
                 value={age}
                 onChange={(e) =>
-                  setAge(e.target.value ? parseInt(e.target.value) : "")
+                  setAge(e.target.value === "" ? "" : Number(e.target.value))
                 }
-                placeholder="Age in years"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
+                placeholder="Years"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e536e] focus:bg-white transition"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Gender
+                Gender <span className="text-rose-500">*</span>
               </label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as Gender)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e536e] focus:bg-white transition"
               >
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -551,21 +391,8 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 required
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                placeholder="10-digit mobile number"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Address
-              </label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Patient residential address / locality"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
+                placeholder="10-digit mobile"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e536e] focus:bg-white transition"
               />
             </div>
 
@@ -576,572 +403,51 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
               <select
                 value={bloodGroup}
                 onChange={(e) => setBloodGroup(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e536e] focus:bg-white transition"
               >
-                {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
-                  (bg) => (
-                    <option key={bg} value={bg}>
-                      {bg}
-                    </option>
-                  ),
-                )}
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
               </select>
             </div>
 
-            <div>
+            <div className="sm:col-span-2 lg:col-span-3">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                OPD Type
-              </label>
-              <select
-                value={opdType}
-                onChange={(e) => setOpdType(e.target.value as OpdType)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
-              >
-                <option value="Consultation">Consultation</option>
-                <option value="Follow-up">Follow-up</option>
-                <option value="Therapy">Therapy / Panchakarma</option>
-                <option value="Routine Checkup">Routine Checkup</option>
-                <option value="Emergency">Emergency</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Charge Type
-              </label>
-              <select
-                value={chargeType}
-                onChange={(e) => setChargeType(e.target.value as ChargeType)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
-              >
-                <option value="First Visit">First Visit</option>
-                <option value="Follow-up">Follow-up Visit</option>
-                <option value="Special Therapy">Special Therapy</option>
-                <option value="Emergency Consultation">
-                  Emergency Consultation
-                </option>
-              </select>
-            </div>
-          </div>
-
-          {/* Clinical Examination: Diagnosis, Symptoms, Image Upload */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Diagnosis
+                Address / City
               </label>
               <input
                 type="text"
-                value={diagnosis}
-                onChange={(e) => setDiagnosis(e.target.value)}
-                placeholder="Enter diagnosis (e.g., Viral pyrexia, Joint stiffness)"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Residential address or locality"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e536e] focus:bg-white transition"
               />
-            </div>
-
-            {/* Smart Symptoms Autocomplete */}
-            <div className="relative">
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700">
-                  Symptoms (Smart Suggestions)
-                </label>
-                <span className="text-[11px] text-sky-600 flex items-center gap-1 font-medium">
-                  <Sparkles className="w-3 h-3" /> Auto-suggest
-                </span>
-              </div>
-
-              <div className="relative">
-                <input
-                  ref={symptomInputRef}
-                  type="text"
-                  value={symptomInput}
-                  onChange={(e) => {
-                    setSymptomInput(e.target.value);
-                    setShowSymptomSuggestions(true);
-                  }}
-                  onFocus={() => setShowSymptomSuggestions(true)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (symptomInput.trim()) {
-                        addSymptom(symptomInput.trim());
-                      }
-                    } else if (e.key === "Escape") {
-                      setShowSymptomSuggestions(false);
-                    } else if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      if (filteredSymptoms.length > 0) {
-                        setShowSymptomSuggestions(true);
-                        setTimeout(() => {
-                          const firstBtn =
-                            symptomSuggestionsRef.current?.querySelector<HTMLButtonElement>(
-                              "button",
-                            );
-                          firstBtn?.focus();
-                        }, 10);
-                      }
-                    }
-                  }}
-                  placeholder="Start typing symptoms (e.g. Fever, Cough, Headache)..."
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
-                />
-              </div>
-
-              {/* Suggestions Popup */}
-              {showSymptomSuggestions && filteredSymptoms.length > 0 && (
-                <div
-                  ref={symptomSuggestionsRef}
-                  role="listbox"
-                  aria-label="Symptom suggestions"
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      setShowSymptomSuggestions(false);
-                      symptomInputRef.current?.focus();
-                    } else if (
-                      e.key === "ArrowRight" ||
-                      e.key === "ArrowDown"
-                    ) {
-                      e.preventDefault();
-                      const buttons = Array.from(
-                        symptomSuggestionsRef.current?.querySelectorAll<HTMLButtonElement>(
-                          "button",
-                        ) || [],
-                      );
-                      const currentIndex = buttons.indexOf(
-                        document.activeElement as HTMLButtonElement,
-                      );
-                      const nextIndex = (currentIndex + 1) % buttons.length;
-                      buttons[nextIndex]?.focus();
-                    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-                      e.preventDefault();
-                      const buttons = Array.from(
-                        symptomSuggestionsRef.current?.querySelectorAll<HTMLButtonElement>(
-                          "button",
-                        ) || [],
-                      );
-                      const currentIndex = buttons.indexOf(
-                        document.activeElement as HTMLButtonElement,
-                      );
-                      if (currentIndex <= 0) {
-                        symptomInputRef.current?.focus();
-                      } else {
-                        buttons[currentIndex - 1]?.focus();
-                      }
-                    }
-                  }}
-                  className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-40 overflow-y-auto p-1.5 flex flex-wrap gap-1.5"
-                >
-                  {filteredSymptoms.map((sym) => (
-                    <button
-                      key={sym}
-                      type="button"
-                      role="option"
-                      aria-selected="false"
-                      onClick={() => {
-                        addSymptom(sym);
-                        symptomInputRef.current?.focus();
-                      }}
-                      className="px-2.5 py-1 text-xs bg-sky-50 hover:bg-sky-100 focus:bg-sky-100 focus:outline-none text-sky-800 rounded-full font-medium transition flex items-center gap-1"
-                    >
-                      <span>+ {sym}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Selected Symptoms Chips */}
-              {symptoms.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {symptoms.map((s) => (
-                    <span
-                      key={s}
-                      className="inline-flex items-center gap-1 bg-medihive-50 border border-medihive-200 text-medihive-800 text-xs px-2.5 py-1 rounded-full font-medium"
-                    >
-                      {s}
-                      <button
-                        type="button"
-                        aria-label={`Remove symptom ${s}`}
-                        onClick={() => removeSymptom(s)}
-                        className="text-medihive-500 hover:text-medihive-800 rounded-full focus:outline-none"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Upload Image Section (Skin Treatment, reports, clinical photos) */}
-          <div className="pt-2">
-            <label className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-              <span>Upload Clinical Image (Skin Treatment / Reports)</span>
-              <span className="text-[11px] text-slate-400 font-normal">
-                PNG, JPG, WebP
-              </span>
-            </label>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="cursor-pointer border-2 border-dashed border-slate-300 hover:border-medihive-500 focus-within:ring-2 focus-within:ring-medihive-500 focus-within:border-medihive-500 bg-slate-50 hover:bg-slate-100/80 px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs font-medium text-slate-700 transition">
-                <Upload className="w-4 h-4 text-medihive-600" />
-                <span>Choose Image Files</span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="sr-only"
-                />
-              </label>
-
-              {/* Preview thumbnails */}
-              {uploadedImages.map((img, idx) => (
-                <div
-                  key={idx}
-                  className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden group"
-                >
-                  <img
-                    src={img}
-                    alt="Clinical upload"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    aria-label={`Delete uploaded image ${idx + 1}`}
-                    onClick={() =>
-                      setUploadedImages(
-                        uploadedImages.filter((_, i) => i !== idx),
-                      )
-                    }
-                    className="absolute inset-0 bg-rose-900/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Medicines Prescribed Section with Smart Suggestions */}
-          <div className="pt-4 border-t border-slate-100 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <span>Medicines Prescribed</span>
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Smart suggestions auto-fill dosages & instructions
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addMedicineRow}
-                className="text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Medicine</span>
-              </button>
-            </div>
-
-            {/* Medicines List */}
-            <div className="space-y-3">
-              {medicines.map((med, index) => (
-                <div
-                  key={med.id}
-                  className="p-3 bg-slate-50 rounded-lg border border-slate-200/90 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center relative"
-                >
-                  {/* Medicine Name with Datalist */}
-                  <div className="sm:col-span-4">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
-                      Medicine Name #{index + 1}
-                    </label>
-                    <input
-                      type="text"
-                      list="med-suggestions"
-                      value={med.name}
-                      onChange={(e) =>
-                        updateMedicine(index, "name", e.target.value)
-                      }
-                      placeholder="e.g. Maharasnadi yog"
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
-                    />
-                  </div>
-
-                  {/* Dosage */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
-                      Dosage
-                    </label>
-                    <input
-                      type="text"
-                      value={med.dosage}
-                      onChange={(e) =>
-                        updateMedicine(index, "dosage", e.target.value)
-                      }
-                      placeholder="e.g. 2 tabs"
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
-                    />
-                  </div>
-
-                  {/* Frequency */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
-                      Frequency
-                    </label>
-                    <input
-                      type="text"
-                      value={med.frequency}
-                      onChange={(e) =>
-                        updateMedicine(index, "frequency", e.target.value)
-                      }
-                      placeholder="e.g. Twice daily"
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
-                    />
-                  </div>
-
-                  {/* Timing */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
-                      Timing
-                    </label>
-                    <select
-                      value={med.timing}
-                      onChange={(e) =>
-                        updateMedicine(index, "timing", e.target.value)
-                      }
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
-                    >
-                      <option value="After Food">After Food</option>
-                      <option value="Before Food">Before Food</option>
-                      <option value="Empty Stomach">Empty Stomach</option>
-                      <option value="With Milk">With Milk</option>
-                    </select>
-                  </div>
-
-                  {/* Duration & Delete */}
-                  <div className="sm:col-span-2 flex items-center gap-2">
-                    <div className="flex-1">
-                      <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
-                        Duration
-                      </label>
-                      <input
-                        type="text"
-                        value={med.duration}
-                        onChange={(e) =>
-                          updateMedicine(index, "duration", e.target.value)
-                        }
-                        placeholder="e.g. 7 Days"
-                        className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
-                      />
-                    </div>
-                    {medicines.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeMedicine(index)}
-                        title="Remove medicine"
-                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded mt-4 transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Datalist for fast medicine autocomplete */}
-            <datalist id="med-suggestions">
-              {medicineCatalog.map((m) => (
-                <option key={m.name} value={m.name} />
-              ))}
-            </datalist>
-          </div>
-
-          {/* Panchakarma & Next Visit Reminder */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Panchakarma Notes / Clinical Instructions
-              </label>
-              <textarea
-                rows={2}
-                value={panchakarmaNotes}
-                onChange={(e) => setPanchakarmaNotes(e.target.value)}
-                placeholder="Panchakarma therapy, diet restrictions, lifestyle advice..."
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-medihive-600" />
-                <span>Next Visit Date Reminder</span>
-              </label>
-              <input
-                type="date"
-                value={nextVisitDate}
-                onChange={(e) => setNextVisitDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">
-                MediHive will automatically remind you in the Calendar when this
-                follow-up is due.
-              </p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* SECTION 2: Billing & Payments */}
-        <div className="p-5 sm:p-6 bg-slate-50/50 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-200/60 pb-3">
-            <h2 className="text-base font-bold text-[#1e536e] flex items-center gap-2">
-              <IndianRupee className="w-4 h-4 text-[#1e536e]" />
-              <span>Billing & Payments</span>
-            </h2>
-            <span className="text-xs font-semibold text-slate-500">
-              Auto-calculated fee summary
-            </span>
-          </div>
+      {/* Unified Consultation Form Section */}
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 sm:p-6">
+        <h2 className="text-base font-bold text-[#1e536e] mb-4 pb-2 border-b border-slate-100">
+          Clinical Examination, Prescription & Billing
+        </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Consultation Fees (₹)
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={consultationFee}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
-                    setConsultationFee(val);
-                  }
-                }}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Medicine Fees (₹)
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={medicineFee}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
-                    setMedicineFee(val);
-                  }
-                }}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Panchakarma Fees (₹)
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={panchakarmaFee}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
-                    setPanchakarmaFee(val);
-                  }
-                }}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Discount Type
-              </label>
-              <select
-                value={discountType}
-                onChange={(e) =>
-                  setDiscountType(e.target.value as DiscountType)
-                }
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
-              >
-                <option value="amount">₹ (Amount)</option>
-                <option value="percentage">% (Percentage)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Discount Value
-              </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={discountValue}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
-                    setDiscountValue(val);
-                  }
-                }}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Payment Mode
-              </label>
-              <select
-                value={paymentMode}
-                onChange={(e) => setPaymentMode(e.target.value as PaymentMode)}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
-              >
-                <option value="Cash">Cash</option>
-                <option value="UPI">UPI / Google Pay / PhonePe</option>
-                <option value="Card">Credit / Debit Card</option>
-                <option value="Net Banking">Net Banking</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Total Fee & Action Button */}
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200/80">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-slate-700">
-                Total Fee:
-              </span>
-              <div className="bg-white px-4 py-2 rounded-lg border-2 border-medihive-600 shadow-sm">
-                <span className="text-xl font-black text-medihive-900 font-mono">
-                  ₹{calculatedTotal}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => handleSubmit(false)}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold transition text-center"
-              >
-                Save Record Only
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSubmit(true)}
-                className="w-full sm:w-auto bg-[#2da478] hover:bg-[#258d67] text-white font-bold text-sm px-6 py-2.5 rounded-lg shadow-md hover:shadow transition flex items-center justify-center gap-2"
-              >
-                <Check className="w-4 h-4" />
-                <span>Save & Generate Prescription</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConsultationForm
+          mode="page"
+          patient={activePatient}
+          doctor={defaultDoctor}
+          clinic={defaultClinic}
+          existingPatients={patients}
+          onSave={handleSaveFromForm}
+          onCancel={onBack}
+          onPreviewPrescription={(pat, rec) => onGeneratePrescription(pat, rec)}
+        />
       </div>
     </div>
   );

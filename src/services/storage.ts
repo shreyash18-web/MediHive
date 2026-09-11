@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { format } from "date-fns";
 import {
   AppState,
   Patient,
@@ -22,6 +23,9 @@ import {
   saveOpdRecordInSupabase,
   fetchUserAccountsFromSupabase,
 } from "./supabaseService";
+
+export const getLocalDateString = (d: Date = new Date()): string =>
+  format(d, "yyyy-MM-dd");
 
 const STORAGE_KEY = "medihive_app_state_v2";
 const AUTH_KEY = "medihive_auth_user";
@@ -190,8 +194,12 @@ export const updateUserPassword = (
 
 export const getStoredAuthUser = (): UserAccount | null => {
   try {
-    const data = localStorage.getItem(AUTH_KEY);
-    if (data) return JSON.parse(data);
+    if (typeof window !== "undefined") {
+      const sessionData = sessionStorage.getItem(AUTH_KEY);
+      if (sessionData) return JSON.parse(sessionData);
+      const localData = localStorage.getItem(AUTH_KEY);
+      if (localData) return JSON.parse(localData);
+    }
   } catch (e) {
     console.error("Error loading auth user", e);
   }
@@ -199,9 +207,12 @@ export const getStoredAuthUser = (): UserAccount | null => {
 };
 
 export const setStoredAuthUser = (user: UserAccount | null) => {
+  if (typeof window === "undefined") return;
   if (user) {
+    sessionStorage.setItem(AUTH_KEY, JSON.stringify(user));
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
   } else {
+    sessionStorage.removeItem(AUTH_KEY);
     localStorage.removeItem(AUTH_KEY);
   }
 };
@@ -281,7 +292,7 @@ export const generateNextVisitId = (visits: PatientVisit[]): string => {
 
 // Generate next Queue Number (e.g. Q-001)
 export const generateNextQueueNumber = (queue: QueueItem[]): string => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const todaysItems = (queue || []).filter((q) => q.visitDate === today);
   let maxNum = 0;
   todaysItems.forEach((item) => {
@@ -391,7 +402,7 @@ export const createVisitAndAddToQueue = (
 } => {
   const visitId = generateNextVisitId(appState.visits);
   const queueNumber = generateNextQueueNumber(appState.queue);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const timeNow = new Date().toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -473,7 +484,7 @@ export const callPatientIntoCabin = (
   appState: AppState,
   queueId?: string,
 ): { updatedState: AppState; activePatient: QueueItem | null } => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const queue = [...(appState.queue || [])];
 
   // Target item to call: either specified queueId, or the first 'Next', or the first 'Waiting'
@@ -555,7 +566,7 @@ export const completeConsultationAndAdvanceQueue = (
   queueId: string,
   opdRecord: OPDRecord,
 ): { updatedState: AppState; nextPatient: QueueItem | null } => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const queue = [...(appState.queue || [])];
   const qIdx = queue.findIndex((q) => q.id === queueId);
 
@@ -644,7 +655,7 @@ export const cancelPatientQueueItem = (
   appState: AppState,
   queueId: string,
 ): AppState => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const queue = (appState.queue || []).map((q) =>
     q.id === queueId ? { ...q, status: "Cancelled" as QueueStatus } : q,
   );

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Patient, PatientVisit, QueueItem } from "../../types";
 import { PatientHistoryModal } from "./PatientHistoryModal";
+import { getLocalDateString } from "../../services/storage";
 
 interface ReceptionistDashboardProps {
   patients: Patient[];
@@ -51,7 +52,7 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
   const [selectedPatientForHistory, setSelectedPatientForHistory] =
     useState<Patient | null>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const todaysVisits = useMemo(
     () => (visits || []).filter((v) => v.visitDate === today),
     [visits, today],
@@ -70,7 +71,14 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
   const nextInLine = useMemo(() => {
     return todaysQueue
       .filter((q) => q.status === "Next" || q.status === "Waiting")
-      .sort((a, b) => a.sequenceNumber - b.sequenceNumber)[0];
+      .sort((a, b) => {
+        if (a.status === "Next" && b.status !== "Next") return -1;
+        if (b.status === "Next" && a.status !== "Next") return 1;
+        const seqA = Number(a.sequenceNumber) || 0;
+        const seqB = Number(b.sequenceNumber) || 0;
+        if (seqA !== seqB) return seqA - seqB;
+        return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+      })[0];
   }, [todaysQueue]);
 
   // Counts

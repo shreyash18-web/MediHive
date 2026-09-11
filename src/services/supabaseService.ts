@@ -969,69 +969,128 @@ export const subscribeToClinicRealtime = (
 
   try {
     onStatusChange?.("CONNECTING");
+    console.log("[Realtime] Subscribing...");
+
+    // Use a unique channel instance ID to prevent async StrictMode / re-render teardown collisions
+    const channelId = `medihive_clinic_feed_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const channel = supabase
-      .channel("medihive_realtime_clinic_feed")
+      .channel(channelId)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "queue_items" },
-        (payload) => onSync("queue_items", payload.eventType, payload),
+        (payload) => {
+          console.log("[Realtime] Event:", {
+            table: "queue_items",
+            ...payload,
+          });
+          onSync("queue_items", payload.eventType, payload);
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "patient_visits" },
-        (payload) => onSync("patient_visits", payload.eventType, payload),
+        (payload) => {
+          console.log("[Realtime] Event:", {
+            table: "patient_visits",
+            ...payload,
+          });
+          onSync("patient_visits", payload.eventType, payload);
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "patients" },
-        (payload) => onSync("patients", payload.eventType, payload),
+        (payload) => {
+          console.log("[Realtime] Event:", { table: "patients", ...payload });
+          onSync("patients", payload.eventType, payload);
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "appointments" },
-        (payload) => onSync("appointments", payload.eventType, payload),
+        (payload) => {
+          console.log("[Realtime] Event:", {
+            table: "appointments",
+            ...payload,
+          });
+          onSync("appointments", payload.eventType, payload);
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "opd_records" },
-        (payload) => onSync("opd_records", payload.eventType, payload),
+        (payload) => {
+          console.log("[Realtime] Event:", {
+            table: "opd_records",
+            ...payload,
+          });
+          onSync("opd_records", payload.eventType, payload);
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "daily_notes" },
-        (payload) => onSync("daily_notes", payload.eventType, payload),
+        (payload) => {
+          console.log("[Realtime] Event:", {
+            table: "daily_notes",
+            ...payload,
+          });
+          onSync("daily_notes", payload.eventType, payload);
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "doctor_profile" },
-        (payload) => onSync("doctor_profile", payload.eventType, payload),
+        (payload) => {
+          console.log("[Realtime] Event:", {
+            table: "doctor_profile",
+            ...payload,
+          });
+          onSync("doctor_profile", payload.eventType, payload);
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "clinic_settings" },
-        (payload) => onSync("clinic_settings", payload.eventType, payload),
+        (payload) => {
+          console.log("[Realtime] Event:", {
+            table: "clinic_settings",
+            ...payload,
+          });
+          onSync("clinic_settings", payload.eventType, payload);
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_accounts" },
-        (payload) => onSync("user_accounts", payload.eventType, payload),
-      )
-      .subscribe((status, err) => {
-        if (status === "SUBSCRIBED") {
-          console.log(
-            "[Supabase Realtime] Connected to live clinic WebSocket feed.",
-          );
-          onStatusChange?.("CONNECTED");
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          console.warn("[Supabase Realtime] Channel subscription error:", err);
-          onStatusChange?.("ERROR");
-        } else if (status === "CLOSED") {
-          onStatusChange?.("DISCONNECTED");
-        }
-      });
+        (payload) => {
+          console.log("[Realtime] Event:", {
+            table: "user_accounts",
+            ...payload,
+          });
+          onSync("user_accounts", payload.eventType, payload);
+        },
+      );
+
+    channel.subscribe((status, err) => {
+      console.log("[Realtime] Status:", status, err || "");
+      if (status === "SUBSCRIBED") {
+        console.log(
+          `[Supabase Realtime] Connected to live clinic WebSocket feed (${channelId}).`,
+        );
+        onStatusChange?.("CONNECTED");
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.warn("[Supabase Realtime] Channel subscription error:", err);
+        onStatusChange?.("ERROR");
+      } else if (status === "CLOSED") {
+        onStatusChange?.("DISCONNECTED");
+      }
+    });
 
     return () => {
-      console.log("[Supabase Realtime] Unsubscribing from clinic feed...");
+      console.log(
+        `[Supabase Realtime] Unsubscribing from clinic feed (${channelId})...`,
+      );
       supabase.removeChannel(channel);
     };
   } catch (err) {

@@ -231,6 +231,10 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'appointments') THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE appointments;
     END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'opd_records') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE opd_records;
+    END IF;
 END $$;
 
 -- Set REPLICA IDENTITY FULL so realtime subscribers get complete updated rows
@@ -238,6 +242,7 @@ ALTER TABLE queue_items REPLICA IDENTITY FULL;
 ALTER TABLE patient_visits REPLICA IDENTITY FULL;
 ALTER TABLE patients REPLICA IDENTITY FULL;
 ALTER TABLE appointments REPLICA IDENTITY FULL;
+ALTER TABLE opd_records REPLICA IDENTITY FULL;
 
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES

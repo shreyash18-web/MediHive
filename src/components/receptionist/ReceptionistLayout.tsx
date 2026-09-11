@@ -29,6 +29,7 @@ import {
 import {
   createVisitAndAddToQueue,
   cancelPatientQueueItem,
+  getLocalDateString,
 } from "../../services/storage";
 import {
   createPatientInSupabase,
@@ -74,7 +75,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
 
   const { showToast } = useToast();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const activeWaitingCount = (appState.queue || []).filter(
     (q) =>
       q.visitDate === today && (q.status === "Waiting" || q.status === "Next"),
@@ -267,7 +268,7 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
 
   // Handle clearing completed and cancelled tokens
   const handleClearCompletedQueue = () => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = getLocalDateString();
     onUpdateAppState((prev) => ({
       ...prev,
       queue: prev.queue.filter(

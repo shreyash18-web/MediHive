@@ -183,13 +183,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const nextInLine = useMemo(() => {
     return todaysQueue
       .filter((q) => q.status === "Next" || q.status === "Waiting")
-      .sort((a, b) => a.sequenceNumber - b.sequenceNumber)[0];
+      .sort((a, b) => {
+        if (a.status === "Next" && b.status !== "Next") return -1;
+        if (b.status === "Next" && a.status !== "Next") return 1;
+        const seqA = Number(a.sequenceNumber) || 0;
+        const seqB = Number(b.sequenceNumber) || 0;
+        if (seqA !== seqB) return seqA - seqB;
+        return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+      })[0];
   }, [todaysQueue]);
 
   const waitingQueueList = useMemo(() => {
     return todaysQueue
       .filter((q) => q.status === "Next" || q.status === "Waiting")
-      .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+      .sort((a, b) => {
+        if (a.status === "Next" && b.status !== "Next") return -1;
+        if (b.status === "Next" && a.status !== "Next") return 1;
+        const seqA = Number(a.sequenceNumber) || 0;
+        const seqB = Number(b.sequenceNumber) || 0;
+        if (seqA !== seqB) return seqA - seqB;
+        return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+      });
   }, [todaysQueue]);
 
   return (

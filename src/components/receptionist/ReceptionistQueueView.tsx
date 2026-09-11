@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { QueueItem, QueueStatus } from "../../types";
 import { useToast } from "../common/Toast";
+import { getLocalDateString } from "../../services/storage";
 
 interface ReceptionistQueueViewProps {
   queue: QueueItem[];
@@ -35,7 +36,7 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
     "active",
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString();
   const todaysQueue = (queue || []).filter((q) => q.visitDate === today);
 
   // Active queue sorted by sequenceNumber (strict FIFO)
@@ -46,7 +47,12 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
         q.status === "Next" ||
         q.status === "Waiting",
     )
-    .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+    .sort((a, b) => {
+      const seqA = Number(a.sequenceNumber) || 0;
+      const seqB = Number(b.sequenceNumber) || 0;
+      if (seqA !== seqB) return seqA - seqB;
+      return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+    });
 
   const completedQueue = todaysQueue
     .filter((q) => q.status === "Completed")
@@ -61,12 +67,28 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
       ? activeQueue
       : filter === "completed"
         ? completedQueue
-        : todaysQueue.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+        : todaysQueue.sort((a, b) => {
+            const seqA = Number(a.sequenceNumber) || 0;
+            const seqB = Number(b.sequenceNumber) || 0;
+            if (seqA !== seqB) return seqA - seqB;
+            return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+          });
 
   const currentPatientWithDoctor = todaysQueue.find(
     (q) => q.status === "With Doctor",
   );
-  const nextPatientInLine = todaysQueue.find((q) => q.status === "Next");
+
+  // Next patient in line: first patient with status 'Next' or 'Waiting', matching activeQueue FIFO ordering
+  const nextPatientInLine = todaysQueue
+    .filter((q) => q.status === "Next" || q.status === "Waiting")
+    .sort((a, b) => {
+      if (a.status === "Next" && b.status !== "Next") return -1;
+      if (b.status === "Next" && a.status !== "Next") return 1;
+      const seqA = Number(a.sequenceNumber) || 0;
+      const seqB = Number(b.sequenceNumber) || 0;
+      if (seqA !== seqB) return seqA - seqB;
+      return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+    })[0];
 
   const handleCancel = (item: QueueItem) => {
     if (item.status === "With Doctor") {
@@ -258,7 +280,9 @@ export const ReceptionistQueueView: React.FC<ReceptionistQueueViewProps> = ({
               <span>Next Patient In Line</span>
             </span>
             <span className="text-xs font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full">
-              Ready to Enter
+              {nextPatientInLine?.status === "Next"
+                ? "Ready to Enter"
+                : "Waiting Next"}
             </span>
           </div>
 

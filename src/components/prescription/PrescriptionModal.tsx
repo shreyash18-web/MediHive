@@ -224,12 +224,17 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               </div>
 
               <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">
-                {record.medicines.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-slate-400">
-                    No medicines prescribed.
-                  </div>
-                ) : (
-                  record.medicines.map((med, idx) => (
+                {(() => {
+                  const medicinesList =
+                    record.medicines || record.prescriptions || [];
+                  if (medicinesList.length === 0) {
+                    return (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        No medicines prescribed.
+                      </div>
+                    );
+                  }
+                  return medicinesList.map((med, idx) => (
                     <div
                       key={med.id || idx}
                       className="p-3 text-xs flex items-start justify-between bg-white hover:bg-slate-50/60"
@@ -253,10 +258,22 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                         {med.duration}
                       </div>
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </div>
             </div>
+
+            {/* Lab Investigations / Tests */}
+            {record.tests && (
+              <div className="p-2.5 bg-sky-50/70 rounded-lg border border-sky-200">
+                <span className="font-bold text-[#1e536e]">
+                  Lab Investigations & Tests:{" "}
+                </span>
+                <span className="text-slate-800 font-medium">
+                  {record.tests}
+                </span>
+              </div>
+            )}
 
             {/* Notes & Panchakarma Notes */}
             <div className="space-y-2 text-xs">
