@@ -41,6 +41,12 @@ import {
   insertVisitAndQueueInSupabase,
   updateQueueItemStatusInSupabase,
   cancelQueueTicketInSupabase,
+  RealtimeSyncStatus,
+  mapQueueItemFromDb,
+  mapPatientFromDb,
+  mapOpdRecordFromDb,
+  mapVisitFromDb,
+  mapAppointmentFromDb,
 } from "./services/supabaseService";
 import { isSupabaseConfigured } from "./lib/supabase";
 import { QueueItem } from "./types";
@@ -80,6 +86,10 @@ const MainAppContent: React.FC = () => {
     useState<QueueItem | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeSyncStatus>(
+    isSupabaseConfigured() ? "CONNECTING" : "DISCONNECTED",
+  );
+
   const { showToast } = useToast();
 
   // Keep state synced in localStorage as fallback/cache
@@ -91,11 +101,204 @@ const MainAppContent: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     let unsubscribeRealtime: (() => void) | null = null;
+    let syncDebounceTimer: any = null;
+
+    const triggerDebouncedReconciliation = () => {
+      if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+      syncDebounceTimer = setTimeout(() => {
+        if (!isMounted) return;
+        fetchFullAppStateFromSupabase().then((refreshed) => {
+          if (refreshed && isMounted) {
+            setAppState((prev) => ({
+              ...prev,
+              ...refreshed,
+              currentUser: prev.currentUser,
+            }));
+          }
+        });
+      }, 300);
+    };
+
+    const handleRealtimeChange = (
+      table: string,
+      eventType: string,
+      payload: any,
+    ) => {
+      console.log(
+        `[Supabase Realtime] Event on ${table} (${eventType}):`,
+        payload,
+      );
+
+      setAppState((prev) => {
+        let updatedQueue = prev.queue ? [...prev.queue] : [];
+        let updatedPatients = prev.patients ? [...prev.patients] : [];
+        let updatedVisits = prev.visits ? [...prev.visits] : [];
+        let updatedAppointments = prev.appointments
+          ? [...prev.appointments]
+          : [];
+        let updatedDailyNotes = { ...(prev.dailyNotes || {}) };
+        let updatedDoctor = prev.doctor;
+        let updatedClinic = prev.clinic;
+
+        if (table === "queue_items") {
+          if (eventType === "INSERT" && payload.new) {
+            const newItem = mapQueueItemFromDb(payload.new);
+            if (!updatedQueue.some((q) => q.id === newItem.id)) {
+              updatedQueue.push(newItem);
+            }
+          } else if (eventType === "UPDATE" && payload.new) {
+            const updatedItem = mapQueueItemFromDb(payload.new);
+            const prevItem = updatedQueue.find((q) => q.id === updatedItem.id);
+
+            // Live toast alert for receptionist when doctor calls a patient into cabin
+            if (
+              prev.currentUser?.role === "receptionist" &&
+              updatedItem.status === "With Doctor" &&
+              prevItem?.status !== "With Doctor"
+            ) {
+              showToast(
+                `📢 Doctor called Token ${updatedItem.queueNumber} (${updatedItem.patientName}) into the Cabin!`,
+                "info",
+              );
+            }
+
+            updatedQueue = updatedQueue.map((q) =>
+              q.id === updatedItem.id ? updatedItem : q,
+            );
+          } else if (eventType === "DELETE" && payload.old) {
+            updatedQueue = updatedQueue.filter((q) => q.id !== payload.old.id);
+          }
+
+          // Strictly maintain FIFO queue order based on sequenceNumber (and arrival time)
+          updatedQueue.sort((a, b) => {
+            const seqA = Number(a.sequenceNumber) || 0;
+            const seqB = Number(b.sequenceNumber) || 0;
+            if (seqA !== seqB) return seqA - seqB;
+            return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+          });
+        } else if (table === "patients") {
+          if (eventType === "INSERT" && payload.new) {
+            const newPatient = mapPatientFromDb(payload.new, []);
+            if (!updatedPatients.some((p) => p.id === newPatient.id)) {
+              updatedPatients = [newPatient, ...updatedPatients];
+            }
+          } else if (eventType === "UPDATE" && payload.new) {
+            const updatedPatient = mapPatientFromDb(payload.new);
+            updatedPatients = updatedPatients.map((p) =>
+              p.id === updatedPatient.id
+                ? { ...updatedPatient, records: p.records || [] }
+                : p,
+            );
+          } else if (eventType === "DELETE" && payload.old) {
+            updatedPatients = updatedPatients.filter(
+              (p) => p.id !== payload.old.id,
+            );
+          }
+        } else if (table === "opd_records") {
+          if (
+            (eventType === "INSERT" || eventType === "UPDATE") &&
+            payload.new
+          ) {
+            const newRecord = mapOpdRecordFromDb(payload.new);
+            updatedPatients = updatedPatients.map((p) => {
+              if (p.id === newRecord.patientId) {
+                const existingRecords = p.records || [];
+                const recordExists = existingRecords.some(
+                  (r) => r.id === newRecord.id,
+                );
+                const nextRecords = recordExists
+                  ? existingRecords.map((r) =>
+                      r.id === newRecord.id ? newRecord : r,
+                    )
+                  : [newRecord, ...existingRecords];
+                return {
+                  ...p,
+                  records: nextRecords,
+                  totalVisits: nextRecords.length,
+                  lastVisitDate: nextRecords[0]?.visitDate || p.lastVisitDate,
+                };
+              }
+              return p;
+            });
+          } else if (eventType === "DELETE" && payload.old) {
+            updatedPatients = updatedPatients.map((p) => {
+              const nextRecords = (p.records || []).filter(
+                (r) => r.id !== payload.old.id,
+              );
+              return {
+                ...p,
+                records: nextRecords,
+                totalVisits: nextRecords.length,
+              };
+            });
+          }
+        } else if (table === "patient_visits") {
+          if (
+            (eventType === "INSERT" || eventType === "UPDATE") &&
+            payload.new
+          ) {
+            const newVisit = mapVisitFromDb(payload.new);
+            const visitExists = updatedVisits.some((v) => v.id === newVisit.id);
+            updatedVisits = visitExists
+              ? updatedVisits.map((v) => (v.id === newVisit.id ? newVisit : v))
+              : [newVisit, ...updatedVisits];
+          } else if (eventType === "DELETE" && payload.old) {
+            updatedVisits = updatedVisits.filter(
+              (v) => v.id !== payload.old.id,
+            );
+          }
+        } else if (table === "appointments") {
+          if (
+            (eventType === "INSERT" || eventType === "UPDATE") &&
+            payload.new
+          ) {
+            const newApt = mapAppointmentFromDb(payload.new);
+            const aptExists = updatedAppointments.some(
+              (a) => a.id === newApt.id,
+            );
+            updatedAppointments = aptExists
+              ? updatedAppointments.map((a) =>
+                  a.id === newApt.id ? newApt : a,
+                )
+              : [newApt, ...updatedAppointments];
+          } else if (eventType === "DELETE" && payload.old) {
+            updatedAppointments = updatedAppointments.filter(
+              (a) => a.id !== payload.old.id,
+            );
+          }
+        } else if (table === "daily_notes") {
+          if (
+            (eventType === "INSERT" || eventType === "UPDATE") &&
+            payload.new
+          ) {
+            updatedDailyNotes[payload.new.date] = payload.new.note;
+          } else if (eventType === "DELETE" && payload.old) {
+            delete updatedDailyNotes[payload.old.date];
+          }
+        }
+
+        return {
+          ...prev,
+          queue: updatedQueue,
+          patients: updatedPatients,
+          visits: updatedVisits,
+          appointments: updatedAppointments,
+          dailyNotes: updatedDailyNotes,
+          doctor: updatedDoctor,
+          clinic: updatedClinic,
+        };
+      });
+
+      triggerDebouncedReconciliation();
+    };
 
     const initSupabaseSync = () => {
       if (!isSupabaseConfigured()) {
+        setRealtimeStatus("DISCONNECTED");
         return;
       }
+
+      setRealtimeStatus("CONNECTING");
 
       console.log(
         "[MediHive] Supabase cloud connection active. Hydrating clinic data...",
@@ -157,7 +360,12 @@ const MainAppContent: React.FC = () => {
               const mergedQueue = [
                 ...(dbState.queue || []),
                 ...localUnsyncedQueue,
-              ];
+              ].sort((a, b) => {
+                const seqA = Number(a.sequenceNumber) || 0;
+                const seqB = Number(b.sequenceNumber) || 0;
+                if (seqA !== seqB) return seqA - seqB;
+                return (a.arrivalTime || "").localeCompare(b.arrivalTime || "");
+              });
               const mergedVisits = [
                 ...(dbState.visits || []),
                 ...(prev.visits || []).filter(
@@ -187,19 +395,25 @@ const MainAppContent: React.FC = () => {
       if (unsubscribeRealtime) {
         unsubscribeRealtime();
       }
-      unsubscribeRealtime = subscribeToClinicRealtime(async () => {
-        console.log(
-          "[MediHive] Realtime cloud change detected. Syncing updates...",
-        );
-        const refreshed = await fetchFullAppStateFromSupabase();
-        if (refreshed && isMounted) {
-          setAppState((prev) => ({
-            ...prev,
-            ...refreshed,
-            currentUser: prev.currentUser,
-          }));
-        }
-      });
+      unsubscribeRealtime = subscribeToClinicRealtime(
+        handleRealtimeChange,
+        (status) => {
+          if (!isMounted) return;
+          setRealtimeStatus(status);
+          if (status === "CONNECTED") {
+            // Immediately catch up on any mutations that happened while offline
+            fetchFullAppStateFromSupabase().then((latest) => {
+              if (latest && isMounted) {
+                setAppState((prev) => ({
+                  ...prev,
+                  ...latest,
+                  currentUser: prev.currentUser,
+                }));
+              }
+            });
+          }
+        },
+      );
     };
 
     initSupabaseSync();
@@ -214,6 +428,7 @@ const MainAppContent: React.FC = () => {
 
     return () => {
       isMounted = false;
+      if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
       if (unsubscribeRealtime) unsubscribeRealtime();
       window.removeEventListener(
         "medihive_supabase_config_changed",
@@ -224,22 +439,50 @@ const MainAppContent: React.FC = () => {
 
   // Real-time synchronization across browser tabs (via BroadcastChannel & Storage events)
   useEffect(() => {
-    const unsubscribe = subscribeQueueEvents(() => {
-      setAppState(loadAppState());
+    const unsubscribe = subscribeQueueEvents((event) => {
+      const fresh = loadAppState();
+      setAppState(fresh);
+
+      if (event?.type === "PATIENT_CALLED" && event.payload?.activePatient) {
+        const called = event.payload.activePatient;
+        if (appState.currentUser?.role === "receptionist") {
+          showToast(
+            `📢 Doctor called Token ${called.queueNumber} (${called.patientName}) into the Cabin!`,
+            "info",
+          );
+        }
+      }
     });
 
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "medihive_app_state_v2" && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          setAppState((prev) => ({
-            ...prev,
-            patients: parsed.patients || [],
-            visits: parsed.visits || [],
-            queue: parsed.queue || [],
-            appointments: parsed.appointments || [],
-            dailyNotes: parsed.dailyNotes || {},
-          }));
+          setAppState((prev) => {
+            if (prev.currentUser?.role === "receptionist") {
+              const prevInCabinId = (prev.queue || []).find(
+                (q) => q.status === "With Doctor",
+              )?.id;
+              const newInCabin = (parsed.queue || []).find(
+                (q: any) => q.status === "With Doctor",
+              );
+              if (newInCabin && newInCabin.id !== prevInCabinId) {
+                showToast(
+                  `📢 Doctor called Token ${newInCabin.queueNumber} (${newInCabin.patientName}) into the Cabin!`,
+                  "info",
+                );
+              }
+            }
+
+            return {
+              ...prev,
+              patients: parsed.patients || [],
+              visits: parsed.visits || [],
+              queue: parsed.queue || [],
+              appointments: parsed.appointments || [],
+              dailyNotes: parsed.dailyNotes || {},
+            };
+          });
         } catch (err) {
           console.error("Storage cross-tab sync error:", err);
         }
@@ -251,7 +494,7 @@ const MainAppContent: React.FC = () => {
       unsubscribe();
       window.removeEventListener("storage", handleStorage);
     };
-  }, []);
+  }, [appState.currentUser]);
 
   // Check follow-ups due today on load
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -274,6 +517,23 @@ const MainAppContent: React.FC = () => {
         q.visitDate === todayStr &&
         (q.status === "Waiting" || q.status === "Next"),
     ).length;
+  }, [appState.queue, todayStr]);
+
+  // Next patient in line and current patient in cabin for Doctor Navbar
+  const nextWaitingPatient = useMemo(() => {
+    return (appState.queue || [])
+      .filter(
+        (q) =>
+          q.visitDate === todayStr &&
+          (q.status === "Waiting" || q.status === "Next"),
+      )
+      .sort((a, b) => a.sequenceNumber - b.sequenceNumber)[0];
+  }, [appState.queue, todayStr]);
+
+  const currentPatientInCabin = useMemo(() => {
+    return (appState.queue || []).find(
+      (q) => q.visitDate === todayStr && q.status === "With Doctor",
+    );
   }, [appState.queue, todayStr]);
 
   // Handle Login / Logout
@@ -603,6 +863,7 @@ const MainAppContent: React.FC = () => {
     return (
       <ReceptionistLayout
         appState={appState}
+        realtimeStatus={realtimeStatus}
         onUpdateAppState={setAppState}
         onLogout={handleLogout}
       />
@@ -632,7 +893,14 @@ const MainAppContent: React.FC = () => {
         <Navbar
           doctor={appState.doctor}
           clinic={appState.clinic}
+          realtimeStatus={realtimeStatus}
           activeFollowUpsCount={todaysFollowUps.length}
+          nextPatientInQueue={nextWaitingPatient}
+          currentPatientInCabin={currentPatientInCabin}
+          onCallNextPatient={handleDoctorCallPatient}
+          onOpenConsultationModal={(item) =>
+            setActiveConsultationQueueItem(item)
+          }
           onNavigateToCalendar={() => setCurrentTab("calendar")}
           onToggleSidebar={() => setMobileSidebarOpen((prev) => !prev)}
         />

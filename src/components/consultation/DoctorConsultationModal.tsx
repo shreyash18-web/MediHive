@@ -1,34 +1,34 @@
-import React, { useState } from 'react';
-import { 
-  X, 
-  Stethoscope, 
-  User, 
-  Activity, 
-  Thermometer, 
-  HeartPulse, 
-  Scale, 
-  Clock, 
-  Plus, 
-  Trash2, 
-  FileText, 
-  CheckCircle2, 
-  ArrowRight, 
-  History, 
+import React, { useState } from "react";
+import {
+  X,
+  Stethoscope,
+  User,
+  Activity,
+  Thermometer,
+  HeartPulse,
+  Scale,
+  Clock,
+  Plus,
+  Trash2,
+  FileText,
+  CheckCircle2,
+  ArrowRight,
+  History,
   AlertCircle,
   Pill,
   Printer,
-  Sparkles
-} from 'lucide-react';
-import { 
-  Patient, 
-  QueueItem, 
-  OPDRecord, 
-  PrescriptionItem, 
-  DoctorProfile, 
-  ClinicSettings 
-} from '../../types';
-import { generateNextOpdId } from '../../services/storage';
-import { useToast } from '../common/Toast';
+  Sparkles,
+} from "lucide-react";
+import {
+  Patient,
+  QueueItem,
+  OPDRecord,
+  PrescriptionItem,
+  DoctorProfile,
+  ClinicSettings,
+} from "../../types";
+import { generateNextOpdId } from "../../services/storage";
+import { useToast } from "../common/Toast";
 
 interface DoctorConsultationModalProps {
   isOpen: boolean;
@@ -44,23 +44,46 @@ interface DoctorConsultationModalProps {
 }
 
 const COMMON_DIAGNOSES = [
-  'Acute Viral Upper Respiratory Infection',
-  'Acute Bronchitis',
-  'Gastroenteritis / Dysentery',
-  'Hypertension (Essential)',
-  'Type 2 Diabetes Mellitus',
-  'Tension Headache / Migraine',
-  'Allergic Rhinitis',
-  'Urinary Tract Infection (UTI)',
-  'Acid Peptic Disease / GERD',
-  'Musculoskeletal Back Pain',
+  "Acute Viral Upper Respiratory Infection",
+  "Acute Bronchitis",
+  "Gastroenteritis / Dysentery",
+  "Hypertension (Essential)",
+  "Type 2 Diabetes Mellitus",
+  "Tension Headache / Migraine",
+  "Allergic Rhinitis",
+  "Urinary Tract Infection (UTI)",
+  "Acid Peptic Disease / GERD",
+  "Musculoskeletal Back Pain",
 ];
 
-const COMMON_DOSAGES = ['500mg', '250mg', '650mg', '100mg', '10mg', '5mg', '40mg'];
-const COMMON_FREQUENCIES = ['1-0-1 (Twice daily)', '1-1-1 (Thrice daily)', '1-0-0 (Once daily morning)', '0-0-1 (Once daily bedtime)', 'SOS (As needed)'];
-const COMMON_DURATIONS = ['3 Days', '5 Days', '7 Days', '10 Days', '14 Days', '1 Month'];
+const COMMON_DOSAGES = [
+  "500mg",
+  "250mg",
+  "650mg",
+  "100mg",
+  "10mg",
+  "5mg",
+  "40mg",
+];
+const COMMON_FREQUENCIES = [
+  "1-0-1 (Twice daily)",
+  "1-1-1 (Thrice daily)",
+  "1-0-0 (Once daily morning)",
+  "0-0-1 (Once daily bedtime)",
+  "SOS (As needed)",
+];
+const COMMON_DURATIONS = [
+  "3 Days",
+  "5 Days",
+  "7 Days",
+  "10 Days",
+  "14 Days",
+  "1 Month",
+];
 
-export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = ({
+export const DoctorConsultationModal: React.FC<
+  DoctorConsultationModalProps
+> = ({
   isOpen,
   onClose,
   queueItem,
@@ -74,21 +97,23 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
 }) => {
   const { showToast } = useToast();
 
-  const [diagnosis, setDiagnosis] = useState('');
-  const [clinicalNotes, setClinicalNotes] = useState('');
-  const [tests, setTests] = useState('');
-  const [followUpDays, setFollowUpDays] = useState('5');
-  const [consultationFee, setConsultationFee] = useState<number>(doctor.consultationFee || 500);
+  const [diagnosis, setDiagnosis] = useState("");
+  const [clinicalNotes, setClinicalNotes] = useState("");
+  const [tests, setTests] = useState("");
+  const [followUpDays, setFollowUpDays] = useState("5");
+  const [consultationFee, setConsultationFee] = useState<string>(
+    doctor.consultationFee ? String(doctor.consultationFee) : "500",
+  );
 
   // Prescription medicines
   const [medicines, setMedicines] = useState<PrescriptionItem[]>([
     {
-      id: 'med-1',
-      name: '',
-      dosage: '500mg',
-      frequency: '1-0-1 (Twice daily)',
-      duration: '5 Days',
-      instruction: 'After meals',
+      id: "med-1",
+      name: "",
+      dosage: "500mg",
+      frequency: "1-0-1 (Twice daily)",
+      duration: "5 Days",
+      instruction: "After meals",
     },
   ]);
 
@@ -99,11 +124,11 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
       ...prev,
       {
         id: `med-${Date.now()}`,
-        name: '',
-        dosage: '500mg',
-        frequency: '1-0-1 (Twice daily)',
-        duration: '5 Days',
-        instruction: 'After meals',
+        name: "",
+        dosage: "500mg",
+        frequency: "1-0-1 (Twice daily)",
+        duration: "5 Days",
+        instruction: "After meals",
       },
     ]);
   };
@@ -112,7 +137,11 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
     setMedicines((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpdateMedicine = (index: number, field: keyof PrescriptionItem, value: string) => {
+  const handleUpdateMedicine = (
+    index: number,
+    field: keyof PrescriptionItem,
+    value: string,
+  ) => {
     setMedicines((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -122,7 +151,7 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
 
   const calculateNextVisitDate = (days: string): string => {
     const d = parseInt(days, 10);
-    if (isNaN(d) || d <= 0) return '';
+    if (isNaN(d) || d <= 0) return "";
     const target = new Date();
     target.setDate(target.getDate() + d);
     return target.toISOString().slice(0, 10);
@@ -137,10 +166,10 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
       id: opdId,
       patientId: patient.id,
       visitDate: today,
-      complaint: queueItem.complaint || 'Consultation',
+      complaint: queueItem.complaint || "Consultation",
       symptoms: queueItem.symptoms || [],
       vitals: queueItem.vitals || {},
-      diagnosis: diagnosis.trim() || 'General Consultation',
+      diagnosis: diagnosis.trim() || "General Consultation",
       clinicalNotes: clinicalNotes.trim(),
       prescriptions: validMedicines,
       tests: tests.trim(),
@@ -152,7 +181,7 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
 
   const handleComplete = (autoCallNext: boolean) => {
     if (!diagnosis.trim()) {
-      showToast('Please enter a clinical diagnosis before completing', 'error');
+      showToast("Please enter a clinical diagnosis before completing", "error");
       return;
     }
 
@@ -160,16 +189,16 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
     onCompleteConsultation(record, autoCallNext);
     showToast(
       autoCallNext
-        ? 'Consultation saved! Next patient called to cabin.'
-        : 'Consultation completed successfully.',
-      'success'
+        ? "Consultation saved! Next patient called to cabin."
+        : "Consultation completed successfully.",
+      "success",
     );
     onClose();
   };
 
   const handlePreview = () => {
     if (!diagnosis.trim()) {
-      showToast('Please specify a diagnosis to preview prescription', 'error');
+      showToast("Please specify a diagnosis to preview prescription", "error");
       return;
     }
     const record = buildOpdRecord();
@@ -192,10 +221,15 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-400 text-slate-900 text-xs font-bold font-mono">
                   {queueItem.queueNumber}
                 </span>
-                <h2 className="text-sm sm:text-lg font-bold text-white truncate">Active Consultation</h2>
+                <h2 className="text-sm sm:text-lg font-bold text-white truncate">
+                  Active Consultation
+                </h2>
               </div>
               <p className="text-[11px] sm:text-xs text-sky-200/90 truncate">
-                <span className="font-semibold text-white">{patient.fullName}</span> ({patient.age}y, {patient.gender}) • ID: {patient.id}
+                <span className="font-semibold text-white">
+                  {patient.fullName}
+                </span>{" "}
+                ({patient.age}y, {patient.gender}) • ID: {patient.id}
               </p>
             </div>
           </div>
@@ -206,7 +240,8 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
               className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] sm:text-xs font-medium transition flex items-center gap-1 border border-white/15"
             >
               <History className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Past History</span> ({patient.records ? patient.records.length : 0})
+              <span className="hidden xs:inline">Past History</span> (
+              {patient.records ? patient.records.length : 0})
             </button>
             <button
               onClick={onClose}
@@ -228,15 +263,17 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
                 <span>Receptionist Triage & Vital Signs</span>
               </div>
               <span className="text-[11px] text-sky-700">
-                Checked in at {queueItem.arrivalTime || 'Today'}
+                Checked in at {queueItem.arrivalTime || "Today"}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-slate-500 font-semibold">Chief Complaint:</p>
+                <p className="text-xs text-slate-500 font-semibold">
+                  Chief Complaint:
+                </p>
                 <p className="text-sm font-bold text-slate-800 mt-0.5">
-                  {queueItem.complaint || 'General Checkup'}
+                  {queueItem.complaint || "General Checkup"}
                 </p>
                 {queueItem.symptoms && queueItem.symptoms.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
@@ -258,34 +295,56 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
               </div>
 
               <div>
-                <p className="text-xs text-slate-500 font-semibold mb-1.5">Recorded Vitals:</p>
+                <p className="text-xs text-slate-500 font-semibold mb-1.5">
+                  Recorded Vitals:
+                </p>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center">
                   <div className="bg-white p-2 rounded-lg border border-sky-100 shadow-2xs">
-                    <span className="text-[10px] text-slate-400 block font-semibold">BP</span>
-                    <span className="text-xs font-bold text-slate-800">{queueItem.vitals?.bp || '—'}</span>
-                  </div>
-                  <div className="bg-white p-2 rounded-lg border border-sky-100 shadow-2xs">
-                    <span className="text-[10px] text-slate-400 block font-semibold">TEMP</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold">
+                      BP
+                    </span>
                     <span className="text-xs font-bold text-slate-800">
-                      {queueItem.vitals?.temp ? `${queueItem.vitals.temp}°F` : '—'}
+                      {queueItem.vitals?.bp || "—"}
                     </span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-sky-100 shadow-2xs">
-                    <span className="text-[10px] text-slate-400 block font-semibold">PULSE</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold">
+                      TEMP
+                    </span>
                     <span className="text-xs font-bold text-slate-800">
-                      {queueItem.vitals?.pulse ? `${queueItem.vitals.pulse} bpm` : '—'}
+                      {queueItem.vitals?.temp
+                        ? `${queueItem.vitals.temp}°F`
+                        : "—"}
                     </span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-sky-100 shadow-2xs">
-                    <span className="text-[10px] text-slate-400 block font-semibold">SPO2</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold">
+                      PULSE
+                    </span>
                     <span className="text-xs font-bold text-slate-800">
-                      {queueItem.vitals?.spo2 ? `${queueItem.vitals.spo2}%` : '—'}
+                      {queueItem.vitals?.pulse
+                        ? `${queueItem.vitals.pulse} bpm`
+                        : "—"}
                     </span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-sky-100 shadow-2xs">
-                    <span className="text-[10px] text-slate-400 block font-semibold">WEIGHT</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold">
+                      SPO2
+                    </span>
                     <span className="text-xs font-bold text-slate-800">
-                      {queueItem.vitals?.weight ? `${queueItem.vitals.weight} kg` : '—'}
+                      {queueItem.vitals?.spo2
+                        ? `${queueItem.vitals.spo2}%`
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-sky-100 shadow-2xs">
+                    <span className="text-[10px] text-slate-400 block font-semibold">
+                      WEIGHT
+                    </span>
+                    <span className="text-xs font-bold text-slate-800">
+                      {queueItem.vitals?.weight
+                        ? `${queueItem.vitals.weight} kg`
+                        : "—"}
                     </span>
                   </div>
                 </div>
@@ -379,7 +438,9 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
                       type="text"
                       placeholder="Medicine Name (e.g. Paracetamol)"
                       value={med.name}
-                      onChange={(e) => handleUpdateMedicine(idx, 'name', e.target.value)}
+                      onChange={(e) =>
+                        handleUpdateMedicine(idx, "name", e.target.value)
+                      }
                       className="w-full px-3 py-1.5 text-xs font-medium bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#194358]"
                     />
                   </div>
@@ -388,29 +449,39 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
                       type="text"
                       placeholder="Dosage (500mg)"
                       value={med.dosage}
-                      onChange={(e) => handleUpdateMedicine(idx, 'dosage', e.target.value)}
+                      onChange={(e) =>
+                        handleUpdateMedicine(idx, "dosage", e.target.value)
+                      }
                       className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#194358]"
                     />
                   </div>
                   <div className="md:col-span-2">
                     <select
                       value={med.frequency}
-                      onChange={(e) => handleUpdateMedicine(idx, 'frequency', e.target.value)}
+                      onChange={(e) =>
+                        handleUpdateMedicine(idx, "frequency", e.target.value)
+                      }
                       className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#194358]"
                     >
                       {COMMON_FREQUENCIES.map((f) => (
-                        <option key={f} value={f}>{f}</option>
+                        <option key={f} value={f}>
+                          {f}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div className="md:col-span-2">
                     <select
                       value={med.duration}
-                      onChange={(e) => handleUpdateMedicine(idx, 'duration', e.target.value)}
+                      onChange={(e) =>
+                        handleUpdateMedicine(idx, "duration", e.target.value)
+                      }
                       className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#194358]"
                     >
                       {COMMON_DURATIONS.map((d) => (
-                        <option key={d} value={d}>{d}</option>
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -418,8 +489,10 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
                     <input
                       type="text"
                       placeholder="After meals"
-                      value={med.instruction || ''}
-                      onChange={(e) => handleUpdateMedicine(idx, 'instruction', e.target.value)}
+                      value={med.instruction || ""}
+                      onChange={(e) =>
+                        handleUpdateMedicine(idx, "instruction", e.target.value)
+                      }
                       className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#194358]"
                     />
                     {medicines.length > 1 && (
@@ -467,7 +540,7 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
                 <span className="text-xs text-slate-500">
                   {followUpDays && parseInt(followUpDays, 10) > 0
                     ? `(${calculateNextVisitDate(followUpDays)})`
-                    : 'No follow up'}
+                    : "No follow up"}
                 </span>
               </div>
             </div>
@@ -477,10 +550,15 @@ export const DoctorConsultationModal: React.FC<DoctorConsultationModalProps> = (
                 Consultation Fee (₹)
               </label>
               <input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={consultationFee}
-                onChange={(e) => setConsultationFee(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                    setConsultationFee(val);
+                  }
+                }}
                 className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#194358] focus:bg-white"
               />
             </div>

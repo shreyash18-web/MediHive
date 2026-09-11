@@ -1,22 +1,22 @@
-import React, { useRef } from 'react';
-import { 
-  X, 
-  Printer, 
-  Download, 
-  Edit3, 
-  Check, 
-  Share2, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Phone, 
-  FileText 
-} from 'lucide-react';
-import { Patient, OPDRecord, DoctorProfile, ClinicSettings } from '../../types';
-import { format } from 'date-fns';
-import { useToast } from '../common/Toast';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import React, { useRef } from "react";
+import {
+  X,
+  Printer,
+  Download,
+  Edit3,
+  Check,
+  Share2,
+  Calendar,
+  Clock,
+  MapPin,
+  Phone,
+  FileText,
+} from "lucide-react";
+import { Patient, OPDRecord, DoctorProfile, ClinicSettings } from "../../types";
+import { format } from "date-fns";
+import { useToast } from "../common/Toast";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface PrescriptionModalProps {
   patient: Patient;
@@ -53,17 +53,17 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
   const handleDownloadPdf = async () => {
     if (!prescriptionRef.current) return;
     try {
-      showToast('Generating PDF prescription...', 'info');
+      showToast("Generating PDF prescription...", "info");
       const canvas = await html2canvas(prescriptionRef.current, {
         scale: 2,
         useCORS: true,
-        backgroundColor: '#ffffff',
+        backgroundColor: "#ffffff",
       });
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
 
       const imgWidth = 210;
@@ -72,19 +72,21 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
       let heightLeft = imgHeight;
       let position = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
       pdf.save(`Prescription_${patient.fullName}_${record.visitDate}.pdf`);
-      showToast('Prescription PDF downloaded successfully!', 'success');
+      showToast("Prescription PDF downloaded successfully!", "success");
     } catch (err) {
       console.error(err);
-      showToast('Failed to generate PDF. You can also use the Print button.', 'error');
+      showToast(
+        "Failed to generate PDF. You can also use the Print button.",
+        "error",
+      );
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6">
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full flex flex-col max-h-[96dvh] sm:max-h-[92vh] overflow-hidden">
-        
         {/* Modal Top Bar */}
         <div className="px-3 sm:px-6 py-2.5 sm:py-3.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between no-print">
           <div className="flex items-center gap-2 overflow-hidden">
@@ -107,14 +109,18 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
           <div
             ref={prescriptionRef}
             id="printable-prescription"
-            className="bg-white rounded-xl shadow-md border border-slate-200/90 w-full max-w-[720px] min-w-[300px] p-4 sm:p-10 text-slate-800 space-y-4 sm:space-y-5 print:shadow-none print:border-none print:p-0"
+            className="bg-white rounded-xl shadow-md border border-slate-200/90 w-full max-w-180 min-w-75 p-4 sm:p-10 text-slate-800 space-y-4 sm:space-y-5 print:shadow-none print:border-none print:p-0"
           >
             {/* Header: Clinic Emblem + Clinic Details + Doctor Info */}
             <div className="border-b-2 border-[#1e536e] pb-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 {/* Clinic Logo Emblem */}
                 <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center p-2 text-emerald-700">
-                  <svg viewBox="0 0 100 100" className="w-full h-full fill-emerald-600" xmlns="http://www.w3.org/2000/svg">
+                  <svg
+                    viewBox="0 0 100 100"
+                    className="w-full h-full fill-emerald-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
                     <path d="M50 10 C30 30 15 55 15 75 C15 88 26 95 38 95 C48 95 50 88 50 88 C50 88 52 95 62 95 C74 95 85 88 85 75 C85 55 70 30 50 10 Z" />
                     <circle cx="50" cy="50" r="10" fill="#ffffff" />
                   </svg>
@@ -123,9 +129,15 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                   <h1 className="text-xl sm:text-2xl font-black text-[#1e536e] tracking-tight">
                     {clinic.name}
                   </h1>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">{doctor.name}</p>
-                  <p className="text-[11px] font-medium text-emerald-700">{doctor.qualifications}</p>
-                  <p className="text-[10px] text-slate-500 font-mono">Reg No: {doctor.medicalLicenseNo}</p>
+                  <p className="text-xs font-bold text-slate-700 mt-0.5">
+                    {doctor.name}
+                  </p>
+                  <p className="text-[11px] font-medium text-emerald-700">
+                    {doctor.qualifications}
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    Reg No: {doctor.medicalLicenseNo}
+                  </p>
                 </div>
               </div>
 
@@ -134,9 +146,10 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                   <Phone className="w-3 h-3 text-slate-400" /> {clinic.phone}
                 </p>
                 <p className="flex items-center justify-end gap-1 text-slate-500">
-                  <Clock className="w-3 h-3 text-slate-400" /> {clinic.operatingHours}
+                  <Clock className="w-3 h-3 text-slate-400" />{" "}
+                  {clinic.operatingHours}
                 </p>
-                <p className="text-[10px] text-slate-500 max-w-[200px] leading-tight mt-1">
+                <p className="text-[10px] text-slate-500 max-w-50 leading-tight mt-1">
                   {clinic.address}
                 </p>
               </div>
@@ -145,16 +158,26 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             {/* Patient Meta Strip */}
             <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
               <div>
-                <span className="text-slate-400 font-medium">Patient Name:</span>
-                <p className="font-bold text-slate-900 capitalize">{patient.fullName}</p>
+                <span className="text-slate-400 font-medium">
+                  Patient Name:
+                </span>
+                <p className="font-bold text-slate-900 capitalize">
+                  {patient.fullName}
+                </p>
               </div>
               <div>
-                <span className="text-slate-400 font-medium">Age / Gender:</span>
-                <p className="font-bold text-slate-900">{patient.age} Yrs / {patient.gender}</p>
+                <span className="text-slate-400 font-medium">
+                  Age / Gender:
+                </span>
+                <p className="font-bold text-slate-900">
+                  {patient.age} Yrs / {patient.gender}
+                </p>
               </div>
               <div>
                 <span className="text-slate-400 font-medium">Patient ID:</span>
-                <p className="font-bold font-mono text-slate-900">{patient.id}</p>
+                <p className="font-bold font-mono text-slate-900">
+                  {patient.id}
+                </p>
               </div>
               <div>
                 <span className="text-slate-400 font-medium">Date:</span>
@@ -166,13 +189,17 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               {record.symptoms && record.symptoms.length > 0 && (
                 <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-700 block mb-1">Symptoms:</span>
-                  <p className="text-slate-800">{record.symptoms.join(', ')}</p>
+                  <span className="font-bold text-slate-700 block mb-1">
+                    Symptoms:
+                  </span>
+                  <p className="text-slate-800">{record.symptoms.join(", ")}</p>
                 </div>
               )}
               {record.diagnosis && (
                 <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-700 block mb-1">Diagnosis:</span>
+                  <span className="font-bold text-slate-700 block mb-1">
+                    Diagnosis:
+                  </span>
                   <p className="text-slate-800">{record.diagnosis}</p>
                 </div>
               )}
@@ -187,19 +214,27 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 
               <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">
                 {record.medicines.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-slate-400">No medicines prescribed.</div>
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    No medicines prescribed.
+                  </div>
                 ) : (
                   record.medicines.map((med, idx) => (
-                    <div key={med.id || idx} className="p-3 text-xs flex items-start justify-between bg-white hover:bg-slate-50/60">
+                    <div
+                      key={med.id || idx}
+                      className="p-3 text-xs flex items-start justify-between bg-white hover:bg-slate-50/60"
+                    >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900">{idx + 1}. {med.name}</span>
+                          <span className="font-bold text-slate-900">
+                            {idx + 1}. {med.name}
+                          </span>
                           <span className="bg-sky-50 text-sky-800 font-semibold px-2 py-0.5 rounded text-[11px] border border-sky-100">
                             {med.dosage}
                           </span>
                         </div>
                         <p className="text-slate-600 text-[11px]">
-                          <strong>Schedule:</strong> {med.frequency} • <em>{med.timing}</em>
+                          <strong>Schedule:</strong> {med.frequency} •{" "}
+                          <em>{med.timing}</em>
                           {med.instructions && ` (${med.instructions})`}
                         </p>
                       </div>
@@ -222,8 +257,12 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               )}
               {record.panchakarmaNotes && (
                 <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                  <span className="font-bold text-emerald-800">Panchakarma Notes: </span>
-                  <span className="text-slate-800">{record.panchakarmaNotes}</span>
+                  <span className="font-bold text-emerald-800">
+                    Panchakarma Notes:{" "}
+                  </span>
+                  <span className="text-slate-800">
+                    {record.panchakarmaNotes}
+                  </span>
                 </div>
               )}
               {record.dietaryAdvice && (
@@ -250,14 +289,19 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             <div className="pt-8 flex justify-end items-center text-right">
               <div className="space-y-1 pr-4">
                 <div className="w-36 border-b border-slate-400 mb-2"></div>
-                <p className="text-xs font-bold text-slate-900">{doctor.name}</p>
-                <p className="text-[10px] text-slate-500">{doctor.qualifications}</p>
+                <p className="text-xs font-bold text-slate-900">
+                  {doctor.name}
+                </p>
+                <p className="text-[10px] text-slate-500">
+                  {doctor.qualifications}
+                </p>
               </div>
             </div>
 
             {/* Subtle Prescription Footer */}
             <div className="pt-4 border-t border-slate-200 text-center text-[10px] text-slate-400">
-              Prescription generated via MediHive Clinical Suite • Keep medicines out of reach of children
+              Prescription generated via MediHive Clinical Suite • Keep
+              medicines out of reach of children
             </div>
           </div>
         </div>
@@ -308,9 +352,7 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
 };
-

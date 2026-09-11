@@ -1,32 +1,35 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  ArrowLeft, 
-  Search, 
-  Plus, 
-  Trash2, 
-  Upload, 
-  Calendar, 
-  Check, 
-  Sparkles, 
-  FileText, 
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  ArrowLeft,
+  Search,
+  Plus,
+  Trash2,
+  Upload,
+  Calendar,
+  Check,
+  Sparkles,
+  FileText,
   IndianRupee,
   X,
-  Image as ImageIcon
-} from 'lucide-react';
-import { 
-  Patient, 
-  OPDRecord, 
-  PrescribedMedicine, 
-  OpdType, 
-  ChargeType, 
-  PaymentMode, 
-  DiscountType, 
-  Gender 
-} from '../../types';
-import { commonSymptomsList, medicineCatalog } from '../../services/mockData';
-import { generateNextPatientId, generateNextOpdId } from '../../services/storage';
-import { format, differenceInYears, parseISO } from 'date-fns';
-import { useToast } from '../common/Toast';
+  Image as ImageIcon,
+} from "lucide-react";
+import {
+  Patient,
+  OPDRecord,
+  PrescribedMedicine,
+  OpdType,
+  ChargeType,
+  PaymentMode,
+  DiscountType,
+  Gender,
+} from "../../types";
+import { commonSymptomsList, medicineCatalog } from "../../services/mockData";
+import {
+  generateNextPatientId,
+  generateNextOpdId,
+} from "../../services/storage";
+import { format, differenceInYears, parseISO } from "date-fns";
+import { useToast } from "../common/Toast";
 
 interface OpdRegistrationProps {
   patients: Patient[];
@@ -46,25 +49,27 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
   const { showToast } = useToast();
 
   // Patient Lookup state
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(preselectedPatientId || '');
-  const [patientSearchInput, setPatientSearchInput] = useState('');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(
+    preselectedPatientId || "",
+  );
+  const [patientSearchInput, setPatientSearchInput] = useState("");
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
 
   // Form Fields
-  const [fullName, setFullName] = useState('');
-  const [dob, setDob] = useState('');
-  const [age, setAge] = useState<number | ''>('');
-  const [gender, setGender] = useState<Gender>('Male');
-  const [mobile, setMobile] = useState('');
-  const [address, setAddress] = useState('');
-  const [bloodGroup, setBloodGroup] = useState('A+');
+  const [fullName, setFullName] = useState("");
+  const [dob, setDob] = useState("");
+  const [age, setAge] = useState<number | "">("");
+  const [gender, setGender] = useState<Gender>("Male");
+  const [mobile, setMobile] = useState("");
+  const [address, setAddress] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("A+");
 
   // Clinical Fields
-  const [opdType, setOpdType] = useState<OpdType>('Consultation');
-  const [chargeType, setChargeType] = useState<ChargeType>('First Visit');
-  const [diagnosis, setDiagnosis] = useState('');
+  const [opdType, setOpdType] = useState<OpdType>("Consultation");
+  const [chargeType, setChargeType] = useState<ChargeType>("First Visit");
+  const [diagnosis, setDiagnosis] = useState("");
   const [symptoms, setSymptoms] = useState<string[]>([]);
-  const [symptomInput, setSymptomInput] = useState('');
+  const [symptomInput, setSymptomInput] = useState("");
   const [showSymptomSuggestions, setShowSymptomSuggestions] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
@@ -72,20 +77,20 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
   const [medicines, setMedicines] = useState<PrescribedMedicine[]>([]);
 
   // Notes & Follow up
-  const [panchakarmaNotes, setPanchakarmaNotes] = useState('');
-  const [clinicalNotes, setClinicalNotes] = useState('');
-  const [dietaryAdvice, setDietaryAdvice] = useState('');
+  const [panchakarmaNotes, setPanchakarmaNotes] = useState("");
+  const [clinicalNotes, setClinicalNotes] = useState("");
+  const [dietaryAdvice, setDietaryAdvice] = useState("");
   const [nextVisitDate, setNextVisitDate] = useState(
-    format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
+    format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
   );
 
   // Billing Fields
-  const [consultationFee, setConsultationFee] = useState<number>(0);
-  const [medicineFee, setMedicineFee] = useState<number>(0);
-  const [panchakarmaFee, setPanchakarmaFee] = useState<number>(0);
-  const [discountType, setDiscountType] = useState<DiscountType>('amount');
-  const [discountValue, setDiscountValue] = useState<number>(0);
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
+  const [consultationFee, setConsultationFee] = useState<string>("");
+  const [medicineFee, setMedicineFee] = useState<string>("");
+  const [panchakarmaFee, setPanchakarmaFee] = useState<string>("");
+  const [discountType, setDiscountType] = useState<DiscountType>("amount");
+  const [discountValue, setDiscountValue] = useState<string>("");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("Cash");
 
   // Load existing patient if selected
   useEffect(() => {
@@ -93,14 +98,14 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
       const p = patients.find((pat) => pat.id === selectedPatientId);
       if (p) {
         setFullName(p.fullName);
-        setDob(p.dob || '');
+        setDob(p.dob || "");
         setAge(p.age);
         setGender(p.gender);
         setMobile(p.mobile);
-        setAddress(p.address || '');
-        setBloodGroup(p.bloodGroup || 'A+');
-        setChargeType(p.records.length > 0 ? 'Follow-up' : 'First Visit');
-        setOpdType(p.records.length > 0 ? 'Follow-up' : 'Consultation');
+        setAddress(p.address || "");
+        setBloodGroup(p.bloodGroup || "A+");
+        setChargeType(p.records.length > 0 ? "Follow-up" : "First Visit");
+        setOpdType(p.records.length > 0 ? "Follow-up" : "Consultation");
       }
     }
   }, [selectedPatientId, patients]);
@@ -123,7 +128,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
     if (!symptomInput.trim()) return commonSymptomsList.slice(0, 8);
     const q = symptomInput.toLowerCase().trim();
     return commonSymptomsList.filter(
-      (s) => s.toLowerCase().includes(q) && !symptoms.includes(s)
+      (s) => s.toLowerCase().includes(q) && !symptoms.includes(s),
     );
   }, [symptomInput, symptoms]);
 
@@ -131,7 +136,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
     if (!symptoms.includes(sym)) {
       setSymptoms([...symptoms, sym]);
     }
-    setSymptomInput('');
+    setSymptomInput("");
     setShowSymptomSuggestions(false);
   };
 
@@ -145,24 +150,28 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
       ...medicines,
       {
         id: `med-${Date.now()}`,
-        name: '',
-        dosage: '1 tab',
-        frequency: 'Twice daily',
-        timing: 'After Food',
-        duration: '5 Days',
-        instructions: 'With warm water',
+        name: "",
+        dosage: "1 tab",
+        frequency: "Twice daily",
+        timing: "After Food",
+        duration: "5 Days",
+        instructions: "With warm water",
       },
     ]);
   };
 
-  const updateMedicine = (index: number, field: keyof PrescribedMedicine, val: string) => {
+  const updateMedicine = (
+    index: number,
+    field: keyof PrescribedMedicine,
+    val: string,
+  ) => {
     const updated = [...medicines];
     updated[index] = { ...updated[index], [field]: val };
-    
+
     // Auto populate defaults if user selects a known medicine
-    if (field === 'name') {
+    if (field === "name") {
       const match = medicineCatalog.find(
-        (m) => m.name.toLowerCase() === val.toLowerCase()
+        (m) => m.name.toLowerCase() === val.toLowerCase(),
       );
       if (match) {
         updated[index].dosage = match.defaultDosage;
@@ -180,13 +189,22 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
   // Total calculation
   const calculatedTotal = useMemo(() => {
-    const subtotal = (Number(consultationFee) || 0) + (Number(medicineFee) || 0) + (Number(panchakarmaFee) || 0);
+    const subtotal =
+      (Number(consultationFee) || 0) +
+      (Number(medicineFee) || 0) +
+      (Number(panchakarmaFee) || 0);
     let disc = Number(discountValue) || 0;
-    if (discountType === 'percentage') {
+    if (discountType === "percentage") {
       disc = (subtotal * disc) / 100;
     }
     return Math.max(0, Math.round(subtotal - disc));
-  }, [consultationFee, medicineFee, panchakarmaFee, discountType, discountValue]);
+  }, [
+    consultationFee,
+    medicineFee,
+    panchakarmaFee,
+    discountType,
+    discountValue,
+  ]);
 
   // Image Upload handler
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,29 +215,32 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          setUploadedImages((prev) => [...prev, event.target!.result as string]);
+          setUploadedImages((prev) => [
+            ...prev,
+            event.target!.result as string,
+          ]);
         }
       };
       reader.readAsDataURL(file);
     });
-    showToast('Image uploaded successfully', 'info');
+    showToast("Image uploaded successfully", "info");
   };
 
   // Validation and Submission
   const handleSubmit = (generatePrescription: boolean = true) => {
     if (!fullName.trim()) {
-      showToast('Please enter patient full name.', 'error');
+      showToast("Please enter patient full name.", "error");
       return;
     }
     if (!mobile.trim()) {
-      showToast('Please enter patient mobile number.', 'error');
+      showToast("Please enter patient mobile number.", "error");
       return;
     }
 
     const patientId = selectedPatientId || generateNextPatientId(patients);
     const existingPatient = patients.find((p) => p.id === patientId);
 
-    const today = format(new Date(), 'yyyy-MM-dd');
+    const today = format(new Date(), "yyyy-MM-dd");
     const opdId = generateNextOpdId(patients);
 
     const newOpdRecord: OPDRecord = {
@@ -228,10 +249,10 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
       visitDate: today,
       opdType,
       chargeType,
-      diagnosis: diagnosis || 'General Health & Consultation',
-      symptoms: symptoms.length > 0 ? symptoms : ['General Consultation'],
+      diagnosis: diagnosis || "General Health & Consultation",
+      symptoms: symptoms.length > 0 ? symptoms : ["General Consultation"],
       uploadedImages,
-      medicines: medicines.filter((m) => m.name.trim() !== ''),
+      medicines: medicines.filter((m) => m.name.trim() !== ""),
       panchakarmaNotes,
       clinicalNotes,
       dietaryAdvice,
@@ -243,7 +264,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
       discountValue: Number(discountValue) || 0,
       totalFee: calculatedTotal,
       paymentMode,
-      paymentStatus: 'Paid',
+      paymentStatus: "Paid",
       createdAt: new Date().toISOString(),
     };
 
@@ -261,14 +282,21 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
       emergencyContact: existingPatient?.emergencyContact,
       allergies: existingPatient?.allergies,
       medicalHistory: existingPatient?.medicalHistory,
-      registrationDate: existingPatient ? existingPatient.registrationDate : today,
+      registrationDate: existingPatient
+        ? existingPatient.registrationDate
+        : today,
       lastVisitDate: today,
       totalVisits: (existingPatient ? existingPatient.records.length : 0) + 1,
-      records: existingPatient ? [newOpdRecord, ...existingPatient.records] : [newOpdRecord],
+      records: existingPatient
+        ? [newOpdRecord, ...existingPatient.records]
+        : [newOpdRecord],
     };
 
     onSaveOpdRecord(updatedPatient, newOpdRecord);
-    showToast(`OPD record saved for ${updatedPatient.fullName} (${patientId})`, 'success');
+    showToast(
+      `OPD record saved for ${updatedPatient.fullName} (${patientId})`,
+      "success",
+    );
 
     if (generatePrescription) {
       onGeneratePrescription(updatedPatient, newOpdRecord);
@@ -288,15 +316,18 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             <span>Back</span>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-800">OPD Registration</h1>
-            <p className="text-xs text-slate-500">Fill patient details, prescriptions and billing information</p>
+            <h1 className="text-xl font-bold text-slate-800">
+              OPD Registration
+            </h1>
+            <p className="text-xs text-slate-500">
+              Fill patient details, prescriptions and billing information
+            </p>
           </div>
         </div>
       </div>
 
       {/* Main OPD Registration Form Container */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200/90 overflow-hidden divide-y divide-slate-100">
-        
         {/* SECTION 1: Patient Information */}
         <div className="p-5 sm:p-6 space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -328,13 +359,13 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedPatientId('');
-                    setPatientSearchInput('');
-                    setFullName('');
-                    setAge('');
-                    setMobile('');
-                    setDob('');
-                    setAddress('');
+                    setSelectedPatientId("");
+                    setPatientSearchInput("");
+                    setFullName("");
+                    setAge("");
+                    setMobile("");
+                    setDob("");
+                    setAddress("");
                   }}
                   className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
                 >
@@ -349,8 +380,8 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedPatientId('');
-                    setPatientSearchInput('');
+                    setSelectedPatientId("");
+                    setPatientSearchInput("");
                     setShowPatientDropdown(false);
                   }}
                   className="w-full text-left px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 border-b border-slate-100"
@@ -358,10 +389,15 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                   + Register as New Patient
                 </button>
                 {patients
-                  .filter((p) =>
-                    p.fullName.toLowerCase().includes(patientSearchInput.toLowerCase()) ||
-                    p.id.toLowerCase().includes(patientSearchInput.toLowerCase()) ||
-                    p.mobile.includes(patientSearchInput)
+                  .filter(
+                    (p) =>
+                      p.fullName
+                        .toLowerCase()
+                        .includes(patientSearchInput.toLowerCase()) ||
+                      p.id
+                        .toLowerCase()
+                        .includes(patientSearchInput.toLowerCase()) ||
+                      p.mobile.includes(patientSearchInput),
                   )
                   .map((p) => (
                     <button
@@ -374,8 +410,12 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center justify-between text-xs transition"
                     >
-                      <span className="font-medium text-slate-800">{p.fullName} ({p.gender}, {p.age}y)</span>
-                      <span className="text-slate-400 font-mono">{p.id} • {p.mobile}</span>
+                      <span className="font-medium text-slate-800">
+                        {p.fullName} ({p.gender}, {p.age}y)
+                      </span>
+                      <span className="text-slate-400 font-mono">
+                        {p.id} • {p.mobile}
+                      </span>
                     </button>
                   ))}
               </div>
@@ -399,7 +439,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">DOB</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                DOB
+              </label>
               <input
                 type="date"
                 value={dob}
@@ -409,20 +451,26 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Age</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Age
+              </label>
               <input
                 type="number"
                 min="0"
                 max="125"
                 value={age}
-                onChange={(e) => setAge(e.target.value ? parseInt(e.target.value) : '')}
+                onChange={(e) =>
+                  setAge(e.target.value ? parseInt(e.target.value) : "")
+                }
                 placeholder="Age in years"
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Gender</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Gender
+              </label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as Gender)}
@@ -449,7 +497,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Address</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Address
+              </label>
               <input
                 type="text"
                 value={address}
@@ -460,20 +510,28 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Blood Group</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Blood Group
+              </label>
               <select
                 value={bloodGroup}
                 onChange={(e) => setBloodGroup(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               >
-                {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((bg) => (
-                  <option key={bg} value={bg}>{bg}</option>
-                ))}
+                {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
+                  (bg) => (
+                    <option key={bg} value={bg}>
+                      {bg}
+                    </option>
+                  ),
+                )}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">OPD Type</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                OPD Type
+              </label>
               <select
                 value={opdType}
                 onChange={(e) => setOpdType(e.target.value as OpdType)}
@@ -488,7 +546,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Charge Type</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Charge Type
+              </label>
               <select
                 value={chargeType}
                 onChange={(e) => setChargeType(e.target.value as ChargeType)}
@@ -497,7 +557,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 <option value="First Visit">First Visit</option>
                 <option value="Follow-up">Follow-up Visit</option>
                 <option value="Special Therapy">Special Therapy</option>
-                <option value="Emergency Consultation">Emergency Consultation</option>
+                <option value="Emergency Consultation">
+                  Emergency Consultation
+                </option>
               </select>
             </div>
           </div>
@@ -505,7 +567,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
           {/* Clinical Examination: Diagnosis, Symptoms, Image Upload */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Diagnosis</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Diagnosis
+              </label>
               <input
                 type="text"
                 value={diagnosis}
@@ -518,14 +582,14 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             {/* Smart Symptoms Autocomplete */}
             <div className="relative">
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-slate-700">
+                <label className="text-xs font-semibold text-slate-700">
                   Symptoms (Smart Suggestions)
                 </label>
                 <span className="text-[11px] text-sky-600 flex items-center gap-1 font-medium">
                   <Sparkles className="w-3 h-3" /> Auto-suggest
                 </span>
               </div>
-              
+
               <div className="relative">
                 <input
                   type="text"
@@ -581,9 +645,11 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
           {/* Upload Image Section (Skin Treatment, reports, clinical photos) */}
           <div className="pt-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
               <span>Upload Clinical Image (Skin Treatment / Reports)</span>
-              <span className="text-[11px] text-slate-400 font-normal">PNG, JPG, WebP</span>
+              <span className="text-[11px] text-slate-400 font-normal">
+                PNG, JPG, WebP
+              </span>
             </label>
             <div className="flex flex-wrap items-center gap-3">
               <label className="cursor-pointer border-2 border-dashed border-slate-300 hover:border-medihive-500 bg-slate-50 hover:bg-slate-100/80 px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs font-medium text-slate-700 transition">
@@ -600,11 +666,22 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
               {/* Preview thumbnails */}
               {uploadedImages.map((img, idx) => (
-                <div key={idx} className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden group">
-                  <img src={img} alt="Clinical upload" className="w-full h-full object-cover" />
+                <div
+                  key={idx}
+                  className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden group"
+                >
+                  <img
+                    src={img}
+                    alt="Clinical upload"
+                    className="w-full h-full object-cover"
+                  />
                   <button
                     type="button"
-                    onClick={() => setUploadedImages(uploadedImages.filter((_, i) => i !== idx))}
+                    onClick={() =>
+                      setUploadedImages(
+                        uploadedImages.filter((_, i) => i !== idx),
+                      )
+                    }
                     className="absolute inset-0 bg-rose-900/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -621,7 +698,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                   <span>Medicines Prescribed</span>
                 </h3>
-                <p className="text-xs text-slate-500">Smart suggestions auto-fill dosages & instructions</p>
+                <p className="text-xs text-slate-500">
+                  Smart suggestions auto-fill dosages & instructions
+                </p>
               </div>
               <button
                 type="button"
@@ -649,7 +728,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                       type="text"
                       list="med-suggestions"
                       value={med.name}
-                      onChange={(e) => updateMedicine(index, 'name', e.target.value)}
+                      onChange={(e) =>
+                        updateMedicine(index, "name", e.target.value)
+                      }
                       placeholder="e.g. Maharasnadi yog"
                       className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
                     />
@@ -657,11 +738,15 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
                   {/* Dosage */}
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Dosage</label>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
+                      Dosage
+                    </label>
                     <input
                       type="text"
                       value={med.dosage}
-                      onChange={(e) => updateMedicine(index, 'dosage', e.target.value)}
+                      onChange={(e) =>
+                        updateMedicine(index, "dosage", e.target.value)
+                      }
                       placeholder="e.g. 2 tabs"
                       className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
                     />
@@ -669,11 +754,15 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
                   {/* Frequency */}
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Frequency</label>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
+                      Frequency
+                    </label>
                     <input
                       type="text"
                       value={med.frequency}
-                      onChange={(e) => updateMedicine(index, 'frequency', e.target.value)}
+                      onChange={(e) =>
+                        updateMedicine(index, "frequency", e.target.value)
+                      }
                       placeholder="e.g. Twice daily"
                       className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
                     />
@@ -681,10 +770,14 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
 
                   {/* Timing */}
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Timing</label>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
+                      Timing
+                    </label>
                     <select
                       value={med.timing}
-                      onChange={(e) => updateMedicine(index, 'timing', e.target.value)}
+                      onChange={(e) =>
+                        updateMedicine(index, "timing", e.target.value)
+                      }
                       className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
                     >
                       <option value="After Food">After Food</option>
@@ -697,11 +790,15 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                   {/* Duration & Delete */}
                   <div className="sm:col-span-2 flex items-center gap-2">
                     <div className="flex-1">
-                      <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">Duration</label>
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-0.5">
+                        Duration
+                      </label>
                       <input
                         type="text"
                         value={med.duration}
-                        onChange={(e) => updateMedicine(index, 'duration', e.target.value)}
+                        onChange={(e) =>
+                          updateMedicine(index, "duration", e.target.value)
+                        }
                         placeholder="e.g. 7 Days"
                         className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-medihive-500"
                       />
@@ -745,7 +842,7 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-medihive-600" />
                 <span>Next Visit Date Reminder</span>
               </label>
@@ -756,7 +853,8 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
               />
               <p className="text-[11px] text-slate-400 mt-1">
-                MediHive will automatically remind you in the Calendar when this follow-up is due.
+                MediHive will automatically remind you in the Calendar when this
+                follow-up is due.
               </p>
             </div>
           </div>
@@ -769,48 +867,75 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
               <IndianRupee className="w-4 h-4 text-[#1e536e]" />
               <span>Billing & Payments</span>
             </h2>
-            <span className="text-xs font-semibold text-slate-500">Auto-calculated fee summary</span>
+            <span className="text-xs font-semibold text-slate-500">
+              Auto-calculated fee summary
+            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Consultation Fees (₹)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Consultation Fees (₹)
+              </label>
               <input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={consultationFee}
-                onChange={(e) => setConsultationFee(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                    setConsultationFee(val);
+                  }
+                }}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Medicine Fees (₹)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Medicine Fees (₹)
+              </label>
               <input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={medicineFee}
-                onChange={(e) => setMedicineFee(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                    setMedicineFee(val);
+                  }
+                }}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Panchakarma Fees (₹)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Panchakarma Fees (₹)
+              </label>
               <input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={panchakarmaFee}
-                onChange={(e) => setPanchakarmaFee(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                    setPanchakarmaFee(val);
+                  }
+                }}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Discount Type</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Discount Type
+              </label>
               <select
                 value={discountType}
-                onChange={(e) => setDiscountType(e.target.value as DiscountType)}
+                onChange={(e) =>
+                  setDiscountType(e.target.value as DiscountType)
+                }
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               >
                 <option value="amount">₹ (Amount)</option>
@@ -819,18 +944,27 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Discount Value</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Discount Value
+              </label>
               <input
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={discountValue}
-                onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                    setDiscountValue(val);
+                  }
+                }}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Mode</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Payment Mode
+              </label>
               <select
                 value={paymentMode}
                 onChange={(e) => setPaymentMode(e.target.value as PaymentMode)}
@@ -847,7 +981,9 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
           {/* Total Fee & Action Button */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200/80">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-slate-700">Total Fee:</span>
+              <span className="text-sm font-bold text-slate-700">
+                Total Fee:
+              </span>
               <div className="bg-white px-4 py-2 rounded-lg border-2 border-medihive-600 shadow-sm">
                 <span className="text-xl font-black text-medihive-900 font-mono">
                   ₹{calculatedTotal}
@@ -879,4 +1015,3 @@ export const OpdRegistration: React.FC<OpdRegistrationProps> = ({
     </div>
   );
 };
-

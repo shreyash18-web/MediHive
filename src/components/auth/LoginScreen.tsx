@@ -37,17 +37,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setShowPassword(false);
   };
 
-  const handleQuickFill = (role: "doctor" | "receptionist") => {
-    setSelectedRole(role);
-    if (role === "doctor") {
-      setUsername("doctor");
-      setPassword("doctor123");
-    } else {
-      setUsername("receptionist");
-      setPassword("reception123");
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
@@ -219,27 +208,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                   ) : (
                     <Eye className="w-4 h-4" />
                   )}
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Demo Fill Buttons for Testing */}
-            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-              <span>Quick Login:</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("doctor")}
-                  className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded border border-slate-200 transition"
-                >
-                  Doctor Fill
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill("receptionist")}
-                  className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded border border-slate-200 transition"
-                >
-                  Reception Fill
                 </button>
               </div>
             </div>

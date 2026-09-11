@@ -39,6 +39,7 @@ import {
   deleteVisitInSupabase,
   insertVisitAndQueueInSupabase,
   cancelQueueTicketInSupabase,
+  RealtimeSyncStatus,
 } from "../../services/supabaseService";
 import { ReceptionistDashboard } from "./ReceptionistDashboard";
 import { PatientSearchAndVisit } from "./PatientSearchAndVisit";
@@ -52,12 +53,14 @@ export type ReceptionistTab = "dashboard" | "search" | "new-patient" | "queue";
 
 interface ReceptionistLayoutProps {
   appState: AppState;
+  realtimeStatus?: RealtimeSyncStatus;
   onUpdateAppState: (updater: (prev: AppState) => AppState) => void;
   onLogout: () => void;
 }
 
 export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   appState,
+  realtimeStatus = "CONNECTED",
   onUpdateAppState,
   onLogout,
 }) => {
@@ -76,6 +79,9 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
     (q) =>
       q.visitDate === today && (q.status === "Waiting" || q.status === "Next"),
   ).length;
+  const currentInCabin = (appState.queue || []).find(
+    (q) => q.visitDate === today && q.status === "With Doctor",
+  );
 
   // Handle saving new patient
   const handlePatientRegistered = (newPatient: Patient) => {
@@ -417,6 +423,23 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Live In-Cabin Doctor Alert for Receptionist */}
+            {currentInCabin && (
+              <div
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0"
+                title={`Currently in Cabin: ${currentInCabin.patientName} (${currentInCabin.queueNumber})`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>In Cabin:</span>
+                <strong className="font-mono bg-emerald-100 px-1.5 py-0.2 rounded text-emerald-900">
+                  {currentInCabin.queueNumber}
+                </strong>
+                <span className="hidden md:inline text-emerald-700 font-medium truncate max-w-25">
+                  ({currentInCabin.patientName.split(" ")[0]})
+                </span>
+              </div>
+            )}
+
             {/* Live Queue Status Pill */}
             <button
               onClick={() => {
@@ -433,6 +456,41 @@ export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
                 <span className="hidden xs:inline">in Line</span>
               </span>
             </button>
+
+            {/* Live Supabase Cloud Realtime Indicator */}
+            <div
+              className={`hidden sm:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all ${
+                realtimeStatus === "CONNECTED"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : realtimeStatus === "CONNECTING"
+                    ? "bg-amber-50 text-amber-800 border-amber-200 animate-pulse"
+                    : "bg-slate-100 text-slate-600 border-slate-200"
+              }`}
+              title={
+                realtimeStatus === "CONNECTED"
+                  ? "Real-time Live Sync active with Doctor Panel"
+                  : realtimeStatus === "CONNECTING"
+                    ? "Connecting to Supabase Realtime..."
+                    : "Offline / Reconnecting to Supabase..."
+              }
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  realtimeStatus === "CONNECTED"
+                    ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]"
+                    : realtimeStatus === "CONNECTING"
+                      ? "bg-amber-500 animate-ping"
+                      : "bg-slate-400"
+                }`}
+              />
+              <span className="font-semibold text-[11px]">
+                {realtimeStatus === "CONNECTED"
+                  ? "Live"
+                  : realtimeStatus === "CONNECTING"
+                    ? "Connecting..."
+                    : "Reconnecting..."}
+              </span>
+            </div>
 
             {/* Current Time Display */}
             <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">

@@ -265,7 +265,7 @@ export const PatientSearchAndVisit: React.FC<PatientSearchAndVisitProps> = ({
           </div>
 
           <div className="overflow-x-auto touch-scroll">
-            <table className="w-full text-left text-sm min-w-[650px]">
+            <table className="w-full text-left text-sm min-w-162.5">
               <thead className="bg-[#1e536e] text-white text-xs uppercase font-semibold">
                 <tr>
                   <th className="px-5 py-3">Patient ID</th>

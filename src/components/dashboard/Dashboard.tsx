@@ -380,16 +380,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto shrink-0">
                 <button
                   onClick={() =>
                     onOpenConsultation && onOpenConsultation(currentWithDoctor)
                   }
-                  className="w-full md:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Stethoscope className="w-4 h-4" />
                   <span>Open Consultation</span>
                 </button>
+
+                {nextInLine && onCallPatientIntoCabin && (
+                  <button
+                    onClick={() => onCallPatientIntoCabin(nextInLine.id)}
+                    title={`Take Next Patient: ${nextInLine.patientName} (${nextInLine.queueNumber}) into Cabin`}
+                    className="px-4 py-2.5 bg-[#194358] hover:bg-[#205570] text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer border border-sky-400/30"
+                  >
+                    <UserCheck className="w-4 h-4 text-emerald-400" />
+                    <span>Take Next: {nextInLine.queueNumber}</span>
+                  </button>
+                )}
               </div>
             </div>
           ) : nextInLine ? (
@@ -463,10 +474,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     onCallPatientIntoCabin &&
                     onCallPatientIntoCabin(nextInLine.id)
                   }
-                  className="w-full md:w-auto px-5 py-2.5 bg-[#194358] hover:bg-[#205570] text-white text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
+                  className="w-full md:w-auto px-6 py-3 bg-[#194358] hover:bg-[#205570] text-white text-sm font-bold rounded-xl shadow-md hover:shadow transition flex items-center justify-center gap-2 cursor-pointer animate-pulse hover:animate-none"
                 >
-                  <UserCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Call Patient into Cabin</span>
+                  <UserCheck className="w-5 h-5 text-emerald-400" />
+                  <span>
+                    Take Next Patient into Cabin ({nextInLine.queueNumber})
+                  </span>
                 </button>
               </div>
             </div>

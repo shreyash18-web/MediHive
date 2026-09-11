@@ -207,15 +207,28 @@ export const setStoredAuthUser = (user: UserAccount | null) => {
 };
 
 // Real-time synchronization via BroadcastChannel & Storage events
+let broadcastChannelInstance: BroadcastChannel | null = null;
+const getBroadcastChannel = (): BroadcastChannel | null => {
+  if (typeof window === "undefined" || !("BroadcastChannel" in window))
+    return null;
+  if (!broadcastChannelInstance) {
+    try {
+      broadcastChannelInstance = new BroadcastChannel(QUEUE_CHANNEL_NAME);
+    } catch (err) {
+      console.warn("BroadcastChannel creation error:", err);
+    }
+  }
+  return broadcastChannelInstance;
+};
+
 export const broadcastQueueEvent = (event: { type: string; payload?: any }) => {
   try {
-    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      const channel = new BroadcastChannel(QUEUE_CHANNEL_NAME);
+    const channel = getBroadcastChannel();
+    if (channel) {
       channel.postMessage({ ...event, timestamp: Date.now() });
-      channel.close();
     }
   } catch (err) {
-    console.warn("BroadcastChannel error:", err);
+    console.warn("BroadcastChannel postMessage error:", err);
   }
 };
 
@@ -224,28 +237,29 @@ export const subscribeQueueEvents = (
 ): (() => void) => {
   if (typeof window === "undefined") return () => {};
 
-  let channel: BroadcastChannel | null = null;
   const storageHandler = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) {
-      callback({ type: "STORAGE_SYNC" });
+    if (e.key === STORAGE_KEY && e.newValue) {
+      callback({ type: "STORAGE_SYNC", timestamp: Date.now() });
     }
   };
 
-  try {
-    if ("BroadcastChannel" in window) {
-      channel = new BroadcastChannel(QUEUE_CHANNEL_NAME);
-      channel.onmessage = (msg) => {
-        callback(msg.data);
-      };
+  const channel = getBroadcastChannel();
+  const messageHandler = (msg: MessageEvent) => {
+    if (msg?.data) {
+      callback(msg.data);
     }
-  } catch (err) {
-    console.warn("BroadcastChannel init error:", err);
+  };
+
+  if (channel) {
+    channel.addEventListener("message", messageHandler);
   }
 
   window.addEventListener("storage", storageHandler);
 
   return () => {
-    if (channel) channel.close();
+    if (channel) {
+      channel.removeEventListener("message", messageHandler);
+    }
     window.removeEventListener("storage", storageHandler);
   };
 };
@@ -320,6 +334,7 @@ export const loadAppState = (): AppState => {
 export const saveAppState = (state: AppState): void => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    broadcastQueueEvent({ type: "CLINIC_STATE_UPDATED", payload: state });
   } catch (err) {
     console.error("Failed to save state to localStorage:", err);
   }

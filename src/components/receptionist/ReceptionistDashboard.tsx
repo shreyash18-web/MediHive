@@ -1,26 +1,26 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Users, 
-  Clock, 
-  UserCheck, 
-  CheckCircle2, 
-  Search, 
-  UserPlus, 
-  ListOrdered, 
-  ArrowRight, 
-  Activity, 
-  Stethoscope, 
-  Sparkles, 
-  Phone, 
-  Eye, 
-  Calendar, 
-  AlertCircle, 
+import React, { useState, useMemo } from "react";
+import {
+  Users,
+  Clock,
+  UserCheck,
+  CheckCircle2,
+  Search,
+  UserPlus,
+  ListOrdered,
+  ArrowRight,
+  Activity,
+  Stethoscope,
+  Sparkles,
+  Phone,
+  Eye,
+  Calendar,
+  AlertCircle,
   Thermometer,
   Edit2,
-  Trash2
-} from 'lucide-react';
-import { Patient, PatientVisit, QueueItem } from '../../types';
-import { PatientHistoryModal } from './PatientHistoryModal';
+  Trash2,
+} from "lucide-react";
+import { Patient, PatientVisit, QueueItem } from "../../types";
+import { PatientHistoryModal } from "./PatientHistoryModal";
 
 interface ReceptionistDashboardProps {
   patients: Patient[];
@@ -47,51 +47,62 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
   onDeletePatient,
   onDeleteVisit,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPatientForHistory, setSelectedPatientForHistory] = useState<Patient | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPatientForHistory, setSelectedPatientForHistory] =
+    useState<Patient | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
-  const todaysVisits = useMemo(() => (visits || []).filter(v => v.visitDate === today), [visits, today]);
-  const todaysQueue = useMemo(() => (queue || []).filter(q => q.visitDate === today), [queue, today]);
+  const todaysVisits = useMemo(
+    () => (visits || []).filter((v) => v.visitDate === today),
+    [visits, today],
+  );
+  const todaysQueue = useMemo(
+    () => (queue || []).filter((q) => q.visitDate === today),
+    [queue, today],
+  );
 
   // Current Patient with doctor
   const currentWithDoctor = useMemo(() => {
-    return todaysQueue.find(q => q.status === 'With Doctor');
+    return todaysQueue.find((q) => q.status === "With Doctor");
   }, [todaysQueue]);
 
   // Next patient in line
   const nextInLine = useMemo(() => {
     return todaysQueue
-      .filter(q => q.status === 'Next' || q.status === 'Waiting')
+      .filter((q) => q.status === "Next" || q.status === "Waiting")
       .sort((a, b) => a.sequenceNumber - b.sequenceNumber)[0];
   }, [todaysQueue]);
 
   // Counts
   const waitingCount = useMemo(() => {
-    return todaysQueue.filter(q => q.status === 'Waiting' || q.status === 'Next').length;
+    return todaysQueue.filter(
+      (q) => q.status === "Waiting" || q.status === "Next",
+    ).length;
   }, [todaysQueue]);
 
   const completedCount = useMemo(() => {
-    return todaysQueue.filter(q => q.status === 'Completed').length;
+    return todaysQueue.filter((q) => q.status === "Completed").length;
   }, [todaysQueue]);
 
   // Quick search results
   const filteredPatients = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase().trim();
-    return patients.filter(
-      p =>
-        p.fullName.toLowerCase().includes(q) ||
-        p.id.toLowerCase().includes(q) ||
-        p.mobile.replace(/\D/g, '').includes(q.replace(/\D/g, '')) ||
-        (p.dob && p.dob.includes(q))
-    ).slice(0, 5);
+    return patients
+      .filter(
+        (p) =>
+          p.fullName.toLowerCase().includes(q) ||
+          p.id.toLowerCase().includes(q) ||
+          p.mobile.replace(/\D/g, "").includes(q.replace(/\D/g, "")) ||
+          (p.dob && p.dob.includes(q)),
+      )
+      .slice(0, 5);
   }, [patients, searchQuery]);
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 page-fade-in">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-[#194358] via-[#205570] to-[#2c7295] rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-linear-to-r from-[#194358] via-[#205570] to-[#2c7295] rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1.5">
@@ -99,13 +110,17 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
               Reception Desk Online
             </span>
             <span className="text-xs text-sky-200">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Patient Reception & Triage Portal</h1>
-          <p className="text-sky-100/90 text-sm mt-1 max-w-xl">
-            Search existing records, register new walk-in patients, capture vital signs, and assign live FIFO consultation tokens.
-          </p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            Patient Reception Portal
+          </h1>
         </div>
 
         <div className="flex flex-wrap gap-2.5">
@@ -133,9 +148,15 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Registered Patients</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{patients.length}</h3>
-            <p className="text-[11px] text-slate-400">Total in clinic records</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Registered Patients
+            </p>
+            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+              {patients.length}
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Total in clinic records
+            </p>
           </div>
         </div>
 
@@ -144,9 +165,15 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
             <Activity className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today's Visits</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{todaysVisits.length}</h3>
-            <p className="text-[11px] text-indigo-600 font-medium">Admitted today</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Today's Visits
+            </p>
+            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+              {todaysVisits.length}
+            </h3>
+            <p className="text-[11px] text-indigo-600 font-medium">
+              Admitted today
+            </p>
           </div>
         </div>
 
@@ -155,9 +182,15 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Waiting in Queue</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{waitingCount}</h3>
-            <p className="text-[11px] text-amber-600 font-medium">In waiting area</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Waiting in Queue
+            </p>
+            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+              {waitingCount}
+            </h3>
+            <p className="text-[11px] text-amber-600 font-medium">
+              In waiting area
+            </p>
           </div>
         </div>
 
@@ -166,9 +199,15 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed Today</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{completedCount}</h3>
-            <p className="text-[11px] text-emerald-600 font-medium">Consultations done</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Completed Today
+            </p>
+            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+              {completedCount}
+            </h3>
+            <p className="text-[11px] text-emerald-600 font-medium">
+              Consultations done
+            </p>
           </div>
         </div>
       </div>
@@ -180,7 +219,9 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">In Doctor's Cabin Now</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                In Doctor's Cabin Now
+              </h3>
             </div>
             <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
               Active Consultation
@@ -195,37 +236,59 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
                     <span>{currentWithDoctor.queueNumber}</span>
                   </div>
                   <div>
-                    <h4 className="text-base font-bold text-slate-900">{currentWithDoctor.patientName}</h4>
+                    <h4 className="text-base font-bold text-slate-900">
+                      {currentWithDoctor.patientName}
+                    </h4>
                     <p className="text-xs text-slate-500">
-                      {currentWithDoctor.patientAge} yrs • {currentWithDoctor.patientGender} • ID: {currentWithDoctor.patientId}
+                      {currentWithDoctor.patientAge} yrs •{" "}
+                      {currentWithDoctor.patientGender} • ID:{" "}
+                      {currentWithDoctor.patientId}
                     </p>
                   </div>
                 </div>
                 <span className="text-xs font-medium text-slate-500 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  Called {currentWithDoctor.calledAt ? new Date(currentWithDoctor.calledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently'}
+                  Called{" "}
+                  {currentWithDoctor.calledAt
+                    ? new Date(currentWithDoctor.calledAt).toLocaleTimeString(
+                        [],
+                        { hour: "2-digit", minute: "2-digit" },
+                      )
+                    : "recently"}
                 </span>
               </div>
 
               <div className="bg-slate-50 rounded-lg p-3 text-xs border border-slate-100">
-                <span className="font-semibold text-slate-700">Complaint: </span>
-                <span className="text-slate-600">{currentWithDoctor.complaint || 'General Checkup'}</span>
-                {currentWithDoctor.symptoms && currentWithDoctor.symptoms.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {currentWithDoctor.symptoms.map(s => (
-                      <span key={s} className="px-1.5 py-0.5 rounded bg-white text-slate-600 border border-slate-200 text-[10px] font-medium">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <span className="font-semibold text-slate-700">
+                  Complaint:{" "}
+                </span>
+                <span className="text-slate-600">
+                  {currentWithDoctor.complaint || "General Checkup"}
+                </span>
+                {currentWithDoctor.symptoms &&
+                  currentWithDoctor.symptoms.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {currentWithDoctor.symptoms.map((s) => (
+                        <span
+                          key={s}
+                          className="px-1.5 py-0.5 rounded bg-white text-slate-600 border border-slate-200 text-[10px] font-medium"
+                        >
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           ) : (
             <div className="py-8 text-center text-slate-400">
               <Stethoscope className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-medium text-slate-600">Cabin is currently open</p>
-              <p className="text-xs text-slate-400 mt-0.5">Doctor has not called the next patient yet.</p>
+              <p className="text-sm font-medium text-slate-600">
+                Cabin is currently open
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Doctor has not called the next patient yet.
+              </p>
             </div>
           )}
         </div>
@@ -235,7 +298,9 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Next Patient In Line</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                Next Patient In Line
+              </h3>
             </div>
             <button
               onClick={onNavigateToQueue}
@@ -254,9 +319,12 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
                     <span>{nextInLine.queueNumber}</span>
                   </div>
                   <div>
-                    <h4 className="text-base font-bold text-slate-900">{nextInLine.patientName}</h4>
+                    <h4 className="text-base font-bold text-slate-900">
+                      {nextInLine.patientName}
+                    </h4>
                     <p className="text-xs text-slate-500">
-                      {nextInLine.patientAge} yrs • {nextInLine.patientGender} • ID: {nextInLine.patientId}
+                      {nextInLine.patientAge} yrs • {nextInLine.patientGender} •
+                      ID: {nextInLine.patientId}
                     </p>
                   </div>
                 </div>
@@ -266,13 +334,30 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
               </div>
 
               <div className="bg-slate-50 rounded-lg p-3 text-xs border border-slate-100">
-                <span className="font-semibold text-slate-700">Complaint: </span>
-                <span className="text-slate-600">{nextInLine.complaint || 'Checkup'}</span>
+                <span className="font-semibold text-slate-700">
+                  Complaint:{" "}
+                </span>
+                <span className="text-slate-600">
+                  {nextInLine.complaint || "Checkup"}
+                </span>
                 {nextInLine.vitals && (
                   <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-200/60 text-[11px] text-slate-600">
-                    <div><span className="text-slate-400">BP:</span> {nextInLine.vitals.bp || '—'}</div>
-                    <div><span className="text-slate-400">Temp:</span> {nextInLine.vitals.temp ? `${nextInLine.vitals.temp}°F` : '—'}</div>
-                    <div><span className="text-slate-400">SpO2:</span> {nextInLine.vitals.spo2 ? `${nextInLine.vitals.spo2}%` : '—'}</div>
+                    <div>
+                      <span className="text-slate-400">BP:</span>{" "}
+                      {nextInLine.vitals.bp || "—"}
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Temp:</span>{" "}
+                      {nextInLine.vitals.temp
+                        ? `${nextInLine.vitals.temp}°F`
+                        : "—"}
+                    </div>
+                    <div>
+                      <span className="text-slate-400">SpO2:</span>{" "}
+                      {nextInLine.vitals.spo2
+                        ? `${nextInLine.vitals.spo2}%`
+                        : "—"}
+                    </div>
                   </div>
                 )}
               </div>
@@ -280,8 +365,13 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
           ) : (
             <div className="py-8 text-center text-slate-400">
               <Clock className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-medium text-slate-600">No patients waiting in queue</p>
-              <p className="text-xs text-slate-400 mt-0.5">Register a walk-in or search an existing patient to assign token.</p>
+              <p className="text-sm font-medium text-slate-600">
+                No patients waiting in queue
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Register a walk-in or search an existing patient to assign
+                token.
+              </p>
             </div>
           )}
         </div>
@@ -291,8 +381,12 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-bold text-slate-800">Quick Patient Check-in</h3>
-            <p className="text-xs text-slate-500">Search patient by Name, ID, Mobile number or DOB</p>
+            <h3 className="text-base font-bold text-slate-800">
+              Quick Patient Check-in
+            </h3>
+            <p className="text-xs text-slate-500">
+              Search patient by Name, ID, Mobile number or DOB
+            </p>
           </div>
           <button
             onClick={() => onNavigateToSearch(searchQuery)}
@@ -319,10 +413,15 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
           <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden bg-white shadow-sm">
             {filteredPatients.length > 0 ? (
               filteredPatients.map((p) => (
-                <div key={p.id} className="p-3.5 hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div
+                  key={p.id}
+                  className="p-3.5 hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-slate-900">{p.fullName}</span>
+                      <span className="font-semibold text-sm text-slate-900">
+                        {p.fullName}
+                      </span>
                       <span className="text-[11px] font-mono bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded">
                         {p.id}
                       </span>
@@ -335,7 +434,10 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
                         <Phone className="w-3 h-3 text-slate-400" />
                         {p.mobile}
                       </span>
-                      <span>Total Visits: {p.totalVisits || (p.records ? p.records.length : 0)}</span>
+                      <span>
+                        Total Visits:{" "}
+                        {p.totalVisits || (p.records ? p.records.length : 0)}
+                      </span>
                     </div>
                   </div>
 
@@ -362,7 +464,11 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
                     {onDeletePatient && (
                       <button
                         onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete patient ${p.fullName} (${p.id})? This will also remove their visits and queue items.`)) {
+                          if (
+                            window.confirm(
+                              `Are you sure you want to delete patient ${p.fullName} (${p.id})? This will also remove their visits and queue items.`,
+                            )
+                          ) {
                             onDeletePatient(p.id);
                           }
                         }}
@@ -386,8 +492,12 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({
             ) : (
               <div className="p-5 text-center">
                 <AlertCircle className="w-6 h-6 text-amber-500 mx-auto mb-1.5" />
-                <p className="text-sm font-semibold text-slate-800">No patient found matching "{searchQuery}"</p>
-                <p className="text-xs text-slate-500 mt-0.5 mb-3">Would you like to register this person as a new patient?</p>
+                <p className="text-sm font-semibold text-slate-800">
+                  No patient found matching "{searchQuery}"
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5 mb-3">
+                  Would you like to register this person as a new patient?
+                </p>
                 <button
                   onClick={onNavigateToNewPatient}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition inline-flex items-center gap-1.5"

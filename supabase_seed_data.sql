@@ -345,3 +345,7 @@ VALUES (
 ON CONFLICT (date) DO UPDATE SET
     note = EXCLUDED.note;
 
+-- 11. Enable Realtime Publications for all clinic tables
+-- Ensures Supabase WebSocket streams inserts, updates, and deletes to all active sessions instantly
+ALTER PUBLICATION supabase_realtime ADD TABLE patients, patient_visits, queue_items, opd_records, appointments, daily_notes, doctor_profile, clinic_settings;
+

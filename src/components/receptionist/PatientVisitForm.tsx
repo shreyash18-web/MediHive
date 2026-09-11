@@ -1,7 +1,25 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Send, CheckCircle2, User, Activity, AlertCircle, Clock, Thermometer, HeartPulse, Scale, ShieldAlert } from 'lucide-react';
-import { Patient, PatientVisit, PatientVitals, QueueItem, UserAccount } from '../../types';
-import { useToast } from '../common/Toast';
+import React, { useState } from "react";
+import {
+  ArrowLeft,
+  Send,
+  CheckCircle2,
+  User,
+  Activity,
+  AlertCircle,
+  Clock,
+  Thermometer,
+  HeartPulse,
+  Scale,
+  ShieldAlert,
+} from "lucide-react";
+import {
+  Patient,
+  PatientVisit,
+  PatientVitals,
+  QueueItem,
+  UserAccount,
+} from "../../types";
+import { useToast } from "../common/Toast";
 
 interface PatientVisitFormProps {
   patient: Patient;
@@ -17,16 +35,16 @@ interface PatientVisitFormProps {
 }
 
 const COMMON_ILLNESSES = [
-  'Fever',
-  'Cold',
-  'Cough',
-  'Headache',
-  'Body Pain',
-  'Stomach Pain',
-  'Vomiting',
-  'Diarrhea',
-  'Sore Throat',
-  'Weakness',
+  "Fever",
+  "Cold",
+  "Cough",
+  "Headache",
+  "Body Pain",
+  "Stomach Pain",
+  "Vomiting",
+  "Diarrhea",
+  "Sore Throat",
+  "Weakness",
 ];
 
 export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
@@ -40,26 +58,32 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
 
   const [date] = useState(new Date().toISOString().slice(0, 10));
   const [time] = useState(
-    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+    new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }),
   );
 
   // Complaint & Symptoms
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [otherSymptom, setOtherSymptom] = useState('');
+  const [otherSymptom, setOtherSymptom] = useState("");
   const [hasOther, setHasOther] = useState(false);
-  const [complaint, setComplaint] = useState('');
-  const [symptomDuration, setSymptomDuration] = useState('1-2 days');
+  const [complaint, setComplaint] = useState("");
+  const [symptomDuration, setSymptomDuration] = useState("1-2 days");
 
   // Vitals
-  const [temperature, setTemperature] = useState('');
-  const [bloodPressure, setBloodPressure] = useState('');
-  const [weight, setWeight] = useState('');
-  const [spO2, setSpO2] = useState('');
-  const [pulse, setPulse] = useState('');
-  const [otherVitals, setOtherVitals] = useState('');
+  const [temperature, setTemperature] = useState("");
+  const [bloodPressure, setBloodPressure] = useState("");
+  const [weight, setWeight] = useState("");
+  const [spO2, setSpO2] = useState("");
+  const [pulse, setPulse] = useState("");
+  const [otherVitals, setOtherVitals] = useState("");
 
   // Confirmation Modal
-  const [confirmationData, setConfirmationData] = useState<QueueItem | null>(null);
+  const [confirmationData, setConfirmationData] = useState<QueueItem | null>(
+    null,
+  );
 
   const toggleSymptom = (sym: string) => {
     if (selectedSymptoms.includes(sym)) {
@@ -78,7 +102,10 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
     }
 
     if (!complaint.trim() && allSymptoms.length === 0) {
-      showToast('Please specify the main complaint or select at least one symptom.', 'error');
+      showToast(
+        "Please specify the main complaint or select at least one symptom.",
+        "error",
+      );
       return;
     }
 
@@ -91,7 +118,8 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
       otherVitals: otherVitals.trim() || undefined,
     };
 
-    const finalComplaint = complaint.trim() || allSymptoms.join(', ') || 'General Consultation';
+    const finalComplaint =
+      complaint.trim() || allSymptoms.join(", ") || "General Consultation";
 
     const { newQueueItem } = onSubmitVisit({
       complaint: finalComplaint,
@@ -101,7 +129,10 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
     });
 
     setConfirmationData(newQueueItem);
-    showToast(`Patient ${patient.fullName} added to Queue: ${newQueueItem.queueNumber}`, 'success');
+    showToast(
+      `Patient ${patient.fullName} added to Queue: ${newQueueItem.queueNumber}`,
+      "success",
+    );
   };
 
   return (
@@ -117,8 +148,12 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
             <span>Back</span>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-800">Patient Visit & Triage Form</h1>
-            <p className="text-xs text-slate-500">Record patient complaints, symptoms, and basic vitals</p>
+            <h1 className="text-xl font-bold text-slate-800">
+              Patient Visit & Triage Form
+            </h1>
+            <p className="text-xs text-slate-500">
+              Record patient complaints, symptoms, and basic vitals
+            </p>
           </div>
         </div>
       </div>
@@ -131,21 +166,28 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-slate-900 capitalize">{patient.fullName}</h3>
+              <h3 className="text-base font-bold text-slate-900 capitalize">
+                {patient.fullName}
+              </h3>
               <span className="text-xs bg-slate-100 font-mono px-2 py-0.5 rounded text-slate-700 font-semibold">
                 {patient.id}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              {patient.gender}  {patient.age} yrs  Mobile: <span className="font-mono">{patient.mobile}</span>
+              {patient.gender} {patient.age} yrs Mobile:{" "}
+              <span className="font-mono">{patient.mobile}</span>
             </p>
           </div>
         </div>
 
         <div className="text-xs text-slate-500 flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-slate-100 pt-2 sm:pt-0 sm:pl-4">
           <div>
-            <span className="block text-[11px] uppercase font-semibold text-slate-400">Visit Date & Time</span>
-            <span className="font-bold text-slate-700">{date}  {time}</span>
+            <span className="block text-[11px] uppercase font-semibold text-slate-400">
+              Visit Date & Time
+            </span>
+            <span className="font-bold text-slate-700">
+              {date} {time}
+            </span>
           </div>
         </div>
       </div>
@@ -154,13 +196,18 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
       <div className="bg-amber-50/90 border border-amber-200/90 rounded-xl p-3.5 flex items-start gap-3 text-xs text-amber-900 shadow-xs">
         <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <p className="leading-relaxed">
-          <strong>Receptionist Guidelines:</strong> Record basic chief complaints, duration, and measurable vitals only. Diagnosis, clinical assessments, and prescriptions are strictly handled by the consulting Doctor.
+          <strong>Receptionist Guidelines:</strong> Record basic chief
+          complaints, duration, and measurable vitals only. Diagnosis, clinical
+          assessments, and prescriptions are strictly handled by the consulting
+          Doctor.
         </p>
       </div>
 
       {/* Main Visit Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200/90 divide-y divide-slate-100 overflow-hidden">
-        
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl shadow-sm border border-slate-200/90 divide-y divide-slate-100 overflow-hidden"
+      >
         {/* SECTION 1: Symptoms & Complaints */}
         <div className="p-6 space-y-4">
           <h2 className="text-sm font-bold text-[#1e536e] uppercase tracking-wide flex items-center gap-2">
@@ -181,17 +228,19 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
                     onClick={() => toggleSymptom(illness)}
                     className={`px-3 py-2 text-xs font-medium rounded-lg border text-left transition flex items-center justify-between ${
                       isChecked
-                        ? 'bg-sky-50 border-sky-400 text-sky-900 font-semibold shadow-xs'
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                        ? "bg-sky-50 border-sky-400 text-sky-900 font-semibold shadow-xs"
+                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
                     }`}
                   >
                     <span>{illness}</span>
                     <span
                       className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] ${
-                        isChecked ? 'bg-sky-600 text-white font-bold' : 'border border-slate-300'
+                        isChecked
+                          ? "bg-sky-600 text-white font-bold"
+                          : "border border-slate-300"
                       }`}
                     >
-                      {isChecked ? '?' : ''}
+                      {isChecked ? "?" : ""}
                     </span>
                   </button>
                 );
@@ -203,17 +252,19 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
                 onClick={() => setHasOther(!hasOther)}
                 className={`px-3 py-2 text-xs font-medium rounded-lg border text-left transition flex items-center justify-between ${
                   hasOther
-                    ? 'bg-purple-50 border-purple-400 text-purple-900 font-semibold shadow-xs'
-                    : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                    ? "bg-purple-50 border-purple-400 text-purple-900 font-semibold shadow-xs"
+                    : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
                 }`}
               >
                 <span>Other...</span>
                 <span
                   className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] ${
-                    hasOther ? 'bg-purple-600 text-white font-bold' : 'border border-slate-300'
+                    hasOther
+                      ? "bg-purple-600 text-white font-bold"
+                      : "border border-slate-300"
                   }`}
                 >
-                  {hasOther ? '?' : ''}
+                  {hasOther ? "?" : ""}
                 </span>
               </button>
             </div>
@@ -275,7 +326,7 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+              <label className="text-[11px] font-semibold text-slate-600 mb-1 inline-flex items-center gap-1">
                 <Thermometer className="w-3 h-3 text-rose-500" />
                 <span>Temp (F)</span>
               </label>
@@ -289,7 +340,7 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+              <label className="text-[11px] font-semibold text-slate-600 mb-1 inline-flex items-center gap-1">
                 <HeartPulse className="w-3 h-3 text-red-500" />
                 <span>BP (mmHg)</span>
               </label>
@@ -303,7 +354,7 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+              <label className="text-[11px] font-semibold text-slate-600 mb-1 inline-flex items-center gap-1">
                 <Scale className="w-3 h-3 text-indigo-500" />
                 <span>Weight (kg)</span>
               </label>
@@ -386,9 +437,12 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
             </div>
 
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Patient Added to Queue!</h3>
+              <h3 className="text-lg font-bold text-slate-900">
+                Patient Added to Queue!
+              </h3>
               <p className="text-xs text-slate-500 mt-1">
-                The patient is now registered in the doctor's live waiting queue.
+                The patient is now registered in the doctor's live waiting
+                queue.
               </p>
             </div>
 
@@ -404,7 +458,9 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
               </div>
               <div className="flex items-center justify-between pt-1">
                 <span className="text-slate-500">Patient:</span>
-                <span className="font-bold text-slate-800">{confirmationData.patientName}</span>
+                <span className="font-bold text-slate-800">
+                  {confirmationData.patientName}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Status:</span>
@@ -414,7 +470,9 @@ export const PatientVisitForm: React.FC<PatientVisitFormProps> = ({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Arrival Time:</span>
-                <span className="font-mono text-slate-700">{confirmationData.arrivalTime}</span>
+                <span className="font-mono text-slate-700">
+                  {confirmationData.arrivalTime}
+                </span>
               </div>
             </div>
 
