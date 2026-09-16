@@ -1,9 +1,15 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const getEnvUrl = (): string =>
-  (import.meta.env.VITE_SUPABASE_URL || "https://getcxhofzovwapazwtdn.supabase.co").trim();
+  (
+    import.meta.env.VITE_SUPABASE_URL ||
+    "https://getcxhofzovwapazwtdn.supabase.co"
+  ).trim();
 const getEnvKey = (): string =>
-  (import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_PhXleh9dgBbX3kgmkUmh-w_Sny7HUgn").trim();
+  (
+    import.meta.env.VITE_SUPABASE_ANON_KEY ||
+    "sb_publishable_PhXleh9dgBbX3kgmkUmh-w_Sny7HUgn"
+  ).trim();
 
 /**
  * Sanitizes and normalizes Supabase Project URL by stripping /rest/v1 or trailing slashes.
