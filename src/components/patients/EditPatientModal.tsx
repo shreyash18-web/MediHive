@@ -60,6 +60,11 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
       return;
     }
 
+    const cleanedHeight = height.trim();
+    const formattedHeight = cleanedHeight
+      ? (cleanedHeight.toLowerCase().endsWith('cm') ? cleanedHeight : `${cleanedHeight} cm`)
+      : undefined;
+
     const updated: Patient = {
       ...patient,
       fullName: fullName.trim(),
@@ -70,7 +75,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
       address: address.trim() || undefined,
       bloodGroup,
       weight: weight.trim() || undefined,
-      height: height.trim() || undefined,
+      height: formattedHeight,
     };
 
     onSavePatient(updated);
@@ -200,13 +205,13 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
             </div>
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
-                Height (cm / ft)
+                Height (cm)
               </label>
               <input
                 type="text"
                 value={height}
                 onChange={(e) => setHeight(e.target.value)}
-                placeholder="e.g. 172 cm or 5'8 in"
+                placeholder="e.g. 172 cm"
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               />
             </div>

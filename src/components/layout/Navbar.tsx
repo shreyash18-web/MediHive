@@ -54,8 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <div className="flex items-center gap-2.5">
           <span className="text-xs sm:text-sm font-semibold tracking-wide text-sky-100">
-            Welcome{" "}
-            <span className="text-white font-bold">{doctor.name}</span>
+            Welcome <span className="text-white font-bold">{doctor.name}</span>
           </span>
         </div>
       </div>

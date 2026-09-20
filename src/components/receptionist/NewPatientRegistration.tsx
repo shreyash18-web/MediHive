@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, UserPlus, Check, User, Phone, MapPin, Calendar, HeartPulse, AlertCircle } from 'lucide-react';
 import { Patient, Gender } from '../../types';
 import { generateNextPatientId } from '../../services/storage';
-import { differenceInYears, parseISO } from 'date-fns';
+import { differenceInYears } from 'date-fns';
 import { useToast } from '../common/Toast';
 
 interface NewPatientRegistrationProps {
@@ -21,6 +21,8 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
   const [patientId] = useState(() => generateNextPatientId(existingPatients));
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
+  const [dobInput, setDobInput] = useState('');
+  const [dobError, setDobError] = useState('');
   const [age, setAge] = useState<number | ''>('');
   const [gender, setGender] = useState<Gender>('Male');
   const [mobile, setMobile] = useState('');
@@ -32,18 +34,101 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
   const [allergies, setAllergies] = useState('');
   const [medicalHistory, setMedicalHistory] = useState('');
 
-  // Handle DOB change -> auto compute age
-  const handleDobChange = (val: string) => {
-    setDob(val);
-    if (val) {
-      try {
-        const calculatedAge = differenceInYears(new Date(), parseISO(val));
-        if (calculatedAge >= 0 && calculatedAge < 130) {
-          setAge(calculatedAge);
-        }
-      } catch (e) {
-        // ignore
+  // Helper: auto-format DD-MM-YYYY while typing or pasting
+  const formatDobInput = (val: string, prevVal: string): string => {
+    if (val.length < prevVal.length) {
+      return val;
+    }
+    const digits = val.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) {
+      return val.endsWith('-') && digits.length === 2 ? `${digits}-` : digits;
+    }
+    if (digits.length <= 4) {
+      const p1 = digits.slice(0, 2);
+      const p2 = digits.slice(2);
+      return val.endsWith('-') && digits.length === 4 ? `${p1}-${p2}-` : `${p1}-${p2}`;
+    }
+    return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 8)}`;
+  };
+
+  // Helper: parse and validate DD-MM-YYYY
+  const parseAndValidateDate = (val: string): { valid: boolean; error?: string; date?: Date; isoDate?: string; age?: number } => {
+    const trimmed = val.trim();
+    if (!trimmed) {
+      return { valid: true };
+    }
+
+    const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(trimmed);
+    if (!match) {
+      return { valid: false, error: 'Enter date as DD-MM-YYYY (e.g. 20-09-1998)' };
+    }
+
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+
+    if (month < 1 || month > 12) {
+      return { valid: false, error: 'Month must be between 01 and 12' };
+    }
+    if (day < 1 || day > 31) {
+      return { valid: false, error: 'Day must be between 01 and 31' };
+    }
+    if (year < 1900) {
+      return { valid: false, error: 'Year must be 1900 or later' };
+    }
+
+    const d = new Date(year, month - 1, day);
+    if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
+      return { valid: false, error: 'Invalid calendar date' };
+    }
+
+    const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (d > todayMidnight) {
+      return { valid: false, error: 'Date of birth cannot be in the future' };
+    }
+
+    const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const calculatedAge = differenceInYears(today, d);
+
+    return {
+      valid: true,
+      date: d,
+      isoDate,
+      age: calculatedAge >= 0 ? calculatedAge : 0,
+    };
+  };
+
+  // Handle typed DOB change -> validate & auto-sync age
+  const handleDobChange = (rawVal: string) => {
+    const formatted = formatDobInput(rawVal, dobInput);
+    setDobInput(formatted);
+
+    if (!formatted.trim()) {
+      setDob('');
+      setDobError('');
+      return;
+    }
+
+    if (formatted.length === 10) {
+      const result = parseAndValidateDate(formatted);
+      if (result.valid && result.isoDate && result.age !== undefined) {
+        setDob(result.isoDate);
+        setDobError('');
+        setAge(result.age);
+      } else {
+        setDob('');
+        setDobError(result.error || 'Invalid date');
       }
+    } else {
+      setDob('');
+      setDobError('');
+    }
+  };
+
+  const handleDobBlur = () => {
+    if (dobInput.trim() && dobInput.length < 10) {
+      setDobError('Enter full date as DD-MM-YYYY (e.g. 20-09-1998)');
     }
   };
 
@@ -67,18 +152,32 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
       showToast(`Warning: A patient (${duplicate.fullName} - ${duplicate.id}) already exists with this mobile.`, 'info');
     }
 
+    if (dobInput.trim()) {
+      const result = parseAndValidateDate(dobInput);
+      if (!result.valid || !result.isoDate) {
+        setDobError(result.error || 'Please enter a valid Date of Birth (DD-MM-YYYY)');
+        showToast(result.error || 'Please enter a valid Date of Birth (DD-MM-YYYY)', 'error');
+        return;
+      }
+    }
+
     const today = new Date().toISOString().slice(0, 10);
+    const cleanedHeight = height.trim();
+    const formattedHeight = cleanedHeight
+      ? (cleanedHeight.toLowerCase().endsWith('cm') ? cleanedHeight : `${cleanedHeight} cm`)
+      : undefined;
+
     const newPatient: Patient = {
       id: patientId,
       fullName: fullName.trim(),
-      dob: dob || undefined,
+      dob: dob || (dobInput.trim() ? parseAndValidateDate(dobInput).isoDate : undefined),
       age: Number(age) || 0,
       gender,
       mobile: mobile.trim(),
       address: address.trim() || undefined,
       bloodGroup: bloodGroup || undefined,
       weight: weight.trim() || undefined,
-      height: height.trim() || undefined,
+      height: formattedHeight,
       emergencyContact: emergencyContact.trim() || undefined,
       allergies: allergies.trim() || undefined,
       medicalHistory: medicalHistory.trim() || undefined,
@@ -161,13 +260,29 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Date of Birth</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Date of Birth (DD-MM-YYYY)
+              </label>
               <input
-                type="date"
-                value={dob}
+                type="text"
+                inputMode="numeric"
+                value={dobInput}
                 onChange={(e) => handleDobChange(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
+                onBlur={handleDobBlur}
+                placeholder="DD-MM-YYYY (e.g. 20-09-1998)"
+                maxLength={10}
+                className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition ${
+                  dobError
+                    ? 'border-rose-400 focus:ring-rose-400'
+                    : 'border-slate-200 focus:ring-medihive-500'
+                }`}
               />
+              {dobError && (
+                <p className="text-[11px] text-rose-500 mt-1 flex items-center gap-1 font-medium">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  <span>{dobError}</span>
+                </p>
+              )}
             </div>
 
             <div>
@@ -239,14 +354,22 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Height (cm / ft)</label>
-              <input
-                type="text"
-                value={height}
-                onChange={(e) => setHeight(e.target.value)}
-                placeholder="e.g. 172 cm or 5'8&quot;"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
-              />
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Height (cm)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="20"
+                  max="260"
+                  step="0.1"
+                  value={height}
+                  onChange={(e) => setHeight(e.target.value)}
+                  placeholder="e.g. 172"
+                  className="w-full px-3 py-2 pr-10 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
+                />
+                <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs font-semibold text-slate-400">
+                  cm
+                </span>
+              </div>
             </div>
           </div>
         </div>
