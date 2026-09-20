@@ -69,12 +69,89 @@ import { ReceptionistQueueView } from "./components/receptionist/ReceptionistQue
 import { DoctorConsultationModal } from "./components/consultation/DoctorConsultationModal";
 import { format } from "date-fns";
 
+const VALID_DOCTOR_TABS: NavigationTab[] = [
+  "dashboard",
+  "queue",
+  "opd",
+  "patients",
+  "calendar",
+  "settings",
+  "help",
+];
+
+const getInitialTabFromUrl = (): {
+  tab: NavigationTab;
+  opdPatientId?: string;
+} => {
+  try {
+    if (typeof window === "undefined") return { tab: "dashboard" };
+    const rawHash = window.location.hash.replace(/^#\/?/, "");
+    if (rawHash) {
+      const [path, query] = rawHash.split("?");
+      const cleanPath = path.toLowerCase();
+      if (VALID_DOCTOR_TABS.includes(cleanPath as NavigationTab)) {
+        let opdPatientId: string | undefined;
+        if (query) {
+          const qParams = new URLSearchParams(query);
+          opdPatientId = qParams.get("patientId") || undefined;
+        }
+        return { tab: cleanPath as NavigationTab, opdPatientId };
+      }
+    }
+    const saved = sessionStorage.getItem("medihive_active_tab");
+    if (saved && VALID_DOCTOR_TABS.includes(saved as NavigationTab)) {
+      return { tab: saved as NavigationTab };
+    }
+  } catch {
+    // fallback
+  }
+  return { tab: "dashboard" };
+};
+
 const MainAppContent: React.FC = () => {
+  const initialRoute = getInitialTabFromUrl();
   const [appState, setAppState] = useState<AppState>(() => loadAppState());
-  const [currentTab, setCurrentTab] = useState<NavigationTab>("dashboard");
+  const [currentTab, setCurrentTab] = useState<NavigationTab>(initialRoute.tab);
   const [preselectedOpdPatientId, setPreselectedOpdPatientId] = useState<
     string | undefined
-  >(undefined);
+  >(initialRoute.opdPatientId);
+
+  // Keep route synced with URL hash and sessionStorage only when logged in as doctor
+  useEffect(() => {
+    if (!appState.currentUser || appState.currentUser.role === "receptionist") {
+      return;
+    }
+    try {
+      sessionStorage.setItem("medihive_active_tab", currentTab);
+      let hash = `#${currentTab}`;
+      if (currentTab === "opd" && preselectedOpdPatientId) {
+        hash += `?patientId=${encodeURIComponent(preselectedOpdPatientId)}`;
+      }
+      if (window.location.hash !== hash) {
+        window.history.replaceState(null, "", hash);
+      }
+    } catch {
+      // non-blocking
+    }
+  }, [currentTab, preselectedOpdPatientId, appState.currentUser]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (
+        !appState.currentUser ||
+        appState.currentUser.role === "receptionist"
+      ) {
+        return;
+      }
+      const { tab, opdPatientId } = getInitialTabFromUrl();
+      setCurrentTab(tab);
+      if (opdPatientId) {
+        setPreselectedOpdPatientId(opdPatientId);
+      }
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [appState.currentUser]);
 
   // Modals
   const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
@@ -684,12 +761,32 @@ const MainAppContent: React.FC = () => {
   // Handle Login / Logout
   const handleLogin = (user: UserAccount) => {
     setStoredAuthUser(user);
+    if (user.role === "receptionist") {
+      const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+      if (!hash.startsWith("rec-")) {
+        window.history.replaceState(null, "", "#rec-dashboard");
+      }
+    } else {
+      const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+      if (
+        hash.startsWith("rec-") ||
+        !VALID_DOCTOR_TABS.includes(hash as NavigationTab)
+      ) {
+        setCurrentTab("dashboard");
+        window.history.replaceState(null, "", "#dashboard");
+      }
+    }
     setAppState((prev) => ({ ...prev, currentUser: user }));
   };
 
   const handleLogout = () => {
     setStoredAuthUser(null);
     setAppState((prev) => ({ ...prev, currentUser: null }));
+    try {
+      window.history.replaceState(null, "", window.location.pathname);
+    } catch {
+      // non-blocking
+    }
     showToast("Logged out successfully", "info");
   };
 
@@ -970,6 +1067,33 @@ const MainAppContent: React.FC = () => {
   const handleRestoreBackup = (restoredState: AppState) => {
     setAppState(restoredState);
     saveAppState(restoredState);
+    showToast("Restoring clinic backup...", "info");
+    if (restoredState.doctor) {
+      updateDoctorProfileInSupabase(restoredState.doctor).catch((err) =>
+        console.warn("Restore doctor profile notice:", err),
+      );
+    }
+    if (restoredState.clinic) {
+      updateClinicSettingsInSupabase(restoredState.clinic).catch((err) =>
+        console.warn("Restore clinic settings notice:", err),
+      );
+    }
+    if (restoredState.emailConfig) {
+      updateEmailConfigInSupabase(restoredState.emailConfig).catch((err) =>
+        console.warn("Restore email config notice:", err),
+      );
+    }
+    if (Array.isArray(restoredState.patients)) {
+      restoredState.patients.forEach((p) => {
+        createPatientInSupabase(p).catch(() => {});
+        if (Array.isArray(p.records)) {
+          p.records.forEach((r) => {
+            saveOpdRecordInSupabase(p, r).catch(() => {});
+          });
+        }
+      });
+    }
+    showToast("Clinic data restored and synchronized successfully!", "success");
   };
 
   // Queue actions for doctor
@@ -1004,13 +1128,19 @@ const MainAppContent: React.FC = () => {
     );
 
     // Explicitly persist completed consultation & OPD record to Supabase
-    const updatedPatient = updatedState.patients.find((p) => p.id === opdRecord.patientId);
+    const updatedPatient = updatedState.patients.find(
+      (p) => p.id === opdRecord.patientId,
+    );
     if (updatedPatient) {
       saveOpdRecordInSupabase(updatedPatient, opdRecord).catch((err) => {
         console.warn("Supabase saveOpdRecord error:", err);
       });
     }
-    if (viewingPatient && viewingPatient.id === opdRecord.patientId && updatedPatient) {
+    if (
+      viewingPatient &&
+      viewingPatient.id === opdRecord.patientId &&
+      updatedPatient
+    ) {
       setViewingPatient(updatedPatient);
     }
     updateQueueItemStatusInSupabase(

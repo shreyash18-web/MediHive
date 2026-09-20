@@ -312,12 +312,7 @@ export const fetchGoogleSyncOverview =
       // 2. Direct table queries fallback
       const authStatus = await checkGoogleAuthStatus();
       const config = await fetchGoogleSyncConfig();
-
-      const { data: records } = await supabase
-        .from("google_sync_records")
-        .select("status");
-
-      const recs = records || [];
+      const recs = await fetchGoogleSyncRecords();
       return {
         isConnected: authStatus.isConnected,
         connectedEmail: authStatus.email || config.doctorEmail,
@@ -489,34 +484,148 @@ export const syncAllPendingRecordsToGoogle = async (): Promise<{
  * Fetches sync tracking records.
  */
 export const fetchGoogleSyncRecords = async (): Promise<GoogleSyncRecord[]> => {
-  if (!isSupabaseConfigured()) return [];
+  const recordsMap = new Map<string, GoogleSyncRecord>();
 
+  // 1. Load cached records from local storage
   try {
-    const { data, error } = await supabase
-      .from("google_sync_records")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error || !data) return [];
-
-    return data.map((r: any) => ({
-      opdId: r.opd_id,
-      patientId: r.patient_id,
-      status: r.status,
-      driveSynced: r.drive_synced,
-      sheetSynced: r.sheet_synced,
-      sheetRowIndex: r.sheet_row_index,
-      driveFolderId: r.drive_folder_id,
-      driveLinks: Array.isArray(r.drive_links) ? r.drive_links : [],
-      lastError: r.last_error,
-      retryCount: r.retry_count || 0,
-      syncedAt: r.synced_at,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-    }));
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("medihive_google_sync_records");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((r: GoogleSyncRecord) => {
+            if (r && r.opdId) recordsMap.set(r.opdId, r);
+          });
+        }
+      }
+    }
   } catch {
-    return [];
+    // ignore
   }
+
+  // 2. Query Supabase google_sync_records table if configured
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from("google_sync_records")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        data.forEach((r: any) => {
+          recordsMap.set(r.opd_id, {
+            opdId: r.opd_id,
+            patientId: r.patient_id,
+            status: r.status || "pending",
+            driveSynced: Boolean(r.drive_synced),
+            sheetSynced: Boolean(r.sheet_synced),
+            sheetRowIndex: r.sheet_row_index,
+            driveFolderId: r.drive_folder_id,
+            driveLinks: Array.isArray(r.drive_links) ? r.drive_links : [],
+            lastError: r.last_error,
+            retryCount: r.retry_count || 0,
+            syncedAt: r.synced_at,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          });
+        });
+      }
+    } catch {
+      // Table may not be migrated yet in Supabase
+    }
+
+    // 3. Query opd_records from Supabase to capture all clinical visits
+    try {
+      const { data: opdData, error: opdErr } = await supabase
+        .from("opd_records")
+        .select("id, patient_id, visit_date, created_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (!opdErr && opdData) {
+        opdData.forEach((row: any) => {
+          if (!recordsMap.has(row.id)) {
+            recordsMap.set(row.id, {
+              opdId: row.id,
+              patientId: row.patient_id,
+              status: "pending",
+              driveSynced: false,
+              sheetSynced: false,
+              sheetRowIndex: null,
+              driveFolderId: null,
+              driveLinks: [],
+              lastError: null,
+              retryCount: 0,
+              syncedAt: null,
+              createdAt:
+                row.created_at || row.visit_date || new Date().toISOString(),
+              updatedAt:
+                row.created_at || row.visit_date || new Date().toISOString(),
+            });
+          }
+        });
+      }
+    } catch {
+      // non-blocking
+    }
+  }
+
+  // 4. Incorporate any locally saved patient OPD records from local storage
+  try {
+    if (typeof window !== "undefined") {
+      const rawState = localStorage.getItem("medihive_app_state_v2");
+      if (rawState) {
+        const parsed = JSON.parse(rawState);
+        if (parsed && Array.isArray(parsed.patients)) {
+          parsed.patients.forEach((p: any) => {
+            if (Array.isArray(p.records)) {
+              p.records.forEach((r: any) => {
+                if (r && r.id && !recordsMap.has(r.id)) {
+                  recordsMap.set(r.id, {
+                    opdId: r.id,
+                    patientId: p.id,
+                    status: "pending",
+                    driveSynced: false,
+                    sheetSynced: false,
+                    sheetRowIndex: null,
+                    driveFolderId: null,
+                    driveLinks: [],
+                    lastError: null,
+                    retryCount: 0,
+                    syncedAt: null,
+                    createdAt:
+                      r.createdAt || r.visitDate || new Date().toISOString(),
+                    updatedAt:
+                      r.createdAt || r.visitDate || new Date().toISOString(),
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  const result = Array.from(recordsMap.values()).sort((a, b) => {
+    return (b.createdAt || "").localeCompare(a.createdAt || "");
+  });
+
+  // Persist combined records to local storage cache
+  try {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "medihive_google_sync_records",
+        JSON.stringify(result),
+      );
+    }
+  } catch {
+    // ignore
+  }
+
+  return result;
 };
 
 /**

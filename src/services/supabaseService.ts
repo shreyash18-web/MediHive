@@ -317,18 +317,16 @@ export const fetchFullAppStateFromSupabase =
           .select("*")
           .order("date", { ascending: true }),
         supabase.from("daily_notes").select("*"),
-        supabase.from("doctor_profile").select("*").eq("id", 1).maybeSingle(),
-        supabase.from("clinic_settings").select("*").eq("id", 1).maybeSingle(),
-        supabase.from("email_config").select("*").eq("id", 1).maybeSingle(),
+        supabase.from("doctor_profile").select("*").limit(1).maybeSingle(),
+        supabase.from("clinic_settings").select("*").limit(1).maybeSingle(),
+        supabase.from("email_config").select("*").limit(1).maybeSingle(),
       ]);
 
-      // Handle any table errors gracefully
       if (patientsRes.error) {
         console.warn(
           "Supabase fetch patients notice:",
           patientsRes.error.message,
         );
-        return null;
       }
 
       // Group OPD records by patient_id
@@ -832,8 +830,15 @@ export const updateDoctorProfileInSupabase = async (
 ): Promise<boolean> => {
   if (!isSupabaseConfigured()) return false;
   try {
+    const { data: existing } = await supabase
+      .from("doctor_profile")
+      .select("id")
+      .limit(1)
+      .maybeSingle();
+    const rowId = existing?.id || 1;
+
     const { error } = await supabase.from("doctor_profile").upsert({
-      id: 1,
+      id: rowId,
       name: doctor.name,
       qualifications: doctor.qualifications,
       specialisation: doctor.specialisation,
@@ -858,8 +863,15 @@ export const updateClinicSettingsInSupabase = async (
 ): Promise<boolean> => {
   if (!isSupabaseConfigured()) return false;
   try {
+    const { data: existing } = await supabase
+      .from("clinic_settings")
+      .select("id")
+      .limit(1)
+      .maybeSingle();
+    const rowId = existing?.id || 1;
+
     const { error } = await supabase.from("clinic_settings").upsert({
-      id: 1,
+      id: rowId,
       name: clinic.name,
       address: clinic.address,
       phone: clinic.phone,
@@ -885,8 +897,15 @@ export const updateEmailConfigInSupabase = async (
 ): Promise<boolean> => {
   if (!isSupabaseConfigured()) return false;
   try {
+    const { data: existing } = await supabase
+      .from("email_config")
+      .select("id")
+      .limit(1)
+      .maybeSingle();
+    const rowId = existing?.id || 1;
+
     const { error } = await supabase.from("email_config").upsert({
-      id: 1,
+      id: rowId,
       smtp_email: config.smtpEmail,
       smtp_app_password: config.smtpAppPassword,
       smtp_server: config.smtpServer || "smtp.gmail.com",
@@ -900,6 +919,57 @@ export const updateEmailConfigInSupabase = async (
   } catch (err) {
     console.error("Supabase updateEmailConfig error:", err);
     return false;
+  }
+};
+
+// ==============================================================================
+// SUPPORT TICKETS
+// ==============================================================================
+
+export interface SupportTicketRecord {
+  id: string;
+  topic: string;
+  subject: string;
+  message: string;
+  status?: string;
+  senderName?: string;
+  senderEmail?: string;
+  createdAt: string;
+}
+
+export const submitSupportTicketInSupabase = async (
+  ticket: SupportTicketRecord,
+): Promise<boolean> => {
+  // Always safely cache locally first so user query is never lost
+  try {
+    const key = "medihive_support_tickets_v1";
+    const existingRaw = localStorage.getItem(key);
+    const existing = existingRaw ? JSON.parse(existingRaw) : [];
+    localStorage.setItem(key, JSON.stringify([ticket, ...existing]));
+  } catch (e) {
+    console.warn("Local support ticket cache warning:", e);
+  }
+
+  if (!isSupabaseConfigured()) return true;
+
+  try {
+    const { error } = await supabase.from("support_tickets").insert({
+      id: ticket.id,
+      topic: ticket.topic,
+      subject: ticket.subject,
+      message: ticket.message,
+      status: ticket.status || "Open",
+      sender_name: ticket.senderName || null,
+      sender_email: ticket.senderEmail || null,
+      created_at: ticket.createdAt,
+    });
+    if (error) {
+      console.warn("Supabase support_tickets notice:", error.message);
+    }
+    return true;
+  } catch (err) {
+    console.warn("Supabase support_tickets notice:", err);
+    return true;
   }
 };
 

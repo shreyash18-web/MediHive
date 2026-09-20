@@ -122,6 +122,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [smtpServer, setSmtpServer] = useState(emailConfig.smtpServer);
   const [smtpPort, setSmtpPort] = useState(emailConfig.smtpPort);
 
+  // Synchronize state when props update (e.g. after Supabase loads on refresh)
+  React.useEffect(() => {
+    setDocName(doctor.name);
+    setDocQual(doctor.qualifications);
+    setDocSpec(doctor.specialisation);
+    setDocLicense(doctor.medicalLicenseNo);
+    setDocEmail(doctor.email);
+    setDocContact(doctor.contact);
+    setDocPhoto(doctor.photoUrl || "");
+  }, [doctor]);
+
+  React.useEffect(() => {
+    setClinicName(clinic.name);
+    setClinicAddress(clinic.address);
+    setClinicPhone(clinic.phone);
+    setClinicWebsite(clinic.website || "");
+    setClinicHours(clinic.operatingHours);
+    setClinicLogo(clinic.logoUrl || "");
+  }, [clinic]);
+
+  React.useEffect(() => {
+    setSmtpEmail(emailConfig.smtpEmail);
+    setSmtpPassword(emailConfig.smtpAppPassword);
+    setSmtpServer(emailConfig.smtpServer);
+    setSmtpPort(emailConfig.smtpPort);
+  }, [emailConfig]);
+
   // Auth state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -170,6 +197,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setGoogleRecords(recs);
     } catch {
       // Non-blocking
+    } finally {
+      setIsLoadingGoogle(false);
+    }
+  };
+
+  const handleRefreshGoogleLog = async () => {
+    setIsLoadingGoogle(true);
+    try {
+      await loadGoogleData();
+      showToast("Realtime sync log refreshed with latest records.", "success");
+    } catch {
+      showToast("Failed to refresh sync log.", "error");
     } finally {
       setIsLoadingGoogle(false);
     }
@@ -322,6 +361,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleSaveMainSettings = (e: React.FormEvent) => {
     e.preventDefault();
     const updatedDoctor: DoctorProfile = {
+      ...doctor,
       name: docName,
       qualifications: docQual,
       specialisation: docSpec,
@@ -349,6 +389,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleSaveSmtp = (e: React.FormEvent) => {
     e.preventDefault();
     const updatedEmail: EmailConfig = {
+      ...emailConfig,
       smtpEmail,
       smtpAppPassword: smtpPassword,
       smtpServer,
@@ -994,101 +1035,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Backup Help Guide matching Page 12 */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200/90 p-6 space-y-3">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-sky-600" />
-              <span>Help Guide — About Backups</span>
-            </h3>
-            <ul className="space-y-1.5 text-xs text-slate-600 pl-2">
-              <li>
-                • <strong>1 Month:</strong> Export patient data from the last 30
-                days
-              </li>
-              <li>
-                • <strong>3 Months:</strong> Export patient data from the last 3
-                months
-              </li>
-              <li>
-                • <strong>6 Months:</strong> Export patient data from the last 6
-                months
-              </li>
-              <li>
-                • <strong>12 Months:</strong> Export patient data from the last
-                12 months
-              </li>
-              <li>
-                • <strong>Complete Backup:</strong> Export all of your clinic
-                data permanently
-              </li>
-            </ul>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Backups will be downloaded as Excel/JSON files containing patient
-              records, visit history, prescriptions, and billing info.
-            </p>
-          </div>
-
           {/* Danger Zone: Data Management & Reset */}
-          <div className="bg-white rounded-xl shadow-sm border border-rose-200 p-6 space-y-4">
-            <div className="flex items-start justify-between gap-4 border-b border-rose-100 pb-3">
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
               <div>
-                <h2 className="text-base font-bold text-rose-800 flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-rose-600" />
-                  <span>Danger Zone — Reset Clinic Records</span>
+                <h2 className="text-sm font-bold text-slate-900">
+                  Reset Clinic Records
                 </h2>
-                <p className="text-xs text-rose-600/90 mt-0.5">
-                  Permanently clear all existing patient demographics, visit
-                  histories, consultations, live queues, and calendar notes.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Permanently clear patient records and consultations while
+                  keeping clinic settings intact.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
-                <span className="block text-2xl font-black text-rose-900 font-mono">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+                <span className="block text-2xl font-black text-slate-800 font-mono">
                   {fullState.patients.length}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-700">
+                <span className="text-[11px] font-semibold text-slate-500">
                   Patients
                 </span>
               </div>
-              <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
-                <span className="block text-2xl font-black text-rose-900 font-mono">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+                <span className="block text-2xl font-black text-slate-800 font-mono">
                   {totalOpdRecords}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-700">
+                <span className="text-[11px] font-semibold text-slate-500">
                   OPD Records
                 </span>
               </div>
-              <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
-                <span className="block text-2xl font-black text-rose-900 font-mono">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+                <span className="block text-2xl font-black text-slate-800 font-mono">
                   {fullState.queue.length}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-700">
+                <span className="text-[11px] font-semibold text-slate-500">
                   Queue Items
                 </span>
               </div>
-              <div className="bg-rose-50/50 border border-rose-100 rounded-lg p-3 text-center">
-                <span className="block text-2xl font-black text-rose-900 font-mono">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+                <span className="block text-2xl font-black text-slate-800 font-mono">
                   {totalNotes}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-700">
+                <span className="text-[11px] font-semibold text-slate-500">
                   Calendar Notes
                 </span>
               </div>
-            </div>
-
-            <div className="bg-rose-50/70 rounded-lg p-3.5 border border-rose-200/80 text-xs text-rose-900 space-y-1">
-              <p className="font-semibold flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                This will delete test/demo data from both cloud database and
-                browser local storage.
-              </p>
-              <p className="text-rose-700 text-[11px] pl-5">
-                Your clinic information, doctor profile, and login credentials
-                will remain intact. Before resetting, ensure you have exported a
-                backup if needed.
-              </p>
             </div>
 
             <div className="pt-1 flex justify-end">
@@ -1098,7 +1091,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   setResetConfirmText("");
                   setShowResetModal(true);
                 }}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-lg shadow-sm flex items-center gap-2 transition"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-lg shadow-xs flex items-center gap-2 transition"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Reset & Clear All Clinic Records...</span>
@@ -1358,42 +1351,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Google Sheet ID (Clinical & Billing Record Destination)
+                  Google Sheet ID
                 </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={googleConfig.sheetId || ""}
-                    onChange={(e) =>
-                      setGoogleConfig({
-                        ...googleConfig,
-                        sheetId: e.target.value,
-                      })
-                    }
-                    placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-                    className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
-                  />
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Found in your Google Sheet URL:{" "}
-                  <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700">
-                    docs.google.com/spreadsheets/d/
-                    <span className="text-teal-700 font-bold">
-                      [SPREADSHEET_ID]
-                    </span>
-                    /edit
-                  </code>
-                  . MediHive will automatically maintain headers and duplicate
-                  protection.
-                </p>
+                <input
+                  type="text"
+                  value={googleConfig.sheetId || ""}
+                  onChange={(e) =>
+                    setGoogleConfig({
+                      ...googleConfig,
+                      sheetId: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                  className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Google Drive Root Folder ID (Clinical Photos & Rx Storage)
+                  Google Drive Root Folder ID
                 </label>
                 <input
                   type="text"
@@ -1404,22 +1383,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       driveRootFolderId: e.target.value,
                     })
                   }
-                  placeholder="e.g. 1y6P8abcXYZ... (leave blank to create in root My Drive)"
+                  placeholder="Optional (leave blank to create in root My Drive)"
                   className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Prescription & skin photos will be structured automatically
-                  under{" "}
-                  <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700">
-                    MediHive Images / &lt;Year&gt; / &lt;Month&gt; /
-                    &lt;OPD-ID&gt; /
-                  </code>
-                  .
-                </p>
               </div>
 
               <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-                <label className="flex items-center gap-2.5 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={googleConfig.autoSyncEnabled}
@@ -1431,15 +1401,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     }
                     className="w-4 h-4 text-[#1e536e] rounded border-slate-300 focus:ring-[#1e536e]"
                   />
-                  <div>
-                    <span className="text-xs font-semibold text-slate-800">
-                      Auto-sync on OPD Registration & Consultation save
-                    </span>
-                    <p className="text-[11px] text-slate-500">
-                      Triggers seamless background upload without freezing the
-                      screen
-                    </p>
-                  </div>
+                  <span className="text-xs font-medium text-slate-800">
+                    Auto-sync on OPD Registration &amp; Consultation save
+                  </span>
                 </label>
 
                 <button
@@ -1570,11 +1534,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
               <button
                 type="button"
-                onClick={loadGoogleData}
-                className="px-3 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1"
+                onClick={handleRefreshGoogleLog}
+                disabled={isLoadingGoogle}
+                className="px-3 py-1.5 text-xs text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5 font-medium border border-slate-200 cursor-pointer shadow-2xs"
               >
-                <RefreshCw className="w-3 h-3" />
-                <span>Refresh Log</span>
+                <RefreshCw
+                  className={`w-3 h-3 ${isLoadingGoogle ? "animate-spin text-[#1e536e]" : ""}`}
+                />
+                <span>{isLoadingGoogle ? "Refreshing..." : "Refresh Log"}</span>
               </button>
             </div>
 
@@ -1663,8 +1630,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           </td>
                           <td className="py-2.5 px-4 text-slate-500 font-mono text-[11px]">
                             {rec.syncedAt
-                              ? new Date(rec.syncedAt).toLocaleTimeString()
-                              : "—"}
+                              ? `${new Date(rec.syncedAt).toLocaleDateString()} ${new Date(rec.syncedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                              : rec.createdAt
+                                ? `${new Date(rec.createdAt).toLocaleDateString()} ${new Date(rec.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                                : "—"}
                           </td>
                           <td className="py-2.5 px-4 text-right">
                             <button

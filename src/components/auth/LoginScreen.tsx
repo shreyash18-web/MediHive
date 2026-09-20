@@ -21,22 +21,12 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-  const [selectedRole, setSelectedRole] = useState<"doctor" | "receptionist">(
-    "doctor",
-  );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
-
-  const handleRoleSelect = (role: "doctor" | "receptionist") => {
-    setSelectedRole(role);
-    setUsername("");
-    setPassword("");
-    setShowPassword(false);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,10 +38,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setLoading(true);
 
     setTimeout(() => {
-      const authResult = authenticateUser(username, password, selectedRole);
+      const authResult = authenticateUser(username, password);
 
       if (authResult.success && authResult.user) {
-        showToast(`Welcome back, ${authResult.user.name}!`, "success");
+        const roleLabel =
+          authResult.user.role === "receptionist" ? "Receptionist" : "Doctor";
+        showToast(
+          `Welcome back, ${authResult.user.name} (${roleLabel})!`,
+          "success",
+        );
         onLogin(authResult.user);
       } else {
         showToast(
@@ -73,7 +68,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         </span>
       </div>
 
-      {/* Main Login Card with Split Style matching Page 2 */}
+      {/* Main Login Card with Split Style */}
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200/80 flex flex-col md:flex-row min-h-125">
         {/* Left Dark Teal Panel */}
         <div className="w-full md:w-5/12 bg-linear-to-br from-[#1e536e] via-[#1a475e] to-[#123141] text-white p-6 sm:p-8 md:p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden">
@@ -86,70 +81,50 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
           <div className="my-auto py-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-sky-200 text-xs font-semibold mb-3 border border-white/10">
-              {selectedRole === "doctor" ? (
-                <>
-                  <Stethoscope className="w-3.5 h-3.5 text-sky-300" />
-                </>
-              ) : (
-                <>
-                  <ClipboardList className="w-3.5 h-3.5 text-sky-300" />
-                </>
-              )}
+              <ShieldCheck className="w-3.5 h-3.5 text-sky-300" />
+              <span>CLINICAL & RECEPTION SUITE</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-3">
-              {selectedRole === "doctor" ? "DOCTOR PORTAL" : "RECEPTION DESK"}
+              CLINIC PORTAL
             </h1>
-            <p className="text-sky-100/80 text-sm leading-relaxed">
-              {selectedRole === "doctor"
-                ? "Sign in to access your consultations, OPD prescriptions, medical history, and live patient queue."
-                : "Sign in to register patients, record complaints and vitals, and coordinate the live FIFO waiting queue."}
+            <p className="text-sky-100/80 text-sm leading-relaxed mb-6">
+              Sign in to access your consultations, prescriptions, live patient
+              queue, and front-desk clinic operations.
             </p>
+
+            <div className="space-y-2.5 text-xs text-sky-100/75 pt-3 border-t border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1 rounded bg-white/10 text-sky-300">
+                  <Stethoscope className="w-3.5 h-3.5" />
+                </div>
+                <span>Doctor: Consultations, OPD Rx & Medical Records</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="p-1 rounded bg-white/10 text-sky-300">
+                  <ClipboardList className="w-3.5 h-3.5" />
+                </div>
+                <span>
+                  Receptionist: Patient Registration & Live FIFO Queue
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="text-xs text-sky-200/60 pt-4 border-t border-white/10 flex items-center justify-between"></div>
+          <div className="text-xs text-sky-200/60 pt-4 border-t border-white/10 flex items-center justify-between">
+            <span>v2.5 Enterprise</span>
+            <span>Auto Role Detection</span>
+          </div>
         </div>
 
         {/* Right Form Panel */}
         <div className="w-full md:w-7/12 p-6 sm:p-8 md:p-8 lg:p-12 flex flex-col justify-center bg-white">
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center mb-1">
-              <img
-                src="/medihive-logo.png"
-                alt="MediHive Logo"
-                className="w-24 h-24 object-contain drop-shadow-sm hover:scale-105 transition-transform"
-              />
-            </div>
-            <p className="text-xs text-slate-500 font-medium">
-              Select your clinic role to begin
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Sign In
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              Enter your clinic username and password to continue
             </p>
-          </div>
-
-          {/* Role Tabs Switcher */}
-          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl mb-6 max-w-sm mx-auto w-full border border-slate-200/80">
-            <button
-              type="button"
-              onClick={() => handleRoleSelect("doctor")}
-              className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                selectedRole === "doctor"
-                  ? "bg-[#1e536e] text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Stethoscope className="w-3.5 h-3.5" />
-              <span>Doctor</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRoleSelect("receptionist")}
-              className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                selectedRole === "receptionist"
-                  ? "bg-[#2ba4c7] text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              <span>Receptionist</span>
-            </button>
           </div>
 
           <form
@@ -158,9 +133,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           >
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                {selectedRole === "doctor"
-                  ? "Doctor Username"
-                  : "Receptionist Username"}
+                Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -172,11 +145,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500 focus:bg-white transition"
-                  placeholder={
-                    selectedRole === "doctor"
-                      ? "e.g. doctor or admin"
-                      : "e.g. receptionist"
-                  }
+                  placeholder="e.g. doctor or receptionist"
                 />
               </div>
             </div>
@@ -216,16 +185,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full mt-2 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:shadow transition flex items-center justify-center gap-2 group ${
-                selectedRole === "doctor"
-                  ? "bg-[#1e536e] hover:bg-[#18445a]"
-                  : "bg-[#2ba4c7] hover:bg-[#228da8]"
-              }`}
+              className="w-full mt-2 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:shadow transition flex items-center justify-center gap-2 group bg-[#1e536e] hover:bg-[#18445a]"
             >
               <span>
-                {loading
-                  ? "Authenticating..."
-                  : `Log In as ${selectedRole === "doctor" ? "Doctor" : "Receptionist"}`}
+                {loading ? "Authenticating..." : "Sign In to MediHive"}
               </span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </button>

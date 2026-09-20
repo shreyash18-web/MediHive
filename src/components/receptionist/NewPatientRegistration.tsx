@@ -1,9 +1,19 @@
-import React, { useState } from 'react';
-import { ArrowLeft, UserPlus, Check, User, Phone, MapPin, Calendar, HeartPulse, AlertCircle } from 'lucide-react';
-import { Patient, Gender } from '../../types';
-import { generateNextPatientId } from '../../services/storage';
-import { differenceInYears } from 'date-fns';
-import { useToast } from '../common/Toast';
+import React, { useState } from "react";
+import {
+  ArrowLeft,
+  UserPlus,
+  Check,
+  User,
+  Phone,
+  MapPin,
+  Calendar,
+  HeartPulse,
+  AlertCircle,
+} from "lucide-react";
+import { Patient, Gender } from "../../types";
+import { generateNextPatientId } from "../../services/storage";
+import { differenceInYears } from "date-fns";
+import { useToast } from "../common/Toast";
 
 interface NewPatientRegistrationProps {
   existingPatients: Patient[];
@@ -19,40 +29,50 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
   const { showToast } = useToast();
 
   const [patientId] = useState(() => generateNextPatientId(existingPatients));
-  const [fullName, setFullName] = useState('');
-  const [dob, setDob] = useState('');
-  const [dobInput, setDobInput] = useState('');
-  const [dobError, setDobError] = useState('');
-  const [age, setAge] = useState<number | ''>('');
-  const [gender, setGender] = useState<Gender>('Male');
-  const [mobile, setMobile] = useState('');
-  const [address, setAddress] = useState('');
-  const [bloodGroup, setBloodGroup] = useState('A+');
-  const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
-  const [emergencyContact, setEmergencyContact] = useState('');
-  const [allergies, setAllergies] = useState('');
-  const [medicalHistory, setMedicalHistory] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [dob, setDob] = useState("");
+  const [dobInput, setDobInput] = useState("");
+  const [dobError, setDobError] = useState("");
+  const [age, setAge] = useState<number | "">("");
+  const [gender, setGender] = useState<Gender>("Male");
+  const [mobile, setMobile] = useState("");
+  const [address, setAddress] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("A+");
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
+  const [emergencyContact, setEmergencyContact] = useState("");
+  const [allergies, setAllergies] = useState("");
+  const [medicalHistory, setMedicalHistory] = useState("");
 
   // Helper: auto-format DD-MM-YYYY while typing or pasting
   const formatDobInput = (val: string, prevVal: string): string => {
     if (val.length < prevVal.length) {
       return val;
     }
-    const digits = val.replace(/\D/g, '').slice(0, 8);
+    const digits = val.replace(/\D/g, "").slice(0, 8);
     if (digits.length <= 2) {
-      return val.endsWith('-') && digits.length === 2 ? `${digits}-` : digits;
+      return val.endsWith("-") && digits.length === 2 ? `${digits}-` : digits;
     }
     if (digits.length <= 4) {
       const p1 = digits.slice(0, 2);
       const p2 = digits.slice(2);
-      return val.endsWith('-') && digits.length === 4 ? `${p1}-${p2}-` : `${p1}-${p2}`;
+      return val.endsWith("-") && digits.length === 4
+        ? `${p1}-${p2}-`
+        : `${p1}-${p2}`;
     }
     return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 8)}`;
   };
 
   // Helper: parse and validate DD-MM-YYYY
-  const parseAndValidateDate = (val: string): { valid: boolean; error?: string; date?: Date; isoDate?: string; age?: number } => {
+  const parseAndValidateDate = (
+    val: string,
+  ): {
+    valid: boolean;
+    error?: string;
+    date?: Date;
+    isoDate?: string;
+    age?: number;
+  } => {
     const trimmed = val.trim();
     if (!trimmed) {
       return { valid: true };
@@ -60,7 +80,10 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
 
     const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(trimmed);
     if (!match) {
-      return { valid: false, error: 'Enter date as DD-MM-YYYY (e.g. 20-09-1998)' };
+      return {
+        valid: false,
+        error: "Enter date as DD-MM-YYYY (e.g. 20-09-1998)",
+      };
     }
 
     const day = parseInt(match[1], 10);
@@ -68,27 +91,35 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
     const year = parseInt(match[3], 10);
 
     if (month < 1 || month > 12) {
-      return { valid: false, error: 'Month must be between 01 and 12' };
+      return { valid: false, error: "Month must be between 01 and 12" };
     }
     if (day < 1 || day > 31) {
-      return { valid: false, error: 'Day must be between 01 and 31' };
+      return { valid: false, error: "Day must be between 01 and 31" };
     }
     if (year < 1900) {
-      return { valid: false, error: 'Year must be 1900 or later' };
+      return { valid: false, error: "Year must be 1900 or later" };
     }
 
     const d = new Date(year, month - 1, day);
-    if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
-      return { valid: false, error: 'Invalid calendar date' };
+    if (
+      d.getFullYear() !== year ||
+      d.getMonth() !== month - 1 ||
+      d.getDate() !== day
+    ) {
+      return { valid: false, error: "Invalid calendar date" };
     }
 
     const today = new Date();
-    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayMidnight = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
     if (d > todayMidnight) {
-      return { valid: false, error: 'Date of birth cannot be in the future' };
+      return { valid: false, error: "Date of birth cannot be in the future" };
     }
 
-    const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const isoDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const calculatedAge = differenceInYears(today, d);
 
     return {
@@ -105,8 +136,8 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
     setDobInput(formatted);
 
     if (!formatted.trim()) {
-      setDob('');
-      setDobError('');
+      setDob("");
+      setDobError("");
       return;
     }
 
@@ -114,21 +145,21 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
       const result = parseAndValidateDate(formatted);
       if (result.valid && result.isoDate && result.age !== undefined) {
         setDob(result.isoDate);
-        setDobError('');
+        setDobError("");
         setAge(result.age);
       } else {
-        setDob('');
-        setDobError(result.error || 'Invalid date');
+        setDob("");
+        setDobError(result.error || "Invalid date");
       }
     } else {
-      setDob('');
-      setDobError('');
+      setDob("");
+      setDobError("");
     }
   };
 
   const handleDobBlur = () => {
     if (dobInput.trim() && dobInput.length < 10) {
-      setDobError('Enter full date as DD-MM-YYYY (e.g. 20-09-1998)');
+      setDobError("Enter full date as DD-MM-YYYY (e.g. 20-09-1998)");
     }
   };
 
@@ -136,27 +167,37 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
     e.preventDefault();
 
     if (!fullName.trim()) {
-      showToast('Please enter patient full name.', 'error');
+      showToast("Please enter patient full name.", "error");
       return;
     }
     if (!mobile.trim()) {
-      showToast('Please enter mobile number.', 'error');
+      showToast("Please enter mobile number.", "error");
       return;
     }
 
     // Check duplicate mobile
     const duplicate = existingPatients.find(
-      (p) => p.mobile.replace(/\D/g, '') === mobile.replace(/\D/g, '') && mobile.length >= 10
+      (p) =>
+        p.mobile.replace(/\D/g, "") === mobile.replace(/\D/g, "") &&
+        mobile.length >= 10,
     );
     if (duplicate) {
-      showToast(`Warning: A patient (${duplicate.fullName} - ${duplicate.id}) already exists with this mobile.`, 'info');
+      showToast(
+        `Warning: A patient (${duplicate.fullName} - ${duplicate.id}) already exists with this mobile.`,
+        "info",
+      );
     }
 
     if (dobInput.trim()) {
       const result = parseAndValidateDate(dobInput);
       if (!result.valid || !result.isoDate) {
-        setDobError(result.error || 'Please enter a valid Date of Birth (DD-MM-YYYY)');
-        showToast(result.error || 'Please enter a valid Date of Birth (DD-MM-YYYY)', 'error');
+        setDobError(
+          result.error || "Please enter a valid Date of Birth (DD-MM-YYYY)",
+        );
+        showToast(
+          result.error || "Please enter a valid Date of Birth (DD-MM-YYYY)",
+          "error",
+        );
         return;
       }
     }
@@ -164,13 +205,17 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
     const today = new Date().toISOString().slice(0, 10);
     const cleanedHeight = height.trim();
     const formattedHeight = cleanedHeight
-      ? (cleanedHeight.toLowerCase().endsWith('cm') ? cleanedHeight : `${cleanedHeight} cm`)
+      ? cleanedHeight.toLowerCase().endsWith("cm")
+        ? cleanedHeight
+        : `${cleanedHeight} cm`
       : undefined;
 
     const newPatient: Patient = {
       id: patientId,
       fullName: fullName.trim(),
-      dob: dob || (dobInput.trim() ? parseAndValidateDate(dobInput).isoDate : undefined),
+      dob:
+        dob ||
+        (dobInput.trim() ? parseAndValidateDate(dobInput).isoDate : undefined),
       age: Number(age) || 0,
       gender,
       mobile: mobile.trim(),
@@ -188,7 +233,10 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
     };
 
     onPatientRegistered(newPatient);
-    showToast(`Patient ${newPatient.fullName} (${newPatient.id}) registered successfully!`, 'success');
+    showToast(
+      `Patient ${newPatient.fullName} (${newPatient.id}) registered successfully!`,
+      "success",
+    );
   };
 
   return (
@@ -204,20 +252,30 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
             <span>Back</span>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-800">New Patient Registration</h1>
-            <p className="text-xs text-slate-500">Register new patient and initiate consultation visit</p>
+            <h1 className="text-xl font-bold text-slate-800">
+              New Patient Registration
+            </h1>
+            <p className="text-xs text-slate-500">
+              Register new patient and initiate consultation visit
+            </p>
           </div>
         </div>
 
         <div className="text-right">
-          <span className="text-xs text-slate-400 block font-medium">Assigned Patient ID</span>
-          <span className="text-base font-extrabold text-[#1e536e] font-mono">{patientId}</span>
+          <span className="text-xs text-slate-400 block font-medium">
+            Assigned Patient ID
+          </span>
+          <span className="text-base font-extrabold text-[#1e536e] font-mono">
+            {patientId}
+          </span>
         </div>
       </div>
 
       {/* Registration Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200/90 divide-y divide-slate-100 overflow-hidden">
-        
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl shadow-sm border border-slate-200/90 divide-y divide-slate-100 overflow-hidden"
+      >
         {/* Section 1: Demographics */}
         <div className="p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -273,8 +331,8 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
                 maxLength={10}
                 className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:bg-white transition ${
                   dobError
-                    ? 'border-rose-400 focus:ring-rose-400'
-                    : 'border-slate-200 focus:ring-medihive-500'
+                    ? "border-rose-400 focus:ring-rose-400"
+                    : "border-slate-200 focus:ring-medihive-500"
                 }`}
               />
               {dobError && (
@@ -295,14 +353,18 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
                 min="0"
                 max="125"
                 value={age}
-                onChange={(e) => setAge(e.target.value ? parseInt(e.target.value) : '')}
+                onChange={(e) =>
+                  setAge(e.target.value ? parseInt(e.target.value) : "")
+                }
                 placeholder="Age"
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Gender</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Gender
+              </label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as Gender)}
@@ -317,7 +379,9 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Address / Residence</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Address / Residence
+              </label>
               <input
                 type="text"
                 value={address}
@@ -328,22 +392,30 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Blood Group</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Blood Group
+              </label>
               <select
                 value={bloodGroup}
                 onChange={(e) => setBloodGroup(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-medihive-500"
               >
-                {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((bg) => (
-                  <option key={bg} value={bg}>{bg}</option>
-                ))}
+                {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
+                  (bg) => (
+                    <option key={bg} value={bg}>
+                      {bg}
+                    </option>
+                  ),
+                )}
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Weight (kg)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Weight (kg)
+              </label>
               <input
                 type="text"
                 value={weight}
@@ -354,7 +426,9 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Height (cm)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Height (cm)
+              </label>
               <div className="relative">
                 <input
                   type="number"
@@ -385,7 +459,9 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Emergency Contact Number</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Emergency Contact Number
+              </label>
               <input
                 type="tel"
                 value={emergencyContact}
@@ -396,7 +472,9 @@ export const NewPatientRegistration: React.FC<NewPatientRegistrationProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Known Drug / Food Allergies</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Known Drug / Food Allergies
+              </label>
               <input
                 type="text"
                 value={allergies}

@@ -62,7 +62,9 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
     const cleanedHeight = height.trim();
     const formattedHeight = cleanedHeight
-      ? (cleanedHeight.toLowerCase().endsWith('cm') ? cleanedHeight : `${cleanedHeight} cm`)
+      ? cleanedHeight.toLowerCase().endsWith("cm")
+        ? cleanedHeight
+        : `${cleanedHeight} cm`
       : undefined;
 
     const updated: Patient = {

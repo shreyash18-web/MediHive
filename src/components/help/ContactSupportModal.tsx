@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { X, Send, MessageSquare, CheckCircle } from "lucide-react";
+import { X, Send, MessageSquare, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "../common/Toast";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { submitSupportTicketInSupabase } from "../../services/supabaseService";
+import { getStoredAuthUser } from "../../services/storage";
 
 interface ContactSupportModalProps {
   isOpen: boolean;
@@ -17,21 +19,54 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
   const [topic, setTopic] = useState("General Query");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedTicketId, setSubmittedTicketId] = useState<string | null>(
+    null,
+  );
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    showToast(
-      "Support request submitted! MediHive support team responds within 24 hours.",
-      "success",
-    );
-    setTimeout(() => {
-      setSubmitted(false);
-      onClose();
-    }, 1500);
+    if (!subject.trim() || !message.trim()) {
+      showToast("Please fill in both the subject and message", "error");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const user = getStoredAuthUser();
+    const ticketId = `MH-${Date.now().toString().slice(-6)}`;
+
+    try {
+      await submitSupportTicketInSupabase({
+        id: ticketId,
+        topic,
+        subject: subject.trim(),
+        message: message.trim(),
+        status: "Open",
+        senderName: user?.name || "Clinic Staff",
+        senderEmail: user?.username || undefined,
+        createdAt: new Date().toISOString(),
+      });
+
+      setSubmittedTicketId(ticketId);
+      showToast(
+        `Support request #${ticketId} submitted successfully!`,
+        "success",
+      );
+    } catch (err: any) {
+      console.error("Support ticket error:", err);
+      showToast("Failed to submit ticket. Please try again.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setSubmittedTicketId(null);
+    setSubject("");
+    setMessage("");
+    onClose();
   };
 
   return (
@@ -54,24 +89,40 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
             </h3>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {submitted ? (
-          <div className="p-8 text-center space-y-3">
-            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
-            <h4 className="text-base font-bold text-slate-800">
-              Support Ticket Created!
-            </h4>
-            <p className="text-xs text-slate-500">
-              Ticket #MH-{Math.floor(10000 + Math.random() * 90000)} has been
-              logged. Our technical team will reach out to your registered
-              email.
+        {submittedTicketId ? (
+          <div className="p-8 text-center space-y-4">
+            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
+            <div>
+              <h4 className="text-base font-bold text-slate-800">
+                Support Ticket Created!
+              </h4>
+              <p className="text-xs text-slate-500 mt-1">
+                Your ticket has been recorded with reference number:
+              </p>
+              <p className="text-sm font-black font-mono text-[#1e536e] mt-1 bg-slate-100 py-1 px-3 rounded inline-block border border-slate-200">
+                #{submittedTicketId}
+              </p>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
+              Our technical support team will review your query and respond
+              promptly.
             </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-5 py-2 rounded-lg bg-[#1e536e] hover:bg-[#18445a] text-white font-bold text-xs shadow-sm transition"
+              >
+                Done
+              </button>
+            </div>
           </div>
         ) : (
           <form
@@ -128,17 +179,28 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
             <div className="pt-2 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
+                disabled={isSubmitting}
                 className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-lg bg-[#2da478] hover:bg-[#258d67] text-white font-bold flex items-center gap-1.5 shadow-sm transition"
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-lg bg-[#2da478] hover:bg-[#258d67] text-white font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-60"
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Submit Ticket</span>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Submit Ticket</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

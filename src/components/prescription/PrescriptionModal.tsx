@@ -51,38 +51,552 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
     window.print();
   };
 
-  // Download PDF Handler using html2canvas & jsPDF
+  // Direct Vector PDF Generator as reliable fail-safe
+  const generateDirectPrescriptionPdf = (
+    pat: Patient,
+    rec: OPDRecord,
+    doc: DoctorProfile,
+    cln: ClinicSettings,
+  ) => {
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 14;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    // Header clinic emblem / title
+    pdf.setDrawColor(30, 83, 110);
+    pdf.setLineWidth(0.8);
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(17);
+    pdf.setTextColor(30, 83, 110);
+    pdf.text(cln?.name || "MediHive Clinic", margin, y + 5);
+
+    pdf.setFontSize(11);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text(doc?.name || "Doctor", margin, y + 12);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(4, 120, 87);
+    if (doc?.qualifications) {
+      pdf.text(doc.qualifications, margin, y + 17);
+    }
+    if (doc?.medicalLicenseNo) {
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Reg No: ${doc.medicalLicenseNo}`, margin, y + 21);
+    }
+
+    // Right-aligned clinic details
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(71, 85, 105);
+    let rightY = y + 5;
+    if (cln?.phone) {
+      pdf.text(`Phone: ${cln.phone}`, pageWidth - margin, rightY, {
+        align: "right",
+      });
+      rightY += 4.5;
+    }
+    if (cln?.operatingHours) {
+      pdf.text(`Hours: ${cln.operatingHours}`, pageWidth - margin, rightY, {
+        align: "right",
+      });
+      rightY += 4.5;
+    }
+    if (cln?.address) {
+      const addressLines = pdf.splitTextToSize(cln.address, 65);
+      pdf.text(addressLines, pageWidth - margin, rightY, { align: "right" });
+    }
+
+    y += 25;
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 5;
+
+    // Patient Meta Box
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.3);
+    pdf.roundedRect(margin, y, contentWidth, 21, 2, 2, "FD");
+
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text("Patient Name:", margin + 4, y + 5.5);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(pat?.fullName || "—", margin + 26, y + 5.5);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(100, 116, 139);
+    pdf.text("Age / Gender:", margin + 85, y + 5.5);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(
+      `${pat?.age || 0} Yrs / ${pat?.gender || "—"}`,
+      margin + 107,
+      y + 5.5,
+    );
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(100, 116, 139);
+    pdf.text("Patient ID:", margin + 4, y + 12);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(pat?.id || "—", margin + 26, y + 12);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(100, 116, 139);
+    pdf.text("Visit Date:", margin + 85, y + 12);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(
+      rec?.visitDate || new Date().toISOString().slice(0, 10),
+      margin + 107,
+      y + 12,
+    );
+
+    // Vitals & Allergies line
+    const vitalsText = [
+      pat?.weight ? `Wt: ${pat.weight}kg` : null,
+      pat?.height ? `Ht: ${pat.height}` : null,
+      rec?.vitals?.bp ? `BP: ${rec.vitals.bp}` : null,
+      rec?.vitals?.pulse ? `Pulse: ${rec.vitals.pulse} bpm` : null,
+    ]
+      .filter(Boolean)
+      .join("   •   ");
+
+    if (vitalsText || pat?.allergies) {
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      if (vitalsText) {
+        pdf.setTextColor(71, 85, 105);
+        pdf.text(`Vitals: ${vitalsText}`, margin + 4, y + 18);
+      }
+      if (pat?.allergies) {
+        pdf.setTextColor(225, 29, 72);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(`Allergies: ${pat.allergies}`, margin + 107, y + 18);
+      }
+    }
+
+    y += 26;
+
+    // Complaints, Symptoms & Diagnosis
+    if (
+      rec?.complaint ||
+      (rec?.symptoms && rec.symptoms.length > 0) ||
+      rec?.diagnosis
+    ) {
+      if (rec.complaint) {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(30, 41, 59);
+        pdf.text("Chief Complaint: ", margin, y);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(51, 65, 85);
+        const lines = pdf.splitTextToSize(rec.complaint, contentWidth - 30);
+        pdf.text(lines, margin + 30, y);
+        y += lines.length * 4.5 + 2;
+      }
+
+      const symptomsList = Array.isArray(rec.symptoms)
+        ? rec.symptoms.join(", ")
+        : typeof rec?.symptoms === "string"
+          ? rec.symptoms
+          : "";
+      if (symptomsList) {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(30, 41, 59);
+        pdf.text("Symptoms: ", margin, y);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(51, 65, 85);
+        const lines = pdf.splitTextToSize(symptomsList, contentWidth - 25);
+        pdf.text(lines, margin + 25, y);
+        y += lines.length * 4.5 + 2;
+      }
+
+      if (rec.diagnosis) {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(30, 41, 59);
+        pdf.text("Diagnosis: ", margin, y);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(51, 65, 85);
+        const lines = pdf.splitTextToSize(rec.diagnosis, contentWidth - 25);
+        pdf.text(lines, margin + 25, y);
+        y += lines.length * 4.5 + 3;
+      }
+      y += 2;
+    }
+
+    const checkPageBreak = (neededHeight: number) => {
+      if (y + neededHeight > pageHeight - margin - 22) {
+        pdf.addPage();
+        y = margin + 5;
+      }
+    };
+
+    // Medicines Prescribed Banner
+    checkPageBreak(15);
+    pdf.setFillColor(30, 83, 110);
+    pdf.roundedRect(margin, y, contentWidth, 7, 1.5, 1.5, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("MEDICINES PRESCRIBED (Rx)", margin + 4, y + 4.8);
+    y += 9.5;
+
+    const rawMeds = rec?.medicines ?? rec?.prescriptions;
+    const medsList = Array.isArray(rawMeds) ? rawMeds.filter(Boolean) : [];
+
+    if (medsList.length === 0) {
+      pdf.setFont("helvetica", "italic");
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text("No medicines prescribed.", margin + 4, y + 5);
+      y += 10;
+    } else {
+      medsList.forEach((med, idx) => {
+        checkPageBreak(15);
+        pdf.setFillColor(
+          idx % 2 === 0 ? 255 : 248,
+          idx % 2 === 0 ? 255 : 250,
+          idx % 2 === 0 ? 255 : 252,
+        );
+        pdf.setDrawColor(241, 245, 249);
+        pdf.rect(margin, y, contentWidth, 12, "FD");
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9);
+        pdf.setTextColor(15, 23, 42);
+        pdf.text(`${idx + 1}. ${med.name || "Medicine"}`, margin + 3, y + 4.8);
+
+        if (med.dosage) {
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(8);
+          pdf.setTextColor(2, 132, 199);
+          pdf.text(`[${med.dosage}]`, margin + 65, y + 4.8);
+        }
+
+        if (med.duration) {
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(8);
+          pdf.setTextColor(71, 85, 105);
+          pdf.text(
+            `Duration: ${med.duration}`,
+            pageWidth - margin - 3,
+            y + 4.8,
+            {
+              align: "right",
+            },
+          );
+        }
+
+        const scheduleParts = [
+          med.frequency ? `Schedule: ${med.frequency}` : null,
+          med.timing ? `Timing: ${med.timing}` : null,
+          med.instructions ? `(${med.instructions})` : null,
+        ]
+          .filter(Boolean)
+          .join("  •  ");
+
+        if (scheduleParts) {
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(100, 116, 139);
+          pdf.text(scheduleParts, margin + 6, y + 9.2);
+        }
+
+        y += 12.5;
+      });
+    }
+
+    // Lab Tests
+    if (rec?.tests) {
+      checkPageBreak(12);
+      pdf.setFillColor(240, 249, 255);
+      pdf.setDrawColor(186, 230, 253);
+      pdf.roundedRect(margin, y, contentWidth, 8, 1.5, 1.5, "FD");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      pdf.setTextColor(30, 83, 110);
+      pdf.text("Lab Investigations & Tests: ", margin + 3, y + 5.2);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(30, 41, 59);
+      pdf.text(rec.tests, margin + 48, y + 5.2);
+      y += 11;
+    }
+
+    // Clinical Notes & Panchakarma & Dietary Advice
+    const addNoteSection = (label: string, text?: string) => {
+      if (!text) return;
+      checkPageBreak(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      pdf.setTextColor(51, 65, 85);
+      pdf.text(`${label}: `, margin, y + 4);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(71, 85, 105);
+      const lines = pdf.splitTextToSize(text, contentWidth - 35);
+      pdf.text(lines, margin + 35, y + 4);
+      y += lines.length * 4 + 4;
+    };
+
+    addNoteSection("Clinical Notes", rec?.clinicalNotes);
+    addNoteSection("Panchakarma Notes", rec?.panchakarmaNotes);
+    addNoteSection("Dietary Advice", rec?.dietaryAdvice);
+
+    // Next Visit
+    if (rec?.nextVisitDate) {
+      checkPageBreak(11);
+      pdf.setFillColor(240, 249, 255);
+      pdf.setDrawColor(186, 230, 253);
+      pdf.roundedRect(margin, y, contentWidth, 7.5, 1.5, 1.5, "FD");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      pdf.setTextColor(30, 83, 110);
+      pdf.text("Next Visit Reminder:", margin + 3, y + 5);
+      pdf.setTextColor(12, 74, 110);
+      pdf.text(rec.nextVisitDate, margin + 38, y + 5);
+      y += 10.5;
+    }
+
+    // Doctor Signature Block
+    checkPageBreak(25);
+    const sigY = Math.max(y + 8, pageHeight - margin - 22);
+    pdf.setDrawColor(148, 163, 184);
+    pdf.setLineWidth(0.4);
+    pdf.line(pageWidth - margin - 45, sigY, pageWidth - margin, sigY);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(doc?.name || "Doctor", pageWidth - margin - 22, sigY + 4, {
+      align: "center",
+    });
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(doc?.qualifications || "", pageWidth - margin - 22, sigY + 7.5, {
+      align: "center",
+    });
+
+    // Footer
+    pdf.setFontSize(7);
+    pdf.setTextColor(148, 163, 184);
+    pdf.text(
+      "Prescription generated via MediHive Clinical Suite • Keep medicines out of reach of children",
+      pageWidth / 2,
+      pageHeight - 6,
+      { align: "center" },
+    );
+
+    const safeName = (pat?.fullName || "Patient")
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
+    pdf.save(`Prescription_${safeName}_${rec?.visitDate || "visit"}.pdf`);
+  };
+
+  // Helper to sanitize OKLCH and modern CSS colors in cloned DOM for html2canvas
+  const sanitizeColorsInClone = (
+    clonedDoc: Document,
+    clonedEl: HTMLElement,
+  ) => {
+    const allElements = [
+      clonedEl,
+      ...Array.from(clonedEl.querySelectorAll("*")),
+    ] as HTMLElement[];
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = 1;
+    tempCanvas.height = 1;
+    const ctx = tempCanvas.getContext("2d");
+
+    const convertColor = (val: string): string => {
+      if (!val || typeof val !== "string") return val;
+      if (
+        !val.includes("oklch") &&
+        !val.includes("color(") &&
+        !val.includes("lab(") &&
+        !val.includes("lch(")
+      ) {
+        return val;
+      }
+      if (ctx) {
+        try {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillStyle = val;
+          const computed = ctx.fillStyle;
+          if (computed && !computed.includes("oklch")) {
+            return computed;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      return "#1e293b";
+    };
+
+    const defaultView = clonedDoc.defaultView || window;
+
+    allElements.forEach((el) => {
+      el.style.boxShadow = "none";
+      el.style.textShadow = "none";
+
+      try {
+        const computed = defaultView.getComputedStyle(el);
+        if (
+          computed.color &&
+          (computed.color.includes("oklch") ||
+            computed.color.includes("color("))
+        ) {
+          el.style.color = convertColor(computed.color);
+        }
+        if (
+          computed.backgroundColor &&
+          (computed.backgroundColor.includes("oklch") ||
+            computed.backgroundColor.includes("color("))
+        ) {
+          el.style.backgroundColor = convertColor(computed.backgroundColor);
+        }
+        if (
+          computed.borderColor &&
+          (computed.borderColor.includes("oklch") ||
+            computed.borderColor.includes("color("))
+        ) {
+          el.style.borderColor = convertColor(computed.borderColor);
+        }
+        if (
+          computed.outlineColor &&
+          (computed.outlineColor.includes("oklch") ||
+            computed.outlineColor.includes("color("))
+        ) {
+          el.style.outlineColor = convertColor(computed.outlineColor);
+        }
+      } catch {
+        // Fallback safely if computed style is unavailable
+      }
+
+      const fill = el.getAttribute("fill");
+      if (fill && (fill.includes("oklch") || fill.includes("color("))) {
+        el.setAttribute("fill", convertColor(fill));
+      }
+      const stroke = el.getAttribute("stroke");
+      if (stroke && (stroke.includes("oklch") || stroke.includes("color("))) {
+        el.setAttribute("stroke", convertColor(stroke));
+      }
+    });
+  };
+
+  // Download PDF Handler using dual-path html2canvas & direct jsPDF
   const handleDownloadPdf = async () => {
-    if (!prescriptionRef.current) return;
     try {
       showToast("Generating PDF prescription...", "info");
-      const canvas = await html2canvas(prescriptionRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
 
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
+      if (prescriptionRef.current) {
+        try {
+          const canvas = await html2canvas(prescriptionRef.current, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+            onclone: (clonedDoc, clonedEl) => {
+              // Neutralize any oklch(...) inside cloned <style> tags to avoid parser crashes
+              clonedDoc.querySelectorAll("style").forEach((s) => {
+                try {
+                  if (s.textContent && s.textContent.includes("oklch")) {
+                    s.textContent = s.textContent.replace(
+                      /oklch\([^)]+\)/g,
+                      "#334155",
+                    );
+                  }
+                } catch {
+                  // ignore
+                }
+              });
+              sanitizeColorsInClone(clonedDoc, clonedEl);
+            },
+          });
 
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      pdf.save(`Prescription_${patient.fullName}_${record.visitDate}.pdf`);
+          const imgData = canvas.toDataURL("image/png");
+          const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4",
+          });
+
+          const pageWidth = 210;
+          const pageHeight = 297;
+          const imgWidth = pageWidth;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          // First page
+          pdf.addImage(
+            imgData,
+            "PNG",
+            0,
+            position,
+            imgWidth,
+            imgHeight,
+            undefined,
+            "FAST",
+          );
+          heightLeft -= pageHeight;
+
+          // Subsequent pages for long prescriptions
+          while (heightLeft > 0) {
+            position -= pageHeight;
+            pdf.addPage();
+            pdf.addImage(
+              imgData,
+              "PNG",
+              0,
+              position,
+              imgWidth,
+              imgHeight,
+              undefined,
+              "FAST",
+            );
+            heightLeft -= pageHeight;
+          }
+
+          const safeName = (patient?.fullName || "Patient")
+            .trim()
+            .replace(/[^a-zA-Z0-9_-]/g, "_");
+          pdf.save(
+            `Prescription_${safeName}_${record?.visitDate || "visit"}.pdf`,
+          );
+          showToast("Prescription PDF downloaded successfully!", "success");
+          return;
+        } catch (canvasErr) {
+          console.warn(
+            "Canvas capture error, using direct PDF generator:",
+            canvasErr,
+          );
+        }
+      }
+
+      // Direct Vector PDF Fallback
+      generateDirectPrescriptionPdf(patient, record, doctor, clinic);
       showToast("Prescription PDF downloaded successfully!", "success");
-    } catch (err) {
-      console.error(err);
-      showToast(
-        "Failed to generate PDF. You can also use the Print button.",
-        "error",
-      );
+    } catch (err: any) {
+      console.error("Prescription PDF generation error:", err);
+      // Final attempt with direct PDF
+      try {
+        generateDirectPrescriptionPdf(patient, record, doctor, clinic);
+        showToast("Prescription PDF downloaded successfully!", "success");
+      } catch (finalErr) {
+        showToast(
+          "Failed to generate PDF. You can also use the Print button to save as PDF.",
+          "error",
+        );
+      }
     }
   };
 
@@ -194,19 +708,73 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                 <span className="text-slate-400 font-medium">Date:</span>
                 <p className="font-bold text-slate-900">{record.visitDate}</p>
               </div>
-            </div>
-
-            {/* Symptoms & Diagnosis */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {record.symptoms && record.symptoms.length > 0 && (
-                <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                  <span className="font-bold text-slate-700 block mb-1">
-                    Symptoms:
-                  </span>
-                  <p className="text-slate-800">{record.symptoms.join(", ")}</p>
+              {patient.mobile && (
+                <div>
+                  <span className="text-slate-400 font-medium">Mobile:</span>
+                  <p className="font-bold text-slate-900">{patient.mobile}</p>
                 </div>
               )}
-              {record.diagnosis && (
+              {patient.bloodGroup && (
+                <div>
+                  <span className="text-slate-400 font-medium">
+                    Blood Group:
+                  </span>
+                  <p className="font-bold text-slate-900">
+                    {patient.bloodGroup}
+                  </p>
+                </div>
+              )}
+              {(patient.weight || patient.height || record.vitals?.bp) && (
+                <div>
+                  <span className="text-slate-400 font-medium">Vitals:</span>
+                  <p className="font-bold text-slate-900">
+                    {[
+                      patient.weight ? `Wt: ${patient.weight}kg` : null,
+                      patient.height ? `Ht: ${patient.height}` : null,
+                      record.vitals?.bp ? `BP: ${record.vitals.bp}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")}
+                  </p>
+                </div>
+              )}
+              {patient.allergies && (
+                <div className="col-span-2">
+                  <span className="text-rose-600 font-bold">Allergies: </span>
+                  <span className="font-semibold text-rose-700">
+                    {patient.allergies}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Complaint, Symptoms & Diagnosis */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {record.complaint && (
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200 col-span-1 sm:col-span-2">
+                  <span className="font-bold text-slate-700 block mb-1">
+                    Chief Complaint:
+                  </span>
+                  <p className="text-slate-800">{record.complaint}</p>
+                </div>
+              )}
+              {(() => {
+                const symptomsList = Array.isArray(record?.symptoms)
+                  ? record.symptoms.join(", ")
+                  : typeof record?.symptoms === "string"
+                    ? record.symptoms
+                    : "";
+                if (!symptomsList) return null;
+                return (
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <span className="font-bold text-slate-700 block mb-1">
+                      Symptoms:
+                    </span>
+                    <p className="text-slate-800">{symptomsList}</p>
+                  </div>
+                );
+              })()}
+              {record?.diagnosis && (
                 <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                   <span className="font-bold text-slate-700 block mb-1">
                     Diagnosis:
@@ -216,7 +784,7 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
               )}
             </div>
 
-            {/* MEDICINES PRESCRIBED BANNER & LIST (Page 6 highlight) */}
+            {/* MEDICINES PRESCRIBED BANNER & LIST */}
             <div className="space-y-2">
               <div className="bg-[#1e536e] text-white px-4 py-2 rounded-md flex items-center justify-between font-bold text-xs uppercase tracking-wider">
                 <span>MEDICINES PRESCRIBED</span>
@@ -225,8 +793,10 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
 
               <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">
                 {(() => {
-                  const medicinesList =
-                    record.medicines || record.prescriptions || [];
+                  const rawMeds = record?.medicines ?? record?.prescriptions;
+                  const medicinesList = Array.isArray(rawMeds)
+                    ? rawMeds.filter(Boolean)
+                    : [];
                   if (medicinesList.length === 0) {
                     return (
                       <div className="p-4 text-center text-xs text-slate-400">
@@ -242,20 +812,22 @@ export const PrescriptionModal: React.FC<PrescriptionModalProps> = ({
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900">
-                            {idx + 1}. {med.name}
+                            {idx + 1}. {med.name || "Medicine"}
                           </span>
-                          <span className="bg-sky-50 text-sky-800 font-semibold px-2 py-0.5 rounded text-[11px] border border-sky-100">
-                            {med.dosage}
-                          </span>
+                          {med.dosage && (
+                            <span className="bg-sky-50 text-sky-800 font-semibold px-2 py-0.5 rounded text-[11px] border border-sky-100">
+                              {med.dosage}
+                            </span>
+                          )}
                         </div>
                         <p className="text-slate-600 text-[11px]">
-                          <strong>Schedule:</strong> {med.frequency} •{" "}
-                          <em>{med.timing}</em>
+                          <strong>Schedule:</strong> {med.frequency || "—"} •{" "}
+                          <em>{med.timing || "—"}</em>
                           {med.instructions && ` (${med.instructions})`}
                         </p>
                       </div>
                       <div className="text-right shrink-0 font-medium text-slate-700 text-xs">
-                        {med.duration}
+                        {med.duration || ""}
                       </div>
                     </div>
                   ));

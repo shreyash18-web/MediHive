@@ -1,18 +1,13 @@
 import React, { useState } from "react";
 import {
   ArrowLeft,
-  Code,
   Laptop,
-  Database,
   ShieldCheck,
   HelpCircle,
   ChevronDown,
   ChevronUp,
   MessageSquare,
   Search,
-  Mail,
-  Phone,
-  ExternalLink,
 } from "lucide-react";
 import { ContactSupportModal } from "./ContactSupportModal";
 
@@ -146,38 +141,9 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onBack }) => {
         </button>
       </div>
 
-      {/* 4 Cards Grid matching Page 13 */}
+      {/* Top Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Card 1: Developer Information */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm space-y-2.5">
-          <div className="flex items-center gap-2.5 text-[#1e536e]">
-            <div className="p-2 bg-sky-50 rounded-lg">
-              <Code className="w-4 h-4 text-sky-700" />
-            </div>
-            <h3 className="font-bold text-sm text-slate-800">
-              Developer Information
-            </h3>
-          </div>
-          <p className="text-xs text-slate-500">
-            For Technical queries & Customization:
-          </p>
-          <div className="space-y-1 text-xs text-slate-700 pt-1">
-            <p className="flex items-center gap-2">
-              <Mail className="w-3.5 h-3.5 text-slate-400" />
-              <span className="font-medium font-mono text-[11px]">
-                shreyashshigwan10@gmail.com
-              </span>
-            </p>
-            <p className="flex items-center gap-2">
-              <Phone className="w-3.5 h-3.5 text-slate-400" />
-              <span className="font-medium font-mono text-[11px]">
-                Phone: 9067251670
-              </span>
-            </p>
-          </div>
-        </div>
-
-        {/* Card 2: Application Info */}
+        {/* Card 1: Application Info */}
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm space-y-2.5">
           <div className="flex items-center gap-2.5 text-[#1e536e]">
             <div className="p-2 bg-sky-50 rounded-lg">
@@ -221,25 +187,7 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Card 3: Backup Information */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm space-y-2.5">
-          <div className="flex items-center gap-2.5 text-[#1e536e]">
-            <div className="p-2 bg-sky-50 rounded-lg">
-              <Database className="w-4 h-4 text-sky-700" />
-            </div>
-            <h3 className="font-bold text-sm text-slate-800">
-              Backup Information
-            </h3>
-          </div>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Backup files are stored locally on your system.
-          </p>
-          <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 font-mono text-[11px] text-slate-600 break-all">
-            C:\Users\AppData\Local\MediHive\backups
-          </div>
-        </div>
-
-        {/* Card 4: Data & Privacy */}
+        {/* Card 2: Data & Privacy */}
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm space-y-2.5">
           <div className="flex items-center gap-2.5 text-[#1e536e]">
             <div className="p-2 bg-emerald-50 rounded-lg">
@@ -248,10 +196,10 @@ export const HelpCenter: React.FC<HelpCenterProps> = ({ onBack }) => {
             <h3 className="font-bold text-sm text-slate-800">Data & Privacy</h3>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            <strong>Privacy Policy:</strong> All patient data is stored locally
-            on your system. MediHive does not upload or share any data with
-            external servers. Your clinic data remains completely private and
-            secure on your local machine.
+            <strong>Privacy Policy:</strong> All patient data is encrypted and
+            securely stored. MediHive does not share any medical data with
+            unauthorized external parties. Your clinic records remain private,
+            secure, and under your direct administrative control.
           </p>
         </div>
       </div>

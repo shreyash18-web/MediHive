@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Calendar as CalendarIcon,
@@ -10,6 +10,7 @@ import {
 import { Patient, Appointment } from "../../types";
 import { useToast } from "../common/Toast";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { getLocalDateString } from "../../services/storage";
 
 interface AddAppointmentModalProps {
   patients: Patient[];
@@ -31,14 +32,19 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({
   const [patientId, setPatientId] = useState("");
   const [patientName, setPatientName] = useState("");
   const [patientMobile, setPatientMobile] = useState("");
-  const [date, setDate] = useState(
-    defaultDate || new Date().toISOString().slice(0, 10),
-  );
+  const [date, setDate] = useState(() => defaultDate || getLocalDateString());
   const [time, setTime] = useState("11:00");
   const [reason, setReason] = useState("");
   const [type, setType] = useState<"Appointment" | "Follow-up Reminder">(
-    "Follow-up Reminder",
+    "Appointment",
   );
+
+  // Synchronize appointment date with the active selected calendar date whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setDate(defaultDate || getLocalDateString());
+    }
+  }, [isOpen, defaultDate]);
 
   if (!isOpen) return null;
 

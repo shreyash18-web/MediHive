@@ -181,9 +181,11 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
                   const records = patient.records || [];
                   const latestRecord = records[0];
                   const latestMeds = latestRecord
-                    ? (latestRecord.medicines || latestRecord.prescriptions || []).filter(
-                        (m) => m.name && m.name.trim(),
-                      )
+                    ? (
+                        latestRecord.medicines ||
+                        latestRecord.prescriptions ||
+                        []
+                      ).filter((m) => m.name && m.name.trim())
                     : [];
 
                   return (
@@ -228,14 +230,19 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
                           <div className="space-y-1">
                             <button
                               type="button"
-                              onClick={() => latestRecord && onPrintLatestPrescription(patient, latestRecord)}
+                              onClick={() =>
+                                latestRecord &&
+                                onPrintLatestPrescription(patient, latestRecord)
+                              }
                               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 transition shadow-2xs"
                               title="Click to preview/print latest prescription"
                             >
                               <Pill className="w-3.5 h-3.5 text-teal-600" />
                               <span>
                                 {records.length}{" "}
-                                {records.length === 1 ? "Prescription" : "Prescriptions"}
+                                {records.length === 1
+                                  ? "Prescription"
+                                  : "Prescriptions"}
                               </span>
                             </button>
                             {latestMeds.length > 0 ? (
@@ -243,7 +250,9 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
                                 className="text-xs text-slate-600 truncate max-w-[220px]"
                                 title={latestMeds.map((m) => m.name).join(", ")}
                               >
-                                <span className="font-semibold text-slate-700">Rx: </span>
+                                <span className="font-semibold text-slate-700">
+                                  Rx:{" "}
+                                </span>
                                 {latestMeds.map((m) => m.name).join(", ")}
                               </p>
                             ) : latestRecord?.diagnosis ? (
@@ -251,7 +260,9 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
                                 {latestRecord.diagnosis}
                               </p>
                             ) : (
-                              <span className="text-[11px] text-slate-400 block">Consultation visit</span>
+                              <span className="text-[11px] text-slate-400 block">
+                                Consultation visit
+                              </span>
                             )}
                           </div>
                         ) : (

@@ -1,8 +1,17 @@
-export type Gender = 'Male' | 'Female' | 'Other';
-export type OpdType = 'Consultation' | 'Follow-up' | 'Emergency' | 'Routine Checkup' | 'Therapy';
-export type ChargeType = 'First Visit' | 'Follow-up' | 'Special Therapy' | 'Emergency Consultation';
-export type PaymentMode = 'Cash' | 'UPI' | 'Card' | 'Net Banking';
-export type DiscountType = 'amount' | 'percentage';
+export type Gender = "Male" | "Female" | "Other";
+export type OpdType =
+  | "Consultation"
+  | "Follow-up"
+  | "Emergency"
+  | "Routine Checkup"
+  | "Therapy";
+export type ChargeType =
+  | "First Visit"
+  | "Follow-up"
+  | "Special Therapy"
+  | "Emergency Consultation";
+export type PaymentMode = "Cash" | "UPI" | "Card" | "Net Banking";
+export type DiscountType = "amount" | "percentage";
 
 export interface PrescribedMedicine {
   id: string;
@@ -35,7 +44,7 @@ export interface OPDRecord {
   dietaryAdvice?: string;
   nextVisitDate?: string; // YYYY-MM-DD
   tests?: string;
-  
+
   // Billing details
   consultationFee?: number;
   medicineFee?: number;
@@ -44,8 +53,8 @@ export interface OPDRecord {
   discountValue?: number;
   totalFee: number;
   paymentMode?: PaymentMode;
-  paymentStatus?: 'Paid' | 'Pending';
-  
+  paymentStatus?: "Paid" | "Pending";
+
   createdAt: string;
 }
 
@@ -53,6 +62,7 @@ export interface PatientVitals {
   temperature?: string; // in °F, e.g. '98.6'
   bloodPressure?: string; // in mmHg, e.g. '120/80'
   weight?: string; // in kg, e.g. '68'
+  height?: string; // in cm, e.g. '172'
   spO2?: string; // in %, e.g. '98'
   pulse?: string; // in bpm, e.g. '74'
   respiratoryRate?: string;
@@ -63,7 +73,12 @@ export interface PatientVitals {
   spo2?: string;
 }
 
-export type QueueStatus = 'Waiting' | 'Next' | 'With Doctor' | 'Completed' | 'Cancelled';
+export type QueueStatus =
+  | "Waiting"
+  | "Next"
+  | "With Doctor"
+  | "Completed"
+  | "Cancelled";
 
 export interface PatientVisit {
   id: string; // e.g., 'VIS-2026-001'
@@ -138,8 +153,8 @@ export interface Appointment {
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   reason: string;
-  type: 'Appointment' | 'Follow-up Reminder';
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
+  type: "Appointment" | "Follow-up Reminder";
+  status: "Scheduled" | "Completed" | "Cancelled";
   notes?: string;
 }
 
@@ -184,7 +199,7 @@ export interface UserAccount {
   id: string;
   username: string;
   name: string;
-  role: 'doctor' | 'receptionist' | 'admin';
+  role: "doctor" | "receptionist" | "admin";
   passwordHash: string;
 }
 
@@ -199,4 +214,3 @@ export interface AppState {
   appointments: Appointment[];
   dailyNotes: Record<string, string>; // YYYY-MM-DD -> note
 }
-

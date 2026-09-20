@@ -59,19 +59,67 @@ interface ReceptionistLayoutProps {
   onLogout: () => void;
 }
 
+const VALID_REC_TABS: ReceptionistTab[] = [
+  "dashboard",
+  "search",
+  "new-patient",
+  "queue",
+];
+
+const getInitialRecTab = (): ReceptionistTab => {
+  try {
+    if (typeof window === "undefined") return "dashboard";
+    const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+    const clean = hash.startsWith("rec-") ? hash.replace("rec-", "") : hash;
+    if (VALID_REC_TABS.includes(clean as ReceptionistTab)) {
+      return clean as ReceptionistTab;
+    }
+    const saved = sessionStorage.getItem("medihive_rec_tab");
+    if (saved && VALID_REC_TABS.includes(saved as ReceptionistTab)) {
+      return saved as ReceptionistTab;
+    }
+  } catch {
+    // fallback
+  }
+  return "dashboard";
+};
+
 export const ReceptionistLayout: React.FC<ReceptionistLayoutProps> = ({
   appState,
   realtimeStatus = "CONNECTED",
   onUpdateAppState,
   onLogout,
 }) => {
-  const [currentTab, setCurrentTab] = useState<ReceptionistTab>("dashboard");
+  const [currentTab, setCurrentTab] = useState<ReceptionistTab>(() =>
+    getInitialRecTab(),
+  );
   const [activeVisitPatient, setActiveVisitPatient] = useState<Patient | null>(
     null,
   );
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [initialSearchQuery, setInitialSearchQuery] = useState<string>("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Sync tab to URL hash and sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("medihive_rec_tab", currentTab);
+      const hash = `#rec-${currentTab}`;
+      if (window.location.hash !== hash) {
+        window.history.replaceState(null, "", hash);
+      }
+    } catch {
+      // non-blocking
+    }
+  }, [currentTab]);
+
+  useEffect(() => {
+    const handleHash = () => {
+      setCurrentTab(getInitialRecTab());
+    };
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
 
   const { showToast } = useToast();
 

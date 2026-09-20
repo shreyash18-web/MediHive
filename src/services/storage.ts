@@ -98,7 +98,7 @@ export interface AuthResult {
 export const authenticateUser = (
   username: string,
   password: string,
-  expectedRole: "doctor" | "receptionist",
+  expectedRole?: "doctor" | "receptionist",
 ): AuthResult => {
   const accounts = getStoredAccounts();
   const trimmedUser = username.trim().toLowerCase();
@@ -120,22 +120,24 @@ export const authenticateUser = (
     };
   }
 
-  // Check if role matches expectedRole for this login portal
-  const isDoctorRole =
-    matchingAccount.role === "doctor" || matchingAccount.role === "admin";
-  const isRoleValid =
-    (expectedRole === "doctor" && isDoctorRole) ||
-    (expectedRole === "receptionist" &&
-      matchingAccount.role === "receptionist");
+  // Check if role matches expectedRole if explicitly requested
+  if (expectedRole) {
+    const isDoctorRole =
+      matchingAccount.role === "doctor" || matchingAccount.role === "admin";
+    const isRoleValid =
+      (expectedRole === "doctor" && isDoctorRole) ||
+      (expectedRole === "receptionist" &&
+        matchingAccount.role === "receptionist");
 
-  if (!isRoleValid) {
-    const roleName = isDoctorRole ? "Doctor" : "Receptionist";
-    return {
-      success: false,
-      user: null,
-      error: "ROLE_MISMATCH",
-      errorMessage: `Invalid credentials for this login type. This account has ${roleName} access. Please switch to the ${roleName} login tab.`,
-    };
+    if (!isRoleValid) {
+      const roleName = isDoctorRole ? "Doctor" : "Receptionist";
+      return {
+        success: false,
+        user: null,
+        error: "ROLE_MISMATCH",
+        errorMessage: `Invalid credentials for this login type. This account has ${roleName} access.`,
+      };
+    }
   }
 
   return {
@@ -756,52 +758,101 @@ export const exportDataBackup = (
   const patientsData = filteredPatients.map((p) => ({
     "Patient ID": p.id,
     "Full Name": p.fullName,
+    "Date of Birth": p.dob || "N/A",
     Age: p.age,
     Gender: p.gender,
     Mobile: p.mobile,
     "Blood Group": p.bloodGroup || "N/A",
     "Weight (kg)": p.weight || "N/A",
     Height: p.height || "N/A",
+    "Emergency Contact": p.emergencyContact || "N/A",
+    "Known Allergies": p.allergies || "None",
+    "Medical History": p.medicalHistory || "None",
+    Address: p.address || "N/A",
+    "Clinical Notes": p.notes || "",
     "Registration Date": p.registrationDate,
     "Last Visit Date": p.lastVisitDate,
-    "Total Visits": p.totalVisits,
-    Address: p.address || "N/A",
+    "Total Visits": p.totalVisits || (p.records ? p.records.length : 0),
   }));
   const wsPatients = XLSX.utils.json_to_sheet(patientsData);
   XLSX.utils.book_append_sheet(wb, wsPatients, "Patients");
 
-  // 2. OPD Visits & Prescriptions sheet
+  // 2. OPD Visits & Consultations sheet
   const visitsData: any[] = [];
+  const prescriptionsData: any[] = [];
+
   filteredPatients.forEach((p) => {
-    p.records.forEach((r) => {
+    (p.records || []).forEach((r) => {
+      const medsList = r.medicines || r.prescriptions || [];
+
+      // Collect itemized prescription rows
+      medsList.forEach((m) => {
+        if (m && m.name && m.name.trim()) {
+          prescriptionsData.push({
+            "OPD ID": r.id,
+            "Patient ID": p.id,
+            "Patient Name": p.fullName,
+            "Visit Date": r.visitDate,
+            "Medicine Name": m.name,
+            Dosage: m.dosage || "",
+            Frequency: m.frequency || "",
+            Timing: m.timing || "",
+            Duration: m.duration || "",
+            Instructions: m.instructions || m.instruction || "",
+          });
+        }
+      });
+
       visitsData.push({
         "OPD ID": r.id,
         "Patient ID": p.id,
         "Patient Name": p.fullName,
         "Visit Date": r.visitDate,
-        "OPD Type": r.opdType,
-        "Charge Type": r.chargeType,
-        Diagnosis: r.diagnosis,
-        Symptoms: r.symptoms.join(", "),
-        "Medicines Prescribed": r.medicines
-          .map((m) => `${m.name} (${m.dosage}, ${m.frequency})`)
+        "OPD Type": r.opdType || "General",
+        "Charge Type": r.chargeType || "Standard",
+        "Chief Complaint": r.complaint || "N/A",
+        Diagnosis: r.diagnosis || "",
+        Symptoms: Array.isArray(r.symptoms) ? r.symptoms.join(", ") : "",
+        "BP (mmHg)": r.vitals?.bp || "N/A",
+        "Pulse (bpm)": r.vitals?.pulse || "N/A",
+        "Temperature (°F)": r.vitals?.temp || "N/A",
+        "SpO2 (%)": r.vitals?.spo2 || "N/A",
+        "Weight (kg)": r.vitals?.weight || p.weight || "N/A",
+        Height: r.vitals?.height || p.height || "N/A",
+        "Lab Tests / Investigations": r.tests || "None",
+        "Medicines Summary": medsList
+          .map(
+            (m) =>
+              `${m.name} (${m.dosage}, ${m.frequency}${m.timing ? `, ${m.timing}` : ""}${m.duration ? `, ${m.duration}` : ""})`,
+          )
           .join(" | "),
-        "Panchakarma / Notes": r.panchakarmaNotes || r.clinicalNotes || "",
+        "Clinical Notes": r.clinicalNotes || "",
+        "Panchakarma Notes": r.panchakarmaNotes || "",
+        "Dietary Advice": r.dietaryAdvice || "",
         "Next Visit Reminder": r.nextVisitDate || "",
-        "Consultation Fee (₹)": r.consultationFee,
-        "Medicine Fee (₹)": r.medicineFee,
-        "Panchakarma Fee (₹)": r.panchakarmaFee,
-        "Discount (₹)": r.discountValue,
-        "Total Fee (₹)": r.totalFee,
-        "Payment Mode": r.paymentMode,
+        "Consultation Fee (₹)": r.consultationFee ?? 0,
+        "Medicine Fee (₹)": r.medicineFee ?? 0,
+        "Panchakarma Fee (₹)": r.panchakarmaFee ?? 0,
+        "Discount Type": r.discountType || "None",
+        "Discount Value": r.discountValue ?? 0,
+        "Total Fee (₹)": r.totalFee ?? 0,
+        "Payment Mode": r.paymentMode || "Cash",
+        "Payment Status": r.paymentStatus || "Paid",
       });
     });
   });
+
   const wsVisits = XLSX.utils.json_to_sheet(visitsData);
   XLSX.utils.book_append_sheet(wb, wsVisits, "OPD_Visits");
 
-  // 3. Appointments sheet
-  const appointmentsData = state.appointments.map((a) => ({
+  // 3. Itemized Prescriptions Breakdown sheet
+  if (prescriptionsData.length > 0) {
+    const wsPrescriptions = XLSX.utils.json_to_sheet(prescriptionsData);
+    XLSX.utils.book_append_sheet(wb, wsPrescriptions, "Prescriptions_Detailed");
+  }
+
+  // 4. Appointments sheet
+  const appointmentsData = (state.appointments || []).map((a) => ({
     "Appointment ID": a.id,
     "Patient ID": a.patientId,
     "Patient Name": a.patientName,
@@ -811,9 +862,28 @@ export const exportDataBackup = (
     Reason: a.reason,
     Type: a.type,
     Status: a.status,
+    Notes: a.notes || "",
   }));
   const wsAppointments = XLSX.utils.json_to_sheet(appointmentsData);
   XLSX.utils.book_append_sheet(wb, wsAppointments, "Appointments");
+
+  // 5. Clinic & Doctor Profile sheet
+  const clinicData = [
+    {
+      "Clinic Name": state.clinic.name,
+      "Clinic Address": state.clinic.address,
+      "Clinic Phone": state.clinic.phone,
+      "Clinic Email": state.clinic.email,
+      "Doctor Name": state.doctor.name,
+      Qualifications: state.doctor.qualifications,
+      Specialisation: state.doctor.specialisation,
+      "License No": state.doctor.medicalLicenseNo,
+      "Operating Hours": state.clinic.operatingHours,
+      "Export Date": new Date().toISOString(),
+    },
+  ];
+  const wsClinic = XLSX.utils.json_to_sheet(clinicData);
+  XLSX.utils.book_append_sheet(wb, wsClinic, "Clinic_Profile");
 
   // Download
   XLSX.writeFile(wb, `MediHive_Clinic_Records_${timestamp}.xlsx`);
