@@ -1,6 +1,5 @@
 import { DoctorProfile, ClinicSettings, QueueItem } from "../../types";
 import { RealtimeSyncStatus } from "../../services/supabaseService";
-import { MediHiveLogo } from "../common/MediHiveLogo";
 import {
   User,
   Bell,
@@ -54,13 +53,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         <div className="flex items-center gap-2.5">
-          <MediHiveLogo size="sm" textColor="text-white" />
-          <div className="border-l border-white/20 pl-3 py-0.5 hidden sm:block">
-            <span className="text-xs sm:text-sm font-semibold tracking-wide text-sky-100">
-              Welcome{" "}
-              <span className="text-white font-bold">{doctor.name}</span>
-            </span>
-          </div>
+          <span className="text-xs sm:text-sm font-semibold tracking-wide text-sky-100">
+            Welcome{" "}
+            <span className="text-white font-bold">{doctor.name}</span>
+          </span>
         </div>
       </div>
 
