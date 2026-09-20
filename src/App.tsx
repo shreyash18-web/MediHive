@@ -1004,11 +1004,14 @@ const MainAppContent: React.FC = () => {
     );
 
     // Explicitly persist completed consultation & OPD record to Supabase
-    const patient = appState.patients.find((p) => p.id === opdRecord.patientId);
-    if (patient) {
-      saveOpdRecordInSupabase(patient, opdRecord).catch((err) => {
+    const updatedPatient = updatedState.patients.find((p) => p.id === opdRecord.patientId);
+    if (updatedPatient) {
+      saveOpdRecordInSupabase(updatedPatient, opdRecord).catch((err) => {
         console.warn("Supabase saveOpdRecord error:", err);
       });
+    }
+    if (viewingPatient && viewingPatient.id === opdRecord.patientId && updatedPatient) {
+      setViewingPatient(updatedPatient);
     }
     updateQueueItemStatusInSupabase(
       activeConsultationQueueItem.id,

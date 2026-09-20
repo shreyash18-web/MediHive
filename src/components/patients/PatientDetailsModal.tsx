@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Image as ImageIcon,
+  Pill,
 } from "lucide-react";
 import { Patient, OPDRecord } from "../../types";
 import { format } from "date-fns";
@@ -134,21 +135,65 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                 </div>
 
                 {/* Medicines List */}
-                {record.medicines && record.medicines.length > 0 && (
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/80 text-xs">
-                    <span className="font-bold text-slate-800 block mb-1">
-                      Medicines:
-                    </span>
-                    <ol className="list-decimal list-inside space-y-0.5 text-slate-700">
-                      {record.medicines.map((m, mIdx) => (
-                        <li key={mIdx}>
-                          <span className="font-semibold">{m.name}</span> —{" "}
-                          {m.dosage} ({m.frequency}, {m.timing})
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
+                {(() => {
+                  const meds =
+                    record.medicines && record.medicines.length > 0
+                      ? record.medicines
+                      : record.prescriptions || [];
+                  if (meds.length === 0) {
+                    return (
+                      <div className="bg-slate-50/70 p-2.5 rounded-lg border border-slate-200/70 text-xs text-slate-500 italic">
+                        No medicines prescribed for this consultation visit.
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="bg-emerald-50/40 p-3 rounded-xl border border-emerald-200/80 text-xs space-y-2">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                        <Pill className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Prescribed Medicines ({meds.length}):</span>
+                      </span>
+                      <div className="space-y-1.5">
+                        {meds.map((m, mIdx) => (
+                          <div
+                            key={mIdx}
+                            className="bg-white p-2 rounded-lg border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 shadow-2xs"
+                          >
+                            <div>
+                              <span className="font-bold text-slate-900">
+                                {m.name}
+                              </span>
+                              {m.dosage && (
+                                <span className="text-slate-600">
+                                  {" "}
+                                  • {m.dosage}
+                                </span>
+                              )}
+                              {m.duration && (
+                                <span className="text-teal-700 font-medium">
+                                  {" "}
+                                  • For {m.duration}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-slate-500 text-[11px]">
+                              <span className="font-medium text-slate-700">
+                                {m.frequency}
+                              </span>
+                              {m.timing && <span> ({m.timing})</span>}
+                              {(m.instruction || m.instructions) && (
+                                <span className="text-slate-400 italic">
+                                  {" "}
+                                  — {m.instruction || m.instructions}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Panchakarma & Clinical Notes */}
                 <div className="text-xs space-y-1 text-slate-600">

@@ -105,8 +105,11 @@ export const DoctorConsultationModal: React.FC<
             doctor={doctor}
             clinic={clinic}
             existingPatients={existingPatients}
-            onSave={(record, updatedPatient, autoCallNext) => {
+            onSave={(record, updatedPatient, autoCallNext, generatePrescription) => {
               onCompleteConsultation(record, Boolean(autoCallNext));
+              if (generatePrescription && onPreviewPrescription) {
+                onPreviewPrescription(updatedPatient, record);
+              }
               onClose();
             }}
             onCancel={onClose}

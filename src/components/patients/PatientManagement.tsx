@@ -11,6 +11,8 @@ import {
   Phone,
   Download,
   FileSpreadsheet,
+  Pill,
+  FileText,
 } from "lucide-react";
 import { Patient, OPDRecord } from "../../types";
 import { useToast } from "../common/Toast";
@@ -156,10 +158,10 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
               <tr>
                 <th className="px-5 py-3.5">Patient ID</th>
                 <th className="px-5 py-3.5">Name</th>
-                <th className="px-4 py-3.5">Age</th>
+                <th className="px-4 py-3.5">Age / Gender</th>
                 <th className="px-5 py-3.5">DOB / DOR</th>
-                <th className="px-4 py-3.5">Gender</th>
                 <th className="px-5 py-3.5">Mobile</th>
+                <th className="px-5 py-3.5">Prescriptions / Rx</th>
                 <th className="px-5 py-3.5">Last Visit</th>
                 <th className="px-5 py-3.5 text-center">Actions</th>
               </tr>
@@ -175,89 +177,148 @@ export const PatientManagement: React.FC<PatientManagementProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredPatients.map((patient) => (
-                  <tr
-                    key={patient.id}
-                    className="hover:bg-slate-50/80 transition-colors cursor-pointer"
-                    onClick={() => onViewPatient(patient)}
-                  >
-                    <td className="px-5 py-3.5 font-bold text-slate-900">
-                      <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono text-xs">
-                        {patient.id}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 font-semibold text-slate-900 capitalize">
-                      {patient.fullName}
-                    </td>
-                    <td className="px-4 py-3.5 text-slate-600">
-                      {patient.age}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-500 font-mono text-xs">
-                      {patient.dob || patient.registrationDate}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          patient.gender === "Male"
-                            ? "bg-blue-50 text-blue-700"
-                            : "bg-pink-50 text-pink-700"
-                        }`}
-                      >
-                        {patient.gender}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600 font-mono text-xs">
-                      {patient.mobile}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-700 font-medium font-mono text-xs">
-                      {patient.lastVisitDate}
-                    </td>
-                    <td
-                      className="px-5 py-3.5 text-center"
-                      onClick={(e) => e.stopPropagation()}
+                filteredPatients.map((patient) => {
+                  const records = patient.records || [];
+                  const latestRecord = records[0];
+                  const latestMeds = latestRecord
+                    ? (latestRecord.medicines || latestRecord.prescriptions || []).filter(
+                        (m) => m.name && m.name.trim(),
+                      )
+                    : [];
+
+                  return (
+                    <tr
+                      key={patient.id}
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                      onClick={() => onViewPatient(patient)}
                     >
-                      <div className="flex items-center justify-center gap-1">
-                        {/* Eye Icon - View (Page 7) */}
-                        <button
-                          onClick={() => onViewPatient(patient)}
-                          title="View Records (Read-Only)"
-                          className="p-1.5 text-sky-600 hover:text-sky-800 hover:bg-sky-50 rounded-md transition"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-
-                        {/* Pencil Icon - Edit (Page 7) */}
-                        <button
-                          onClick={() => onEditPatient(patient)}
-                          title="Edit Patient Details"
-                          className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-
-                        {/* File Icon - Print & Download Prescription (Page 7) */}
-                        <button
-                          onClick={() => handlePrintClick(patient)}
-                          title="Print & Download Latest Prescription"
-                          className="p-1.5 text-slate-600 hover:text-[#1e536e] hover:bg-slate-100 rounded-md transition"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </button>
-
-                        {/* Trash Icon - Delete Patient */}
-                        {onDeletePatient && (
-                          <button
-                            onClick={() => setPatientToDelete(patient)}
-                            title="Delete Patient Record"
-                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition"
+                      <td className="px-5 py-3.5 font-bold text-slate-900">
+                        <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono text-xs">
+                          {patient.id}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 font-semibold text-slate-900 capitalize">
+                        {patient.fullName}
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600">
+                        <div className="flex items-center gap-1.5">
+                          <span>{patient.age}y</span>
+                          <span
+                            className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                              patient.gender === "Male"
+                                ? "bg-blue-50 text-blue-700"
+                                : "bg-pink-50 text-pink-700"
+                            }`}
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            {patient.gender}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-500 font-mono text-xs">
+                        {patient.dob || patient.registrationDate}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-600 font-mono text-xs">
+                        {patient.mobile}
+                      </td>
+                      <td
+                        className="px-5 py-3.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {records.length > 0 ? (
+                          <div className="space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => latestRecord && onPrintLatestPrescription(patient, latestRecord)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 transition shadow-2xs"
+                              title="Click to preview/print latest prescription"
+                            >
+                              <Pill className="w-3.5 h-3.5 text-teal-600" />
+                              <span>
+                                {records.length}{" "}
+                                {records.length === 1 ? "Prescription" : "Prescriptions"}
+                              </span>
+                            </button>
+                            {latestMeds.length > 0 ? (
+                              <p
+                                className="text-xs text-slate-600 truncate max-w-[220px]"
+                                title={latestMeds.map((m) => m.name).join(", ")}
+                              >
+                                <span className="font-semibold text-slate-700">Rx: </span>
+                                {latestMeds.map((m) => m.name).join(", ")}
+                              </p>
+                            ) : latestRecord?.diagnosis ? (
+                              <p className="text-xs text-slate-500 italic truncate max-w-[220px]">
+                                {latestRecord.diagnosis}
+                              </p>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 block">Consultation visit</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-400">
+                            <Pill className="w-3 h-3 opacity-40" />
+                            <span>No Rx yet</span>
+                          </span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-700 font-medium font-mono text-xs">
+                        {patient.lastVisitDate}
+                      </td>
+                      <td
+                        className="px-5 py-3.5 text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          {/* Eye Icon - View (Page 7) */}
+                          <button
+                            onClick={() => onViewPatient(patient)}
+                            title="View Records & Prescriptions"
+                            className="p-1.5 text-sky-600 hover:text-sky-800 hover:bg-sky-50 rounded-md transition"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          {/* Pencil Icon - Edit (Page 7) */}
+                          <button
+                            onClick={() => onEditPatient(patient)}
+                            title="Edit Patient Details"
+                            className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+
+                          {/* File Icon - Print & Download Prescription (Page 7) */}
+                          <button
+                            onClick={() => handlePrintClick(patient)}
+                            title={
+                              records.length > 0
+                                ? `Print & Download Latest Prescription (${latestRecord?.id || latestRecord?.visitDate})`
+                                : `No prescription recorded yet for ${patient.fullName}`
+                            }
+                            className={`p-1.5 rounded-md transition ${
+                              records.length > 0
+                                ? "text-teal-700 hover:text-teal-900 hover:bg-teal-50"
+                                : "text-slate-300 hover:text-slate-400"
+                            }`}
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+
+                          {/* Trash Icon - Delete Patient */}
+                          {onDeletePatient && (
+                            <button
+                              onClick={() => setPatientToDelete(patient)}
+                              title="Delete Patient Record"
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

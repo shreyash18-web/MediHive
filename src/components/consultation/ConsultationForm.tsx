@@ -1365,6 +1365,16 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             </span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => handleComplete(false, true)}
+            className="px-4 py-2.5 text-xs font-bold text-emerald-900 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-xl transition flex items-center justify-center gap-1.5"
+            title="Save consultation and open printable prescription letterhead"
+          >
+            <Printer className="w-4 h-4 text-emerald-700" />
+            <span>Save & Print Rx</span>
+          </button>
+
           {mode === "page" && (
             <button
               type="button"
